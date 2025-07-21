@@ -90,7 +90,7 @@ impl Settings {
             .set_default("claude.command", "claude")?
             .set_default("claude.timeout_seconds", 300)?
             .set_default("claude.max_concurrent_sessions", 10)?
-            .set_default("claude.use_interactive_sessions", true)?
+            .set_default("claude.use_interactive_sessions", false)?
             .set_default("database.url", "sqlite://./claude_code.db")?
             .set_default("database.max_connections", 5)?
             .set_default("auth.enabled", false)?

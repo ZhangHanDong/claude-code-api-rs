@@ -172,17 +172,31 @@ impl ClaudeManager {
             }
         }
 
-        cmd.arg(message);
+        // 不要将 message 作为命令行参数
+        // cmd.arg(message);
 
-        cmd.stdin(Stdio::null())  //
+        cmd.stdin(Stdio::piped())  // 改为 piped 以便写入
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
 
         info!("Starting Claude process for session {} with command: {:?}", session_id, cmd);
 
         let mut child = cmd.spawn()?;
+        let stdin = child.stdin.take().ok_or_else(|| anyhow!("Failed to get stdin"))?;
         let stdout = child.stdout.take().ok_or_else(|| anyhow!("Failed to get stdout"))?;
         let stderr = child.stderr.take().ok_or_else(|| anyhow!("Failed to get stderr"))?;
+        
+        // 将消息写入 stdin
+        use tokio::io::AsyncWriteExt;
+        let message_bytes = message.as_bytes().to_vec();
+        tokio::spawn(async move {
+            let mut stdin = stdin;
+            if let Err(e) = stdin.write_all(&message_bytes).await {
+                error!("Failed to write to stdin: {}", e);
+            }
+            // 关闭 stdin 以表示输入结束
+            drop(stdin);
+        });
 
         let (tx, rx) = mpsc::channel(100);
 

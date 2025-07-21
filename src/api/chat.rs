@@ -59,20 +59,29 @@ async fn cleanup_temp_files(tracker: Arc<Mutex<Vec<(String, std::time::Instant)>
 #[derive(Clone)]
 pub struct ChatState {
     pub claude_manager: Arc<ClaudeManager>,
+    pub process_pool: Arc<crate::core::process_pool::ProcessPool>,
+    pub interactive_session_manager: Arc<crate::core::interactive_session::InteractiveSessionManager>,
     pub conversation_manager: Arc<crate::core::conversation::ConversationManager>,
     pub cache: Arc<crate::core::cache::ResponseCache>,
+    pub use_interactive_sessions: bool,
 }
 
 impl ChatState {
     pub fn new(
         claude_manager: Arc<ClaudeManager>,
+        process_pool: Arc<crate::core::process_pool::ProcessPool>,
+        interactive_session_manager: Arc<crate::core::interactive_session::InteractiveSessionManager>,
         conversation_manager: Arc<crate::core::conversation::ConversationManager>,
         cache: Arc<crate::core::cache::ResponseCache>,
+        use_interactive_sessions: bool,
     ) -> Self {
         Self {
             claude_manager,
+            process_pool,
+            interactive_session_manager,
             conversation_manager,
             cache,
+            use_interactive_sessions,
         }
     }
 }
@@ -80,7 +89,7 @@ impl ChatState {
 pub async fn chat_completions(
     State(state): State<ChatState>,
     Json(request): Json<ChatCompletionRequest>,
-) -> ApiResult<axum::response::Response> {
+) -> ApiResult<impl IntoResponse> {
     use crate::core::cache::ResponseCache;
 
     info!("Received chat completion request for model: {}", request.model);
@@ -108,10 +117,24 @@ pub async fn chat_completions(
 
     let formatted_message = format_messages_for_claude(&context_messages).await?;
 
-    let (session_id, rx) = state.claude_manager
-        .create_session_with_message(None, None, Some(request.model.clone()), &formatted_message)
-        .await
-        .map_err(|e| ApiError::ClaudeProcess(e.to_string()))?;
+    // 根据配置选择使用交互式会话管理器或进程池
+    let (session_id, rx) = if state.use_interactive_sessions {
+        // 使用交互式会话管理器复用进程
+        state.interactive_session_manager
+            .get_or_create_session_and_send(
+                request.conversation_id.clone(),
+                request.model.clone(),
+                formatted_message
+            )
+            .await
+            .map_err(|e| ApiError::ClaudeProcess(e.to_string()))?
+    } else {
+        // 使用进程池
+        state.process_pool
+            .get_or_create(request.model.clone(), formatted_message)
+            .await
+            .map_err(|e| ApiError::ClaudeProcess(e.to_string()))?
+    };
 
     if request.stream.unwrap_or(false) {
         Ok(handle_streaming_response(request.model, rx).await?.into_response())
@@ -129,12 +152,12 @@ pub async fn chat_completions(
                 .map_err(|e| ApiError::Internal(e.to_string()))?;
         }
 
-        let mut response_with_conv_id = response.0.clone();
-        response_with_conv_id.conversation_id = Some(conversation_id.clone());
+        let mut response_data = response.0;
+        response_data.conversation_id = Some(conversation_id.clone());
 
-        state.cache.put(cache_key.clone(), response_with_conv_id.clone());
+        state.cache.put(cache_key.clone(), response_data.clone());
 
-        Ok(Json(response_with_conv_id).into_response())
+        Ok(Json(response_data).into_response())
     }
 }
 

@@ -12,6 +12,7 @@
 
 - **🔌 OpenAI API 兼容** - 可直接替换 OpenAI API，兼容现有的 OpenAI 客户端库
 - **🚀 高性能** - 使用 Rust、Axum 和 Tokio 构建，性能卓越
+- **⚡ 交互式会话** - 跨请求复用 Claude 进程，响应速度提升 5-10 倍
 - **💬 会话管理** - 内置会话支持，实现多轮对话
 - **🖼️ 多模态支持** - 在请求中同时处理图片和文本
 - **⚡ 响应缓存** - 智能缓存系统，减少延迟和成本
@@ -208,6 +209,7 @@ CLAUDE_CODE__SERVER__PORT=8080
 CLAUDE_CODE__CLAUDE__COMMAND=claude
 CLAUDE_CODE__CLAUDE__TIMEOUT_SECONDS=300
 CLAUDE_CODE__CLAUDE__MAX_CONCURRENT_SESSIONS=10
+CLAUDE_CODE__CLAUDE__USE_INTERACTIVE_SESSIONS=true
 
 # 文件访问权限
 CLAUDE_CODE__FILE_ACCESS__SKIP_PERMISSIONS=false
@@ -242,6 +244,7 @@ port = 8080
 command = "claude"
 timeout_seconds = 300
 max_concurrent_sessions = 10
+use_interactive_sessions = true  # 启用进程复用以获得更快的响应
 
 [file_access]
 skip_permissions = false

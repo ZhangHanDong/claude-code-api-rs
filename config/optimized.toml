@@ -1,0 +1,43 @@
+# 性能优化配置
+[server]
+host = "0.0.0.0"
+port = 8000
+
+[claude]
+command = "claude-code"
+timeout_seconds = 300
+max_concurrent_sessions = 20
+
+[process_pool]
+# 进程池大小 - 根据您的系统资源调整
+size = 10
+min_idle = 3
+max_idle = 8
+
+[database]
+url = "sqlite://claude_code_api.db"
+max_connections = 25
+
+[auth]
+enabled = false
+secret_key = "your-secret-key"
+token_expiry_hours = 24
+
+[file_access]
+# 跳过权限检查以提高性能（仅在信任的环境中使用）
+skip_permissions = true
+additional_dirs = []
+
+[mcp]
+# 如果不需要 MCP，禁用它以提高性能
+enabled = false
+
+[cache]
+# 启用缓存以大幅提升重复查询的速度
+enabled = true
+max_entries = 5000
+ttl_seconds = 7200  # 2小时
+
+[conversation]
+max_history_messages = 50
+session_timeout_minutes = 120

@@ -1,0 +1,42 @@
+[server]
+host = "0.0.0.0"
+port = 8000
+
+[claude]
+command = "claude-code"
+# 减少超时时间
+timeout_seconds = 120
+max_concurrent_sessions = 20
+# 使用交互式会话管理器以复用进程
+use_interactive_sessions = false  # 使用进程池模式，每次请求创建新进程
+
+[process_pool]
+# 暂时禁用进程池预热
+size = 0
+min_idle = 0
+max_idle = 0
+
+[database]
+url = "sqlite://claude_code_api.db"
+max_connections = 25
+
+[auth]
+enabled = false
+secret_key = "your-secret-key"
+token_expiry_hours = 24
+
+[file_access]
+skip_permissions = true
+additional_dirs = []
+
+[mcp]
+enabled = false
+
+[cache]
+enabled = true
+max_entries = 10000
+ttl_seconds = 14400  # 4小时
+
+[conversation]
+max_history_messages = 20
+session_timeout_minutes = 240  # 4小时

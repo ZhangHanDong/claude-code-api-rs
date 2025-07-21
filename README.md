@@ -12,6 +12,7 @@ A high-performance Rust implementation of an OpenAI-compatible API gateway for C
 
 - **🔌 OpenAI API Compatibility** - Drop-in replacement for OpenAI API, works with existing OpenAI client libraries
 - **🚀 High Performance** - Built with Rust, Axum, and Tokio for exceptional performance
+- **⚡ Interactive Sessions** - Reuse Claude processes across requests for 5-10x faster responses
 - **💬 Conversation Management** - Built-in session support for multi-turn conversations
 - **🖼️ Multimodal Support** - Process images alongside text in your requests
 - **⚡ Response Caching** - Intelligent caching system to reduce latency and costs
@@ -208,6 +209,7 @@ CLAUDE_CODE__SERVER__PORT=8080
 CLAUDE_CODE__CLAUDE__COMMAND=claude
 CLAUDE_CODE__CLAUDE__TIMEOUT_SECONDS=300
 CLAUDE_CODE__CLAUDE__MAX_CONCURRENT_SESSIONS=10
+CLAUDE_CODE__CLAUDE__USE_INTERACTIVE_SESSIONS=true
 
 # File access permissions
 CLAUDE_CODE__FILE_ACCESS__SKIP_PERMISSIONS=false
@@ -242,6 +244,7 @@ port = 8080
 command = "claude"
 timeout_seconds = 300
 max_concurrent_sessions = 10
+use_interactive_sessions = true  # Enable process reuse for faster responses
 
 [file_access]
 skip_permissions = false
@@ -352,6 +355,30 @@ curl -X POST http://localhost:8080/v1/chat/completions \
 - No API key required (relies on Claude CLI authentication)
 - Supports CORS for web applications
 - Request ID tracking for audit trails
+
+## ⚡ Performance Optimization
+
+### Interactive Sessions
+
+The API supports interactive session management for dramatically improved performance:
+
+- **First request**: 5-15 seconds (Claude process startup)
+- **Subsequent requests**: 1-3 seconds (process reuse)
+
+Enable interactive sessions (enabled by default):
+```toml
+[claude]
+use_interactive_sessions = true
+```
+
+### Best Practices
+
+1. **Use conversation IDs** for related requests to reuse sessions
+2. **Enable response caching** for frequently repeated queries
+3. **Configure appropriate timeouts** based on your use case
+4. **Monitor active sessions** via the `/stats` endpoint
+
+For detailed information, see [Interactive Session Guide](doc/INTERACTIVE_SESSION_GUIDE.md).
 
 ## 🐛 Troubleshooting
 

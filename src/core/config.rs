@@ -12,6 +12,8 @@ pub struct Settings {
     pub file_access: FileAccessConfig,
     #[serde(default)]
     pub mcp: MCPConfig,
+    #[serde(default)]
+    pub process_pool: ProcessPoolConfig,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -25,6 +27,8 @@ pub struct ClaudeConfig {
     pub command: String,
     pub timeout_seconds: u64,
     pub max_concurrent_sessions: usize,
+    #[serde(default)]
+    pub use_interactive_sessions: bool,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -58,6 +62,23 @@ pub struct MCPConfig {
     pub debug: bool,
 }
 
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct ProcessPoolConfig {
+    pub size: usize,
+    pub min_idle: usize,
+    pub max_idle: usize,
+}
+
+impl Default for ProcessPoolConfig {
+    fn default() -> Self {
+        Self {
+            size: 5,
+            min_idle: 2,
+            max_idle: 5,
+        }
+    }
+}
+
 
 impl Settings {
     pub fn new() -> Result<Self, ConfigError> {
@@ -69,6 +90,7 @@ impl Settings {
             .set_default("claude.command", "claude")?
             .set_default("claude.timeout_seconds", 300)?
             .set_default("claude.max_concurrent_sessions", 10)?
+            .set_default("claude.use_interactive_sessions", true)?
             .set_default("database.url", "sqlite://./claude_code.db")?
             .set_default("database.max_connections", 5)?
             .set_default("auth.enabled", false)?

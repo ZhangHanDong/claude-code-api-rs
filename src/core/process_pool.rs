@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+// 移除 dead_code，激活进程池
 
 use anyhow::{Result, anyhow};
 use std::sync::Arc;
@@ -84,6 +84,14 @@ impl ProcessPool {
         });
 
         pool
+    }
+    
+    pub async fn get_or_create(&self, model: String, message: String) -> Result<(String, mpsc::Receiver<ClaudeCodeOutput>)> {
+        // 直接创建新会话，暂时不使用池化（需要更复杂的实现）
+        info!("Creating new Claude session for model: {}", model);
+        self.inner.manager
+            .create_session_with_message(None, None, Some(model), &message)
+            .await
     }
 
     pub async fn acquire(&self, model: Option<String>) -> Result<(String, mpsc::Receiver<ClaudeCodeOutput>)> {

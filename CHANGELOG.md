@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.4] - 2025-01-22
+
+### Fixed
+- Fixed interactive session mode issues with Claude CLI
+- Resolved compilation errors with Handler trait bounds
+- Fixed timeout issues with process pool mode
+- Improved error handling for Claude process communication
+
+### Changed
+- Temporarily disabled interactive session mode due to Claude CLI limitations
+- Using process pool mode by default for better stability
+- Improved logging for debugging process communication
+
+### Added
+- Documentation for interactive session concurrency issues
+- Better error messages for timeout scenarios
+
 ## [0.1.3] - 2025-01-21
 
 ### Fixed

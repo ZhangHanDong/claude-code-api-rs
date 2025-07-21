@@ -1,7 +1,7 @@
 use anyhow::Result;
 use axum::{routing::{get, post}, Router};
 use tower_http::cors::CorsLayer;
-use tracing::info;
+use tracing::{info, error};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use std::net::SocketAddr;
 
@@ -11,7 +11,11 @@ mod models;
 mod utils;
 mod middleware;
 
-use crate::core::{config::Settings, claude_manager::ClaudeManager};
+use crate::core::{
+    config::Settings, 
+    claude_manager::ClaudeManager,
+    process_pool::{ProcessPool, PoolConfig},
+};
 use crate::api::chat::ChatState;
 use std::sync::Arc;
 
@@ -48,6 +52,7 @@ async fn create_app(settings: Settings) -> Result<Router> {
     use crate::core::{
         cache::{ResponseCache, CacheConfig},
         conversation::{ConversationManager, ConversationConfig},
+        interactive_session::InteractiveSessionManager,
     };
     use crate::middleware::{error_handler, request_id};
     use axum::middleware;
@@ -59,13 +64,45 @@ async fn create_app(settings: Settings) -> Result<Router> {
         settings.file_access.clone(),
         settings.mcp.clone()
     ));
+    
+    // 创建进程池配置
+    let pool_config = PoolConfig {
+        min_idle: settings.process_pool.min_idle,
+        max_idle: settings.process_pool.max_idle,
+        max_active: settings.process_pool.size,
+        idle_timeout_secs: 300,
+        default_model: "claude-3-5-sonnet-20241022".to_string(),
+    };
+    
+    // 初始化进程池
+    info!("Initializing process pool with {} min idle processes", pool_config.min_idle);
+    let process_pool = Arc::new(ProcessPool::new(claude_manager.clone(), pool_config));
+    
+    // 初始化交互式会话管理器
+    info!("Initializing interactive session manager");
+    let interactive_session_manager = Arc::new(InteractiveSessionManager::new(
+        settings.claude.command.clone(),
+        settings.file_access.clone(),
+        settings.mcp.clone()
+    ));
+    
+    // 如果启用了交互式会话，预热一个默认进程
+    if settings.claude.use_interactive_sessions {
+        if let Err(e) = interactive_session_manager.prewarm_default_session().await {
+            error!("Failed to pre-warm Claude process: {}", e);
+        }
+    }
+    
     let conversation_manager = Arc::new(ConversationManager::new(ConversationConfig::default()));
     let cache = Arc::new(ResponseCache::new(CacheConfig::default()));
 
     let chat_state = ChatState::new(
         claude_manager.clone(),
+        process_pool.clone(),
+        interactive_session_manager.clone(),
         conversation_manager.clone(),
         cache.clone(),
+        settings.claude.use_interactive_sessions,
     );
 
     let conversation_state = api::conversations::ConversationState {

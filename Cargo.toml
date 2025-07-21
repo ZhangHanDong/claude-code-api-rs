@@ -7,8 +7,8 @@ license = "MIT"
 description = "OpenAI-compatible API gateway for Claude Code CLI"
 repository = "https://github.com/ZhangHanDong/claude-code-api-rs"
 readme = "README.md"
-keywords = ["claude", "claude-code", "api", "openai", "ai", "llm"]
-categories = ["api", "web-programming", "cli"]
+keywords = ["claude-code", "api", "openai", "ai", "llm"]
+categories = ["web-programming::http-server", "command-line-utilities", "development-tools"]
 
 [dependencies]
 axum = { version = "0.7", features = ["http2", "json", "macros"] }

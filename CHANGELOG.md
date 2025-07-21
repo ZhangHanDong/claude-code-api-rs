@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.2] - 2025-01-21
+
+### Added
+- Added `ccapi` as a shorter command alias for `claude-code-api`
+- Both `claude-code-api` and `ccapi` commands are now available after installation
+
 ## [0.1.1] - 2025-01-21
 
 ### Fixed

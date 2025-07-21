@@ -1,6 +1,6 @@
 [package]
 name = "claude-code-api"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 authors = ["blackanger"]
 license = "MIT"
@@ -13,6 +13,14 @@ categories = [
     "command-line-utilities",
     "development-tools",
 ]
+
+[[bin]]
+name = "claude-code-api"
+path = "src/main.rs"
+
+[[bin]]
+name = "ccapi"
+path = "src/main.rs"
 
 [dependencies]
 axum = { version = "0.7", features = ["http2", "json", "macros"] }

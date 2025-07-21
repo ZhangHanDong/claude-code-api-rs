@@ -31,18 +31,37 @@ A high-performance Rust implementation of an OpenAI-compatible API gateway for C
 
 ### Installation
 
-1. Clone the repository:
+**Option 1**
+
+```
+cargo install claude-code-api
+```
+
+then run:
+
+```
+RUST_LOG=info claude-code-api
+```
+
+or
+
+```
+RUST_LOG=info ccapi
+```
+
+**Option 2**
+
 ```bash
 git clone https://github.com/yourusername/claude-code-api.git
 cd claude-code-api/rust-claude-code-api
 ```
 
-2. Build the project:
+ Build the project:
 ```bash
 cargo build --release
 ```
 
-3. Start the server:
+Start the server:
 ```bash
 ./target/release/claude-code-api
 ```
@@ -286,7 +305,7 @@ async function chat() {
     model: 'claude-opus-4-20250514',
     messages: [{ role: 'user', content: 'Hello!' }]
   });
-  
+
   console.log(response.choices[0].message.content);
 }
 ```

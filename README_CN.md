@@ -31,7 +31,26 @@
 
 ### 安装
 
-1. 克隆仓库：
+方式一：
+
+```
+cargo install claude-code-api
+```
+
+然后允许命令:
+
+```
+RUST_LOG=info claude-code-api
+```
+
+或者
+
+```
+RUST_LOG=info ccapi
+```
+
+方式二：
+
 ```bash
 git clone https://github.com/yourusername/claude-code-api.git
 cd claude-code-api/rust-claude-code-api
@@ -286,7 +305,7 @@ async function chat() {
     model: 'claude-opus-4-20250514',
     messages: [{ role: 'user', content: '你好！' }]
   });
-  
+
   console.log(response.choices[0].message.content);
 }
 ```

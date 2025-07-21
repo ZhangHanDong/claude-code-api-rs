@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.3] - 2025-01-21
+
+### Fixed
+- Fixed default log level to ensure consistent logging output for both command aliases
+- Changed default log filter from module-specific to global "info" level
+
 ## [0.1.2] - 2025-01-21
 
 ### Added

@@ -98,7 +98,7 @@ Basic usage:
 
 ```python
 import anyio
-from claude_code_sdk import query, ClaudeCodeOptions, Message
+from cc_sdk import query, ClaudeCodeOptions, Message
 
 async def main():
     messages: list[Message] = []
@@ -117,7 +117,7 @@ anyio.run(main)
 The Python SDK accepts all arguments supported by the command line SDK through the `ClaudeCodeOptions` class:
 
 ```python
-from claude_code_sdk import query, ClaudeCodeOptions
+from cc_sdk import query, ClaudeCodeOptions
 from pathlib import Path
 
 options = ClaudeCodeOptions(

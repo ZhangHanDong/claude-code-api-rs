@@ -1,0 +1,31 @@
+# 交互式会话测试配置
+[server]
+host = "0.0.0.0"
+port = 8080
+
+[claude]
+command = "claude"
+timeout_seconds = 300
+max_concurrent_sessions = 10
+use_interactive_sessions = true  # 启用交互式会话
+
+[file_access]
+skip_permissions = true
+additional_dirs = []
+
+[mcp]
+enabled = false
+
+[cache]
+enabled = true
+max_entries = 1000
+ttl_seconds = 3600
+
+[conversation]
+max_history_messages = 20
+session_timeout_minutes = 30
+
+[process_pool]
+size = 5
+min_idle = 2
+max_idle = 5

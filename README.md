@@ -244,7 +244,7 @@ port = 8080
 command = "claude"
 timeout_seconds = 300
 max_concurrent_sessions = 10
-use_interactive_sessions = true  # Enable process reuse for faster responses
+use_interactive_sessions = false  # Disabled by default due to stability issues
 
 [file_access]
 skip_permissions = false
@@ -363,13 +363,15 @@ curl -X POST http://localhost:8080/v1/chat/completions \
 The API supports interactive session management for dramatically improved performance:
 
 - **First request**: 5-15 seconds (Claude process startup)
-- **Subsequent requests**: 1-3 seconds (process reuse)
+- **Subsequent requests**: < 0.1 seconds (with cache)
 
-Enable interactive sessions (enabled by default):
+Interactive sessions are currently disabled by default due to stability issues:
 ```toml
 [claude]
-use_interactive_sessions = true
+use_interactive_sessions = false  # Default value
 ```
+
+**Note**: Interactive session mode has known concurrency issues and is not recommended for production use.
 
 ### Best Practices
 

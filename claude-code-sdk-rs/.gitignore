@@ -1,0 +1,32 @@
+# Rust
+target/
+Cargo.lock
+**/*.rs.bk
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python test files
+*.py
+__pycache__/
+.pytest_cache/
+
+# Test outputs
+test_output/
+*.log
+
+# Documentation build
+doc/_build/
+
+# Temporary files
+*.tmp
+*.temp
+.env

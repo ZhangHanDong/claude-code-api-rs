@@ -1,0 +1,39 @@
+[package]
+name = "claude-code-sdk"
+version = "0.1.5"
+edition = "2021"
+authors = ["ZhangHanDong"]
+license = "MIT"
+description = "Rust SDK for Claude Code CLI with full interactive capabilities"
+repository = "https://github.com/ZhangHanDong/claude-code-api-rs"
+documentation = "https://docs.rs/claude-code-sdk"
+readme = "README.md"
+keywords = ["claude", "claude-code", "sdk", "ai", "llm"]
+categories = ["api-bindings", "asynchronous", "development-tools"]
+exclude = ["examples/", "tests/", "doc/", "README_*.md", "*.sh", "*.py"]
+
+[dependencies]
+# Workspace dependencies
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+futures.workspace = true
+async-trait.workspace = true
+
+# Local dependencies
+tokio-stream = { version = "0.1", features = ["sync"] }
+bytes = "1"
+pin-project-lite = "0.2"
+which = "6"
+dirs = "5"
+uuid = { version = "1", features = ["v4", "serde"] }
+async-stream = "0.3"
+
+[dev-dependencies]
+tokio-test = "0.4"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tempfile = "3"
+chrono = "0.4"
+regex = "1.10"

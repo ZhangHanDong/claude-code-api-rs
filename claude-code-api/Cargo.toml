@@ -1,0 +1,65 @@
+[package]
+name = "claude-code-api"
+version.workspace = true
+edition = "2024"
+authors.workspace = true
+license.workspace = true
+description = "OpenAI-compatible API gateway for Claude Code CLI"
+repository.workspace = true
+readme = "../README.md"
+keywords = ["claude-code", "api", "openai", "ai", "llm"]
+categories = [
+    "web-programming::http-server",
+    "command-line-utilities",
+    "development-tools",
+]
+
+[[bin]]
+name = "claude-code-api"
+path = "src/main.rs"
+
+[[bin]]
+name = "ccapi"
+path = "src/main.rs"
+
+[dependencies]
+# Workspace dependencies
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+futures.workspace = true
+
+# Local dependencies
+axum = { version = "0.7", features = ["http2", "json", "macros"] }
+tower = { version = "0.4", features = ["full"] }
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+sqlx = { version = "0.7", features = [
+    "runtime-tokio-rustls",
+    "sqlite",
+    "chrono",
+    "uuid",
+] }
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+async-stream = "0.3"
+bytes = "1"
+dotenv = "0.15"
+config = "0.14"
+argon2 = "0.5"
+jsonwebtoken = "9"
+base64 = "0.22"
+reqwest = { version = "0.12", features = ["json", "stream"] }
+tokio-stream = "0.1"
+dashmap = "6"
+parking_lot = "0.12"
+sha2 = "0.10"
+once_cell = "1"
+
+[dev-dependencies]
+axum-test = "15"
+mockall = "0.12"
+tempfile = "3"

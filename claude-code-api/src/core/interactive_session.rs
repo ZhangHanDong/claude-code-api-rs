@@ -29,9 +29,9 @@ struct InteractiveSession {
     output_tx: broadcast::Sender<ClaudeCodeOutput>,
     model: String,
     created_at: std::time::Instant,
-    last_used: parking_lot::Mutex<std::time::Instant>,
+    last_used: Arc<parking_lot::Mutex<std::time::Instant>>,
     // 添加互斥锁，确保一次只有一个请求与进程交互
-    interaction_lock: tokio::sync::Mutex<()>,
+    interaction_lock: Arc<tokio::sync::Mutex<()>>,
 }
 
 impl InteractiveSessionManager {
@@ -75,49 +75,122 @@ impl InteractiveSessionManager {
         let (response_tx, response_rx) = mpsc::channel(100);
         
         // 检查是否已有会话
-        let existing_session = {
-            let sessions = self.sessions.read();
-            if let Some(session) = sessions.get(&conversation_id) {
-                info!("Reusing existing session: {}", conversation_id);
-                
-                // 更新最后使用时间
-                *session.last_used.lock() = std::time::Instant::now();
-                
-                // 订阅输出
-                let mut output_rx = session.output_tx.subscribe();
-                let response_tx_clone = response_tx.clone();
-                
-                // 启动转发任务
-                tokio::spawn(async move {
-                    while let Ok(output) = output_rx.recv().await {
-                        if response_tx_clone.send(output).await.is_err() {
-                            break;
-                        }
-                    }
-                });
-                
-                // 克隆 stdin_tx 以便在锁释放后使用
-                let stdin_tx = session.stdin_tx.clone();
-                Some((conversation_id.clone(), stdin_tx))
-            } else {
-                None
-            }
-        };
+        let session_exists = self.sessions.read().contains_key(&conversation_id);
         
-        // 在锁释放后发送消息
-        let existing_session = if let Some((_conv_id, stdin_tx)) = existing_session {
-            match stdin_tx.send(message.clone()).await {
-                Ok(_) => true,
-                Err(e) => {
-                    error!("Failed to send message to existing session: {}", e);
-                    false
+        if session_exists {
+            info!("Reusing existing session: {}", conversation_id);
+            
+            // 在单独的任务中处理已存在的会话
+            let sessions = self.sessions.clone();
+            let conversation_id_clone = conversation_id.clone();
+            let message_clone = message.clone();
+            
+            tokio::spawn(async move {
+                let session_info = {
+                    let sessions_guard = sessions.read();
+                    sessions_guard.get(&conversation_id_clone).map(|s| (
+                        s.stdin_tx.clone(),
+                        s.output_tx.clone(),
+                        Arc::clone(&s.last_used),
+                        Arc::clone(&s.interaction_lock)
+                    ))
+                };
+                
+                if let Some((stdin_tx, output_tx, last_used, interaction_lock)) = session_info {
+                    // 获取交互锁，确保串行化访问
+                    let _lock = interaction_lock.lock().await;
+                    info!("Acquired interaction lock for session: {}", conversation_id_clone);
+                    
+                    // 更新最后使用时间
+                    *last_used.lock() = std::time::Instant::now();
+                    
+                    // 创建专用的响应通道
+                    let (request_tx, _request_rx) = mpsc::channel::<ClaudeCodeOutput>(100);
+                    
+                    // 订阅输出广播
+                    let mut output_rx = output_tx.subscribe();
+                    
+                    // 启动响应收集任务
+                    let response_handle = tokio::spawn(async move {
+                        let mut responses = Vec::new();
+                        let start_time = std::time::Instant::now();
+                        let mut consecutive_empty_lines = 0;
+                        let mut has_content = false;
+                        
+                        loop {
+                            // 使用较短的超时来检测响应结束
+                            match tokio::time::timeout(
+                                std::time::Duration::from_millis(500),
+                                output_rx.recv()
+                            ).await {
+                                Ok(Ok(output)) => {
+                                    consecutive_empty_lines = 0;
+                                    request_tx.send(output.clone()).await.ok();
+                                    responses.push(output.clone());
+                                    
+                                    // 检查是否有实际内容
+                                    if output.r#type == "text" || output.r#type == "content" {
+                                        has_content = true;
+                                    }
+                                    
+                                    // 检查错误响应
+                                    if output.r#type == "error" {
+                                        break;
+                                    }
+                                }
+                                Ok(Err(_)) => {
+                                    // 接收错误，通道关闭
+                                    break;
+                                }
+                                Err(_) => {
+                                    // 超时 - 检查是否已经有内容
+                                    consecutive_empty_lines += 1;
+                                    if has_content && consecutive_empty_lines >= 2 {
+                                        // 如果已经收到内容，并且连续2次超时，认为响应完成
+                                        info!("Response appears complete after timeout");
+                                        break;
+                                    }
+                                    
+                                    // 总超时保护
+                                    if start_time.elapsed() > std::time::Duration::from_secs(30) {
+                                        error!("Total timeout waiting for response");
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        responses
+                    });
+                    
+                    // 发送消息
+                    if let Err(e) = stdin_tx.send(message_clone).await {
+                        error!("Failed to send message to session: {}", e);
+                        response_tx.send(ClaudeCodeOutput {
+                            r#type: "error".to_string(),
+                            subtype: None,
+                            data: serde_json::json!({
+                                "error": format!("Failed to send message: {}", e)
+                            }),
+                        }).await.ok();
+                        return;
+                    }
+                    
+                    // 等待响应收集完成
+                    let responses = response_handle.await.unwrap_or_default();
+                    
+                    // 转发响应到请求者
+                    for output in responses {
+                        response_tx.send(output).await.ok();
+                    }
+                    
+                    // 关闭通道
+                    drop(response_tx);
+                    
+                    info!("Released interaction lock for session: {}", conversation_id_clone);
                 }
-            }
-        } else {
-            false
-        };
-
-        if existing_session {
+            });
+            
             return Ok((conversation_id, response_rx));
         }
 
@@ -169,12 +242,43 @@ impl InteractiveSessionManager {
         let (stdin_tx, mut stdin_rx) = mpsc::channel::<String>(100);
         let (output_tx, _) = broadcast::channel(100);
 
-        // 为初始请求订阅输出
-        let mut initial_output_rx = output_tx.subscribe();
+        // 为初始请求创建专用通道
+        let (initial_tx, mut initial_rx) = mpsc::channel::<ClaudeCodeOutput>(100);
+        
+        // 启动初始响应收集任务
+        let initial_response_tx_clone = initial_response_tx.clone();
         tokio::spawn(async move {
-            while let Ok(output) = initial_output_rx.recv().await {
-                if initial_response_tx.send(output).await.is_err() {
-                    break;
+            let start_time = std::time::Instant::now();
+            let mut has_content = false;
+            let mut consecutive_timeouts = 0;
+            
+            loop {
+                match tokio::time::timeout(
+                    std::time::Duration::from_millis(500),
+                    initial_rx.recv()
+                ).await {
+                    Ok(Some(output)) => {
+                        consecutive_timeouts = 0;
+                        if output.r#type == "text" || output.r#type == "content" {
+                            has_content = true;
+                        }
+                        if initial_response_tx_clone.send(output).await.is_err() {
+                            break;
+                        }
+                    }
+                    Ok(None) => break, // 通道关闭
+                    Err(_) => {
+                        // 超时
+                        consecutive_timeouts += 1;
+                        if has_content && consecutive_timeouts >= 2 {
+                            info!("Initial response appears complete");
+                            break;
+                        }
+                        if start_time.elapsed() > std::time::Duration::from_secs(30) {
+                            error!("Timeout waiting for initial response");
+                            break;
+                        }
+                    }
                 }
             }
         });
@@ -202,6 +306,9 @@ impl InteractiveSessionManager {
         // 处理 stdout
         let conversation_id_clone = conversation_id.clone();
         let output_tx_clone = output_tx.clone();
+        let initial_tx_clone = initial_tx.clone();
+        let is_first_response = Arc::new(parking_lot::Mutex::new(true));
+        
         tokio::spawn(async move {
             let reader = BufReader::new(stdout);
             let mut lines = reader.lines();
@@ -219,6 +326,25 @@ impl InteractiveSessionManager {
                         subtype: json.get("subtype").and_then(|v| v.as_str()).map(|s| s.to_string()),
                         data: json,
                     };
+                    
+                    // 如果是第一次响应，发送到初始通道
+                    let should_send = {
+                        let mut is_first = is_first_response.lock();
+                        if *is_first {
+                            // 检查是否响应结束
+                            if output.r#type == "error" || 
+                               (output.r#type == "text" && line.contains("Human:")) {
+                                *is_first = false;
+                            }
+                            true
+                        } else {
+                            false
+                        }
+                    };
+                    
+                    if should_send {
+                        let _ = initial_tx_clone.send(output.clone()).await;
+                    }
                     
                     // 广播输出到所有订阅者
                     let _ = output_tx_clone.send(output);
@@ -252,8 +378,8 @@ impl InteractiveSessionManager {
             output_tx,
             model,
             created_at: std::time::Instant::now(),
-            last_used: parking_lot::Mutex::new(std::time::Instant::now()),
-            interaction_lock: tokio::sync::Mutex::new(()),
+            last_used: Arc::new(parking_lot::Mutex::new(std::time::Instant::now())),
+            interaction_lock: Arc::new(tokio::sync::Mutex::new(())),
         };
 
         self.sessions.write().insert(conversation_id, session);

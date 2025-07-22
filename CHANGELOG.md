@@ -2,15 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.5] - 2025-01-22
+
+### Fixed
+- Fixed interactive mode hang issue in Rust SDK with new SimpleInteractiveClient implementation
+- Resolved deadlock in ClaudeSDKClient where receiver task held transport lock preventing sends
+- Fixed transport layer to support multiple message receivers using broadcast channels
+
+### Added
+- New SimpleInteractiveClient that works correctly for stateful conversations
+- Broadcast channel implementation in transport layer for multiple receivers
+- Working examples and tests for interactive mode
+
+### Changed
+- Updated README to reflect working interactive mode with SimpleInteractiveClient
+- Modified receive_messages() to create new receivers instead of taking ownership
+
 ## [0.1.4] - 2025-01-22
 
 ### Fixed
+- Fixed critical issue where default `use_interactive_sessions` was set to true, causing timeouts
 - Fixed interactive session mode issues with Claude CLI
 - Resolved compilation errors with Handler trait bounds
 - Fixed timeout issues with process pool mode
 - Improved error handling for Claude process communication
 
 ### Changed
+- **BREAKING**: Changed default `use_interactive_sessions` from true to false
 - Temporarily disabled interactive session mode due to Claude CLI limitations
 - Using process pool mode by default for better stability
 - Improved logging for debugging process communication

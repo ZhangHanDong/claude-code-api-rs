@@ -37,10 +37,10 @@ This release fixes the critical deadlock issue in the interactive client and ach
 If you were using `SimpleInteractiveClient`:
 ```rust
 // Old
-use claude_code_sdk::SimpleInteractiveClient;
+use cc_sdk::SimpleInteractiveClient;
 
 // New (both work)
-use claude_code_sdk::InteractiveClient;
+use cc_sdk::InteractiveClient;
 // or keep using SimpleInteractiveClient (it's an alias)
 ```
 

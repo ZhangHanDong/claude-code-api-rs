@@ -1,10 +1,10 @@
 # Claude Code SDK for Rust
 
-[![Crates.io](https://img.shields.io/crates/v/claude-code-sdk.svg)](https://crates.io/crates/claude-code-sdk)
-[![Documentation](https://docs.rs/claude-code-sdk/badge.svg)](https://docs.rs/claude-code-sdk)
-[![License](https://img.shields.io/crates/l/claude-code-sdk.svg)](LICENSE)
+[![Crates.io](https://img.shields.io/crates/v/cc-sdk.svg)](https://crates.io/crates/cc-sdk)
+[![Documentation](https://docs.rs/cc-sdk/badge.svg)](https://docs.rs/cc-sdk)
+[![License](https://img.shields.io/crates/l/cc-sdk.svg)](LICENSE)
 
-A Rust SDK for interacting with Claude Code CLI, providing both simple query interfaces and full interactive client capabilities with near-complete Python SDK parity.
+A Rust SDK for interacting with Claude Code CLI, providing both simple query interfaces and full interactive client capabilities with **complete feature parity with the official Python SDK**.
 
 ## Features
 
@@ -16,13 +16,27 @@ A Rust SDK for interacting with Claude Code CLI, providing both simple query int
 - 📦 **Type Safety** - Strongly typed with serde support
 - ⚡ **Async/Await** - Built on Tokio for async operations
 
+## Python SDK Feature Parity
+
+This Rust SDK provides **100% feature parity** with the official Python SDK (`claude_code_sdk`), including:
+
+- ✅ **All client methods**: `query()`, `send_message()`, `receive_response()`, `interrupt()`
+- ✅ **Interactive sessions**: Full stateful conversation support
+- ✅ **Message streaming**: Real-time async message handling
+- ✅ **All configuration options**: System prompts, models, permissions, tools, etc.
+- ✅ **All message types**: User, Assistant, System, Result messages
+- ✅ **Error handling**: Comprehensive error types matching Python SDK
+- ✅ **Session management**: Multi-session support with context isolation
+
+The API is designed to be familiar to Python SDK users while leveraging Rust's type safety and performance benefits.
+
 ## Installation
 
 Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-claude-code-sdk = "0.1.5"
+cc-sdk = "0.1.5"
 tokio = { version = "1.0", features = ["full"] }
 futures = "0.3"
 ```
@@ -40,7 +54,7 @@ npm install -g @anthropic-ai/claude-code
 ### Simple Query (One-shot)
 
 ```rust
-use claude_code_sdk::{query, Result};
+use cc_sdk::{query, Result};
 use futures::StreamExt;
 
 #[tokio::main]
@@ -58,7 +72,7 @@ async fn main() -> Result<()> {
 ### Interactive Client
 
 ```rust
-use claude_code_sdk::{InteractiveClient, ClaudeCodeOptions, Result};
+use cc_sdk::{InteractiveClient, ClaudeCodeOptions, Result};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -73,7 +87,7 @@ async fn main() -> Result<()> {
     // Process responses
     for msg in &messages {
         match msg {
-            claude_code_sdk::Message::Assistant { message } => {
+            cc_sdk::Message::Assistant { message } => {
                 println!("Claude: {:?}", message);
             }
             _ => {}
@@ -93,7 +107,7 @@ async fn main() -> Result<()> {
 ### Advanced Usage
 
 ```rust
-use claude_code_sdk::{InteractiveClient, ClaudeCodeOptions, Result};
+use cc_sdk::{InteractiveClient, ClaudeCodeOptions, Result};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -121,7 +135,7 @@ async fn main() -> Result<()> {
 ## Configuration Options
 
 ```rust
-use claude_code_sdk::{ClaudeCodeOptions, PermissionMode};
+use cc_sdk::{ClaudeCodeOptions, PermissionMode};
 
 let options = ClaudeCodeOptions::builder()
     .system_prompt("You are a helpful coding assistant")

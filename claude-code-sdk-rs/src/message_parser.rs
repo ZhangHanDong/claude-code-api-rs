@@ -43,7 +43,7 @@ fn parse_user_message(json: Value) -> Result<Option<Message>> {
     let content = if let Some(content_str) = message.get("content").and_then(|v| v.as_str()) {
         // Simple string content
         content_str.to_string()
-    } else if let Some(content_array) = message.get("content").and_then(|v| v.as_array()) {
+    } else if let Some(_content_array) = message.get("content").and_then(|v| v.as_array()) {
         // Array content (e.g., tool results) - we'll skip these for now
         // as they're not standard user messages but tool responses
         debug!("Skipping user message with array content (likely tool result)");

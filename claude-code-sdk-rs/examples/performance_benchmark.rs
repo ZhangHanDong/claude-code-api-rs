@@ -3,7 +3,7 @@
 //! This example compares the performance of using Claude via command line
 //! versus using the SDK for batch processing.
 
-use claude_code_sdk::{ClaudeCodeOptions, InteractiveClient, PermissionMode, Result};
+use cc_sdk::{ClaudeCodeOptions, InteractiveClient, PermissionMode, Result};
 use std::process::Command;
 use std::time::{Duration, Instant};
 use tokio::time::sleep;
@@ -26,7 +26,7 @@ fn benchmark_command_line(queries: &[&str]) -> BenchmarkResult {
     for (idx, query) in queries.iter().enumerate() {
         println!("  CMD Query {}/{}: {}", idx + 1, queries.len(), query);
         let query_start = Instant::now();
-        
+
         let output = Command::new("claude")
             .args(&[
                 "-p",
@@ -49,7 +49,7 @@ fn benchmark_command_line(queries: &[&str]) -> BenchmarkResult {
                 println!("    ✗ Error: {}", e);
             }
         }
-        
+
         // Small delay between queries
         std::thread::sleep(Duration::from_millis(500));
     }
@@ -78,7 +78,7 @@ async fn benchmark_sdk(queries: &[&str]) -> Result<BenchmarkResult> {
         .build();
 
     let mut client = InteractiveClient::new(options)?;
-    
+
     // Connect once
     let connect_start = Instant::now();
     client.connect().await?;
@@ -88,7 +88,7 @@ async fn benchmark_sdk(queries: &[&str]) -> Result<BenchmarkResult> {
     for (idx, query) in queries.iter().enumerate() {
         println!("  SDK Query {}/{}: {}", idx + 1, queries.len(), query);
         let query_start = Instant::now();
-        
+
         match client.send_and_receive(query.to_string()).await {
             Ok(_messages) => {
                 completed += 1;
@@ -98,13 +98,13 @@ async fn benchmark_sdk(queries: &[&str]) -> Result<BenchmarkResult> {
                 println!("    ✗ Error: {:?}", e);
             }
         }
-        
+
         // Small delay between queries
         sleep(Duration::from_millis(500)).await;
     }
 
     client.disconnect().await?;
-    
+
     let total_duration = start.elapsed();
     Ok(BenchmarkResult {
         method: "SDK".to_string(),
@@ -118,37 +118,37 @@ async fn benchmark_sdk(queries: &[&str]) -> Result<BenchmarkResult> {
 fn print_comparison(cmd_result: &BenchmarkResult, sdk_result: &BenchmarkResult) {
     println!("\n📊 BENCHMARK RESULTS");
     println!("=" .repeat(60));
-    
+
     println!("\n📌 Command Line:");
     println!("  Total time: {:.2}s", cmd_result.total_duration.as_secs_f64());
     println!("  Average per query: {:.2}s", cmd_result.per_query_avg.as_secs_f64());
     println!("  Queries completed: {}", cmd_result.queries_completed);
-    
+
     println!("\n📌 SDK:");
     println!("  Total time: {:.2}s", sdk_result.total_duration.as_secs_f64());
     println!("  Average per query: {:.2}s", sdk_result.per_query_avg.as_secs_f64());
     println!("  Queries completed: {}", sdk_result.queries_completed);
-    
+
     // Calculate performance improvement
-    let improvement = (cmd_result.total_duration.as_secs_f64() - sdk_result.total_duration.as_secs_f64()) 
+    let improvement = (cmd_result.total_duration.as_secs_f64() - sdk_result.total_duration.as_secs_f64())
         / cmd_result.total_duration.as_secs_f64() * 100.0;
-    
+
     println!("\n🎯 Performance Improvement:");
     println!("  SDK is {:.1}% faster than command line", improvement);
-    println!("  Time saved: {:.2}s", 
+    println!("  Time saved: {:.2}s",
         (cmd_result.total_duration - sdk_result.total_duration).as_secs_f64()
     );
-    
+
     // Per-query improvement
-    let per_query_improvement = (cmd_result.per_query_avg.as_secs_f64() - sdk_result.per_query_avg.as_secs_f64()) 
+    let per_query_improvement = (cmd_result.per_query_avg.as_secs_f64() - sdk_result.per_query_avg.as_secs_f64())
         / cmd_result.per_query_avg.as_secs_f64() * 100.0;
     println!("  Per-query improvement: {:.1}%", per_query_improvement);
-    
+
     println!("\n📈 Extrapolated Performance:");
     println!("  For 100 queries:");
     println!("    Command line: ~{:.1} minutes", cmd_result.per_query_avg.as_secs_f64() * 100.0 / 60.0);
     println!("    SDK: ~{:.1} minutes", sdk_result.per_query_avg.as_secs_f64() * 100.0 / 60.0);
-    println!("    Time saved: ~{:.1} minutes", 
+    println!("    Time saved: ~{:.1} minutes",
         (cmd_result.per_query_avg.as_secs_f64() - sdk_result.per_query_avg.as_secs_f64()) * 100.0 / 60.0
     );
 }
@@ -157,7 +157,7 @@ fn print_comparison(cmd_result: &BenchmarkResult, sdk_result: &BenchmarkResult) 
 async fn main() -> Result<()> {
     println!("🏁 Claude SDK Performance Benchmark");
     println!("=" .repeat(60));
-    
+
     // Test queries - simple to avoid long processing times
     let test_queries = vec![
         "Write a one-line Rust function to check if a number is even",
@@ -166,19 +166,19 @@ async fn main() -> Result<()> {
         "Write a simple hello world function in Rust",
         "What is the difference between String and &str in Rust?",
     ];
-    
+
     println!("📝 Test queries: {} simple Rust questions", test_queries.len());
     println!("⚠️  Note: Using simple queries for faster benchmark completion");
-    
+
     // Run command line benchmark
     let cmd_result = benchmark_command_line(&test_queries);
-    
+
     // Run SDK benchmark
     let sdk_result = benchmark_sdk(&test_queries).await?;
-    
+
     // Print comparison
     print_comparison(&cmd_result, &sdk_result);
-    
+
     println!("\n✅ Benchmark completed!");
     Ok(())
 }

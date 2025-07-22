@@ -3,14 +3,14 @@
 //! This example demonstrates how to use the interactive client
 //! for operations that require file system access.
 
-use claude_code_sdk::{ClaudeSDKClient, ClaudeCodeOptions, Message, PermissionMode, Result};
+use cc_sdk::{ClaudeSDKClient, ClaudeCodeOptions, Message, PermissionMode, Result};
 use futures::StreamExt;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize logging
     tracing_subscriber::fmt()
-        .with_env_filter("claude_code_sdk=info")
+        .with_env_filter("cc_sdk=info")
         .init();
 
     println!("Claude Code SDK - File Operations Example\n");
@@ -27,19 +27,19 @@ async fn main() -> Result<()> {
 
     // Create client
     let mut client = ClaudeSDKClient::new(options);
-    
+
     // Connect to Claude CLI with initial prompt
     println!("Connecting to Claude CLI...");
     client.connect(Some("Hello! I'm ready to help with file operations.".to_string())).await?;
     println!("Connected!");
-    
+
     // Process initial response
     let mut messages = client.receive_messages().await;
     while let Some(msg) = messages.next().await {
         match msg? {
             Message::Assistant { message } => {
                 for block in &message.content {
-                    if let claude_code_sdk::ContentBlock::Text(text) = block {
+                    if let cc_sdk::ContentBlock::Text(text) = block {
                         println!("Claude: {}", text.text);
                     }
                 }
@@ -48,13 +48,13 @@ async fn main() -> Result<()> {
             _ => {}
         }
     }
-    
+
     println!("\n");
 
     // Example 1: Create a file
     println!("Example 1: Creating a new file");
     println!("------------------------------");
-    
+
     client.send_request(
         "Create a file called hello_world.rs with a Rust hello world program".to_string(),
         None
@@ -67,10 +67,10 @@ async fn main() -> Result<()> {
             Message::Assistant { message } => {
                 for block in &message.content {
                     match block {
-                        claude_code_sdk::ContentBlock::Text(text) => {
+                        cc_sdk::ContentBlock::Text(text) => {
                             println!("Claude: {}", text.text);
                         }
-                        claude_code_sdk::ContentBlock::ToolUse(tool_use) => {
+                        cc_sdk::ContentBlock::ToolUse(tool_use) => {
                             println!("Claude is using tool: {} ({})", tool_use.name, tool_use.id);
                         }
                         _ => {}
@@ -90,7 +90,7 @@ async fn main() -> Result<()> {
     // Example 2: Read and modify a file
     println!("Example 2: Reading and modifying a file");
     println!("---------------------------------------");
-    
+
     client.send_request(
         "Read the hello_world.rs file and add a comment explaining what it does".to_string(),
         None
@@ -102,7 +102,7 @@ async fn main() -> Result<()> {
         match msg? {
             Message::Assistant { message } => {
                 for block in &message.content {
-                    if let claude_code_sdk::ContentBlock::Text(text) = block {
+                    if let cc_sdk::ContentBlock::Text(text) = block {
                         println!("Claude: {}", text.text);
                     }
                 }

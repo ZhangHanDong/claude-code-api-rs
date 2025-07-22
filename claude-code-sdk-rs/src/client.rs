@@ -14,7 +14,6 @@ use std::sync::Arc;
 use tokio::sync::{mpsc, Mutex, RwLock};
 use tokio_stream::wrappers::ReceiverStream;
 use tracing::{debug, error, info};
-use uuid::Uuid;
 
 /// Client state
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -41,7 +40,7 @@ pub enum ClientState {
 /// # Example
 ///
 /// ```rust,no_run
-/// use claude_code_sdk::{ClaudeSDKClient, ClaudeCodeOptions, Message, Result};
+/// use cc_sdk::{ClaudeSDKClient, ClaudeCodeOptions, Message, Result};
 /// use futures::StreamExt;
 ///
 /// #[tokio::main]
@@ -50,12 +49,12 @@ pub enum ClientState {
 ///         .system_prompt("You are a helpful assistant")
 ///         .model("claude-3-opus-20240229")
 ///         .build();
-///         
+///
 ///     let mut client = ClaudeSDKClient::new(options);
-///     
+///
 ///     // Connect with initial prompt
 ///     client.connect(Some("Hello!".to_string())).await?;
-///     
+///
 ///     // Receive initial response
 ///     let mut messages = client.receive_messages().await;
 ///     while let Some(msg) = messages.next().await {
@@ -64,24 +63,25 @@ pub enum ClientState {
 ///             msg => println!("{:?}", msg),
 ///         }
 ///     }
-///     
+///
 ///     // Send follow-up
 ///     client.send_request("What's 2 + 2?".to_string(), None).await?;
-///     
+///
 ///     // Receive response
 ///     let mut messages = client.receive_messages().await;
 ///     while let Some(msg) = messages.next().await {
 ///         println!("{:?}", msg?);
 ///     }
-///     
+///
 ///     // Disconnect
 ///     client.disconnect().await?;
-///     
+///
 ///     Ok(())
 /// }
 /// ```
 pub struct ClaudeSDKClient {
     /// Configuration options
+    #[allow(dead_code)]
     options: ClaudeCodeOptions,
     /// Transport layer
     transport: Arc<Mutex<SubprocessTransport>>,
@@ -98,6 +98,7 @@ pub struct ClaudeSDKClient {
 }
 
 /// Session data
+#[allow(dead_code)]
 struct SessionData {
     /// Session ID
     id: String,
@@ -202,7 +203,7 @@ impl ClaudeSDKClient {
 
         // Create and send message
         let message = InputMessage::user(prompt, session_id.clone());
-        
+
         {
             let mut transport = self.transport.lock().await;
             transport.send_message(message).await?;
@@ -211,12 +212,12 @@ impl ClaudeSDKClient {
         debug!("Sent request to Claude");
         Ok(())
     }
-    
+
     /// Send a request to Claude (alias for send_user_message with optional session_id)
     pub async fn send_request(
         &mut self,
         prompt: String,
-        session_id: Option<String>,
+        _session_id: Option<String>,
     ) -> Result<()> {
         // For now, ignore session_id and use send_user_message
         self.send_user_message(prompt).await
@@ -397,7 +398,7 @@ impl ClaudeSDKClient {
                     }
                     Err(e) => {
                         error!("Error receiving message: {}", e);
-                        
+
                         // Send error to receiver if available
                         let mut tx_opt = message_tx.lock().await;
                         if let Some(tx) = tx_opt.as_mut() {
@@ -422,7 +423,7 @@ impl Drop for ClaudeSDKClient {
         // Try to disconnect gracefully
         let transport = self.transport.clone();
         let state = self.state.clone();
-        
+
         tokio::spawn(async move {
             let state = state.read().await;
             if *state == ClientState::Connected {

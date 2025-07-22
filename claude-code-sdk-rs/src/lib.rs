@@ -14,7 +14,7 @@
 //! ## Quick Start
 //!
 //! ```rust,no_run
-//! use claude_code_sdk::{query, Result};
+//! use cc_sdk::{query, Result};
 //! use futures::StreamExt;
 //!
 //! #[tokio::main]

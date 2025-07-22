@@ -3,7 +3,7 @@
 //! This example shows how to use the SDK to generate Rust code solutions
 //! with tests and documentation.
 
-use claude_code_sdk::{ClaudeCodeOptions, InteractiveClient, PermissionMode, Result};
+use cc_sdk::{ClaudeCodeOptions, InteractiveClient, PermissionMode, Result};
 use std::time::Instant;
 
 async fn generate_rust_solution(question: &str, project_name: &str) -> Result<()> {
@@ -79,11 +79,11 @@ async fn generate_rust_solution(question: &str, project_name: &str) -> Result<()
     Ok(())
 }
 
-fn print_claude_response(messages: &[claude_code_sdk::Message]) {
+fn print_claude_response(messages: &[cc_sdk::Message]) {
     for msg in messages {
-        if let claude_code_sdk::Message::Assistant { message } = msg {
+        if let cc_sdk::Message::Assistant { message } = msg {
             for content in &message.content {
-                if let claude_code_sdk::ContentBlock::Text(text) = content {
+                if let cc_sdk::ContentBlock::Text(text) = content {
                     // Only print first 500 chars to keep output readable
                     let preview = if text.text.len() > 500 {
                         format!("{}...", &text.text[..500])
@@ -111,7 +111,7 @@ async fn main() -> Result<()> {
     // Process each example
     for (i, (question, project_name)) in examples.iter().enumerate() {
         println!("\n📌 Example {}: {}\n", i + 1, question);
-        
+
         match generate_rust_solution(question, project_name).await {
             Ok(_) => println!("✅ Successfully generated: {}", project_name),
             Err(e) => eprintln!("❌ Failed to generate {}: {:?}", project_name, e),

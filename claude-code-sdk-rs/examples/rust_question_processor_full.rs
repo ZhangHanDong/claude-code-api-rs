@@ -6,7 +6,7 @@
 //! - Annotations directory structure
 //! - Start from specific question number
 
-use claude_code_sdk::{ClaudeCodeOptions, InteractiveClient, PermissionMode, Result, ContentBlock};
+use cc_sdk::{ClaudeCodeOptions, InteractiveClient, PermissionMode, Result, ContentBlock};
 use chrono::{DateTime, Utc};
 use regex::Regex;
 use std::fs;
@@ -23,7 +23,7 @@ struct QuestionSetProcessor {
 impl QuestionSetProcessor {
     async fn new(annotations_dir: PathBuf) -> Result<Self> {
         fs::create_dir_all(&annotations_dir)
-            .map_err(|e| claude_code_sdk::SdkError::InvalidState {
+            .map_err(|e| cc_sdk::SdkError::InvalidState {
                 message: format!("Failed to create annotations directory: {}", e),
             })?;
 
@@ -73,13 +73,13 @@ impl QuestionSetProcessor {
         let basename = question_set_file
             .file_stem()
             .and_then(|s| s.to_str())
-            .ok_or_else(|| claude_code_sdk::SdkError::InvalidState {
+            .ok_or_else(|| cc_sdk::SdkError::InvalidState {
                 message: "Invalid filename".to_string(),
             })?;
 
         self.qs_number = basename
             .strip_prefix("qs")
-            .ok_or_else(|| claude_code_sdk::SdkError::InvalidState {
+            .ok_or_else(|| cc_sdk::SdkError::InvalidState {
                 message: "Filename should start with 'qs'".to_string(),
             })?
             .to_string();
@@ -92,7 +92,7 @@ impl QuestionSetProcessor {
         println!("================================================");
 
         let content = fs::read_to_string(question_set_file)
-            .map_err(|e| claude_code_sdk::SdkError::InvalidState {
+            .map_err(|e| cc_sdk::SdkError::InvalidState {
                 message: format!("Failed to read question set file: {}", e),
             })?;
 
@@ -120,7 +120,7 @@ impl QuestionSetProcessor {
                 }
 
                 let question_text = &captures[2];
-                
+
                 // Generate project name: q{qs_number}{question_num:05}
                 let formatted_question_num = format!("{:05}", question_num);
                 let target_dir = format!("q{}{}", self.qs_number, formatted_question_num);
@@ -130,7 +130,7 @@ impl QuestionSetProcessor {
                 println!("----------------------------------------");
 
                 let question_start = Instant::now();
-                
+
                 match self.process_single_question(question_text, &target_dir).await {
                     Ok(_) => {
                         let duration = question_start.elapsed();
@@ -149,7 +149,7 @@ impl QuestionSetProcessor {
         }
 
         let total_duration = set_start_time.elapsed();
-        
+
         // Print summary
         println!("\n================================================");
         println!("SUMMARY for {}:", question_set_file.display());
@@ -253,14 +253,14 @@ impl QuestionSetProcessor {
     }
 }
 
-fn print_response_summary(messages: &[claude_code_sdk::Message]) {
+fn print_response_summary(messages: &[cc_sdk::Message]) {
     for msg in messages {
-        if let claude_code_sdk::Message::Assistant { message } = msg {
+        if let cc_sdk::Message::Assistant { message } = msg {
             for content in &message.content {
                 if let ContentBlock::Text(text) = content {
                     // Print first 200 chars or look for completion indicators
-                    if text.text.contains("created") || 
-                       text.text.contains("completed") || 
+                    if text.text.contains("created") ||
+                       text.text.contains("completed") ||
                        text.text.contains("iterated") {
                         println!("  → {}", text.text.lines().take(3).collect::<Vec<_>>().join("\n    "));
                     }
@@ -272,9 +272,9 @@ fn print_response_summary(messages: &[claude_code_sdk::Message]) {
 
 async fn process_all_question_sets(annotations_dir: PathBuf) -> Result<()> {
     let qs_dir = Path::new("qs");
-    
+
     if !qs_dir.exists() {
-        return Err(claude_code_sdk::SdkError::InvalidState {
+        return Err(cc_sdk::SdkError::InvalidState {
             message: "Question sets directory 'qs/' not found!".to_string(),
         });
     }
@@ -284,9 +284,9 @@ async fn process_all_question_sets(annotations_dir: PathBuf) -> Result<()> {
 
     let mut processor = QuestionSetProcessor::new(annotations_dir).await?;
     let batch_start = Instant::now();
-    
+
     let mut entries: Vec<_> = fs::read_dir(qs_dir)
-        .map_err(|e| claude_code_sdk::SdkError::InvalidState {
+        .map_err(|e| cc_sdk::SdkError::InvalidState {
             message: format!("Failed to read qs directory: {}", e),
         })?
         .filter_map(|e| e.ok())
@@ -298,13 +298,13 @@ async fn process_all_question_sets(annotations_dir: PathBuf) -> Result<()> {
 
     for entry in entries {
         let path = entry.path();
-        
+
         if path.extension().and_then(|s| s.to_str()) != Some("txt") {
             continue;
         }
 
         stats.0 += 1;
-        
+
         println!("\nProcessing file: {}", path.file_name().unwrap().to_string_lossy());
 
         match processor.process_question_set(&path, None).await {
@@ -320,7 +320,7 @@ async fn process_all_question_sets(annotations_dir: PathBuf) -> Result<()> {
     }
 
     let total_duration = batch_start.elapsed();
-    
+
     println!("\n================================================");
     println!("BATCH PROCESSING SUMMARY:");
     println!("Total files: {}", stats.0);
@@ -336,12 +336,12 @@ async fn main() -> Result<()> {
     // Parse command line arguments
     let args: Vec<String> = std::env::args().collect();
     let batch_mode = args.contains(&"--batch".to_string());
-    
+
     // Set up annotations directory
     let annotations_dir = PathBuf::from("annotations");
-    
+
     println!("Claude Code SDK - Rust Question Processor\n");
-    
+
     if batch_mode {
         // Batch mode: Process all question sets
         println!("🚀 Running in BATCH mode");
@@ -349,12 +349,12 @@ async fn main() -> Result<()> {
     } else {
         // Single mode: Process one question set as demo
         println!("📝 Running in SINGLE mode (use --batch for all question sets)");
-        
+
         // Create a sample question set file if it doesn't exist
         let sample_qs = PathBuf::from("qs/qs00001.txt");
         if !sample_qs.exists() {
             fs::create_dir_all("qs").unwrap();
-            fs::write(&sample_qs, 
+            fs::write(&sample_qs,
                 "1. Create a binary search tree implementation\n\
                  2. Implement a thread-safe counter using Arc and Mutex\n\
                  3. Write a parser for simple arithmetic expressions\n"
@@ -364,20 +364,20 @@ async fn main() -> Result<()> {
 
         // Process the question set
         let mut processor = QuestionSetProcessor::new(annotations_dir.clone()).await?;
-        
+
         // Example: Process specific question set, optionally starting from a specific question
         // processor.process_question_set(&PathBuf::from("qs/qs00035.txt"), Some(44)).await?;
-        
+
         // For demo: just process the sample
         processor.process_question_set(&sample_qs, None).await?;
-        
+
         // Disconnect
         drop(processor);
     }
 
     println!("\n✅ Processing complete!");
     println!("Check the annotations/ directory for generated projects");
-    
+
     // Show example project names
     if annotations_dir.exists() {
         println!("\nGenerated projects:");
@@ -387,7 +387,7 @@ async fn main() -> Result<()> {
             .filter(|e| e.path().is_dir())
             .collect();
         entries.sort_by_key(|e| e.file_name());
-        
+
         for entry in entries.iter().take(5) {
             println!("  - {}", entry.file_name().to_string_lossy());
         }

@@ -15,7 +15,6 @@ use std::process::Stdio;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{Child, Command};
 use tokio::sync::mpsc;
-use tokio_stream::wrappers::{ReceiverStream, BroadcastStream};
 use tracing::{debug, error, info, warn};
 
 /// Default buffer size for channels
@@ -40,6 +39,7 @@ pub struct SubprocessTransport {
     /// Request counter for control requests
     request_counter: u64,
     /// Whether to close stdin after initial prompt
+    #[allow(dead_code)]
     close_stdin_after_prompt: bool,
 }
 
@@ -76,12 +76,14 @@ impl SubprocessTransport {
     }
 
     /// Set whether to close stdin after sending the initial prompt
+    #[allow(dead_code)]
     pub fn set_close_stdin_after_prompt(&mut self, close: bool) {
         self.close_stdin_after_prompt = close;
     }
     
     /// Create transport for simple print mode (one-shot query)
-    pub fn for_print_mode(options: ClaudeCodeOptions, prompt: String) -> Result<Self> {
+    #[allow(dead_code)]
+    pub fn for_print_mode(options: ClaudeCodeOptions, _prompt: String) -> Result<Self> {
         let cli_path = find_claude_cli()?;
         Ok(Self {
             options,

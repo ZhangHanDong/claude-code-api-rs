@@ -2,14 +2,14 @@
 //!
 //! This example demonstrates different permission modes for file operations
 
-use claude_code_sdk::{query, ClaudeCodeOptions, Message, PermissionMode, Result};
+use cc_sdk::{query, ClaudeCodeOptions, Message, PermissionMode, Result};
 use futures::StreamExt;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize logging
     tracing_subscriber::fmt()
-        .with_env_filter("claude_code_sdk=info")
+        .with_env_filter("cc_sdk=info")
         .init();
 
     println!("Claude Code SDK - Permission Modes Example\n");
@@ -19,7 +19,7 @@ async fn main() -> Result<()> {
     println!("----------------------------------");
     println!("This mode will prompt for permission before writing files.");
     println!("Since we're using --print mode, the prompt won't be shown.\n");
-    
+
     let options = ClaudeCodeOptions::builder()
         .system_prompt("You are a helpful coding assistant.")
         .permission_mode(PermissionMode::Default)
@@ -33,7 +33,7 @@ async fn main() -> Result<()> {
     println!("Example 2: AcceptEdits permission mode");
     println!("--------------------------------------");
     println!("This mode automatically accepts edit prompts but still checks permissions.\n");
-    
+
     let options = ClaudeCodeOptions::builder()
         .system_prompt("You are a helpful coding assistant.")
         .permission_mode(PermissionMode::AcceptEdits)
@@ -49,7 +49,7 @@ async fn main() -> Result<()> {
     println!("---------------------------------");
     println!("This mode allows all tool operations without prompting.");
     println!("USE WITH CAUTION - only in trusted environments!\n");
-    
+
     let options = ClaudeCodeOptions::builder()
         .system_prompt("You are a helpful coding assistant.")
         .permission_mode(PermissionMode::BypassPermissions)
@@ -63,7 +63,7 @@ async fn main() -> Result<()> {
     println!("Example 4: Restricted tools with AcceptEdits");
     println!("--------------------------------------------");
     println!("Only allows specific tools, auto-accepts those operations.\n");
-    
+
     let options = ClaudeCodeOptions::builder()
         .system_prompt("You are a helpful coding assistant.")
         .permission_mode(PermissionMode::AcceptEdits)
@@ -79,18 +79,18 @@ async fn main() -> Result<()> {
 async fn run_query(prompt: &str, options: ClaudeCodeOptions) -> Result<()> {
     println!("Query: {}", prompt);
     println!("Permission mode: {:?}", options.permission_mode);
-    
+
     let mut messages = query(prompt, Some(options)).await?;
-    
+
     while let Some(msg) = messages.next().await {
         match msg? {
             Message::Assistant { message } => {
                 for block in &message.content {
                     match block {
-                        claude_code_sdk::ContentBlock::Text(text) => {
+                        cc_sdk::ContentBlock::Text(text) => {
                             println!("Claude: {}", text.text);
                         }
-                        claude_code_sdk::ContentBlock::ToolUse(tool_use) => {
+                        cc_sdk::ContentBlock::ToolUse(tool_use) => {
                             println!("Claude wants to use tool: {} ({})", tool_use.name, tool_use.id);
                         }
                         _ => {}
@@ -108,6 +108,6 @@ async fn run_query(prompt: &str, options: ClaudeCodeOptions) -> Result<()> {
             _ => {}
         }
     }
-    
+
     Ok(())
 }

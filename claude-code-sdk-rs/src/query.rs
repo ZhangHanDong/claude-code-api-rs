@@ -74,25 +74,25 @@ impl From<&str> for QueryInput {
 ///
 /// ## Simple query:
 /// ```rust,no_run
-/// use claude_code_sdk::{query, Result};
+/// use cc_sdk::{query, Result};
 /// use futures::StreamExt;
 ///
 /// #[tokio::main]
 /// async fn main() -> Result<()> {
 ///     // One-off question
 ///     let mut messages = query("What is the capital of France?", None).await?;
-///     
+///
 ///     while let Some(msg) = messages.next().await {
 ///         println!("{:?}", msg?);
 ///     }
-///     
+///
 ///     Ok(())
 /// }
 /// ```
 ///
 /// ## With options:
 /// ```rust,no_run
-/// use claude_code_sdk::{query, ClaudeCodeOptions, Result};
+/// use cc_sdk::{query, ClaudeCodeOptions, Result};
 /// use futures::StreamExt;
 ///
 /// #[tokio::main]
@@ -102,13 +102,13 @@ impl From<&str> for QueryInput {
 ///         .system_prompt("You are an expert Python developer")
 ///         .model("claude-3-opus-20240229")
 ///         .build();
-///         
+///
 ///     let mut messages = query("Create a Python web server", Some(options)).await?;
-///     
+///
 ///     while let Some(msg) = messages.next().await {
 ///         println!("{:?}", msg?);
 ///     }
-///     
+///
 ///     Ok(())
 /// }
 /// ```
@@ -144,43 +144,43 @@ async fn query_print_mode(
 ) -> Result<impl Stream<Item = Result<Message>>> {
     use tokio::process::Command;
     use tokio::io::{AsyncBufReadExt, BufReader};
-    
+
     let cli_path = crate::transport::subprocess::find_claude_cli()?;
     let mut cmd = Command::new(&cli_path);
-    
+
     // Build command with --print mode
     cmd.arg("--output-format").arg("stream-json");
     cmd.arg("--verbose");
-    
+
     // Add all options to match Python SDK exactly
     if let Some(ref system_prompt) = options.system_prompt {
         cmd.arg("--system-prompt").arg(system_prompt);
     }
-    
+
     if let Some(ref append_prompt) = options.append_system_prompt {
         cmd.arg("--append-system-prompt").arg(append_prompt);
     }
-    
+
     if !options.allowed_tools.is_empty() {
         cmd.arg("--allowedTools").arg(options.allowed_tools.join(","));
     }
-    
+
     if let Some(max_turns) = options.max_turns {
         cmd.arg("--max-turns").arg(max_turns.to_string());
     }
-    
+
     if !options.disallowed_tools.is_empty() {
         cmd.arg("--disallowedTools").arg(options.disallowed_tools.join(","));
     }
-    
+
     if let Some(ref model) = options.model {
         cmd.arg("--model").arg(model);
     }
-    
+
     if let Some(ref tool_name) = options.permission_prompt_tool_name {
         cmd.arg("--permission-prompt-tool").arg(tool_name);
     }
-    
+
     match options.permission_mode {
         PermissionMode::Default => {
             cmd.arg("--permission-mode").arg("default");
@@ -192,34 +192,34 @@ async fn query_print_mode(
             cmd.arg("--permission-mode").arg("bypassPermissions");
         }
     }
-    
+
     if options.continue_conversation {
         cmd.arg("--continue");
     }
-    
+
     if let Some(ref resume_id) = options.resume {
         cmd.arg("--resume").arg(resume_id);
     }
-    
+
     if !options.mcp_servers.is_empty() {
         let mcp_config = serde_json::json!({
             "mcpServers": options.mcp_servers
         });
         cmd.arg("--mcp-config").arg(mcp_config.to_string());
     }
-    
+
     // Add the prompt with --print
     cmd.arg("--print").arg(&prompt);
-    
+
     // Set up process pipes
     cmd.stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped());
-    
+
     info!("Starting Claude CLI with --print mode");
     debug!("Command: {:?}", cmd);
-    
+
     let mut child = cmd.spawn().map_err(crate::SdkError::ProcessError)?;
-    
+
     let stdout = child.stdout.take()
         .ok_or_else(|| crate::SdkError::ConnectionError("Failed to get stdout".into()))?;
     let stderr = child.stderr.take()
@@ -227,7 +227,7 @@ async fn query_print_mode(
 
     // Create a channel to collect messages
     let (tx, rx) = mpsc::channel(100);
-    
+
     // Spawn stderr handler
     tokio::spawn(async move {
         let reader = BufReader::new(stderr);
@@ -238,19 +238,19 @@ async fn query_print_mode(
             }
         }
     });
-    
+
     // Spawn stdout handler
     tokio::spawn(async move {
         let reader = BufReader::new(stdout);
         let mut lines = reader.lines();
-        
+
         while let Ok(Some(line)) = lines.next_line().await {
             if line.trim().is_empty() {
                 continue;
             }
-            
+
             debug!("Claude output: {}", line);
-            
+
             // Parse JSON line
             match serde_json::from_str::<serde_json::Value>(&line) {
                 Ok(json) => {
@@ -275,7 +275,7 @@ async fn query_print_mode(
                 }
             }
         }
-        
+
         // Wait for process to complete
         match child.wait().await {
             Ok(status) => {

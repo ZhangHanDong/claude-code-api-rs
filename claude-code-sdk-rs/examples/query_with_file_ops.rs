@@ -3,14 +3,14 @@
 //! This example demonstrates how to use query() with BypassPermissions
 //! to allow file operations in --print mode.
 
-use claude_code_sdk::{query, ClaudeCodeOptions, Message, PermissionMode, Result};
+use cc_sdk::{query, ClaudeCodeOptions, Message, PermissionMode, Result};
 use futures::StreamExt;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize logging
     tracing_subscriber::fmt()
-        .with_env_filter("claude_code_sdk=info")
+        .with_env_filter("cc_sdk=info")
         .init();
 
     println!("Claude Code SDK - Query with File Operations Example\n");
@@ -20,7 +20,7 @@ async fn main() -> Result<()> {
     println!("---------------------------------------------------");
     println!("WARNING: BypassPermissions allows all operations without prompts!");
     println!("Use this mode only in trusted environments.\n");
-    
+
     let options = ClaudeCodeOptions::builder()
         .system_prompt("You are a helpful coding assistant.")
         .model("claude-3-5-sonnet-20241022")
@@ -39,10 +39,10 @@ async fn main() -> Result<()> {
             Message::Assistant { message } => {
                 for block in &message.content {
                     match block {
-                        claude_code_sdk::ContentBlock::Text(text) => {
+                        cc_sdk::ContentBlock::Text(text) => {
                             println!("Claude: {}", text.text);
                         }
-                        claude_code_sdk::ContentBlock::ToolUse(tool_use) => {
+                        cc_sdk::ContentBlock::ToolUse(tool_use) => {
                             println!("Claude is using tool: {} ({})", tool_use.name, tool_use.id);
                             if let Some(file_path) = tool_use.input.get("file_path") {
                                 println!("  File path: {}", file_path);

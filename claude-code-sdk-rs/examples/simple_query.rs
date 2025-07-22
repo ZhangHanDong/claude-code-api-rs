@@ -3,14 +3,14 @@
 //! This example demonstrates how to use the simple `query` function
 //! for one-shot interactions with Claude.
 
-use claude_code_sdk::{query, ClaudeCodeOptions, Message, Result};
+use cc_sdk::{query, ClaudeCodeOptions, Message, Result};
 use futures::StreamExt;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize logging
     tracing_subscriber::fmt()
-        .with_env_filter("claude_code_sdk=debug,simple_query=info")
+        .with_env_filter("cc_sdk=debug,simple_query=info")
         .init();
 
     println!("Claude Code SDK - Simple Query Example\n");
@@ -18,9 +18,9 @@ async fn main() -> Result<()> {
     // Example 1: Basic query
     println!("Example 1: Basic query");
     println!("----------------------");
-    
+
     let mut messages = query("What is 2 + 2?", None).await?;
-    
+
     while let Some(msg) = messages.next().await {
         match msg? {
             Message::Assistant { message } => {
@@ -41,7 +41,7 @@ async fn main() -> Result<()> {
     // Example 2: Query with options
     println!("Example 2: Query with custom options");
     println!("------------------------------------");
-    
+
     let options = ClaudeCodeOptions::builder()
         .system_prompt("You are a helpful coding assistant. Keep responses concise.")
         .model("claude-3-5-sonnet-20241022")

@@ -2,7 +2,7 @@
 //!
 //! Tests the absolute minimum functionality.
 
-use claude_code_sdk::{ClaudeSDKClient, ClaudeCodeOptions, Message, Result};
+use cc_sdk::{ClaudeSDKClient, ClaudeCodeOptions, Message, Result};
 use futures::StreamExt;
 
 #[tokio::main]
@@ -38,7 +38,7 @@ async fn main() -> Result<()> {
                 match msg {
                     Ok(Message::Assistant { message }) => {
                         for block in &message.content {
-                            if let claude_code_sdk::ContentBlock::Text(text) = block {
+                            if let cc_sdk::ContentBlock::Text(text) = block {
                                 println!("Assistant: {}", text.text);
                             }
                         }

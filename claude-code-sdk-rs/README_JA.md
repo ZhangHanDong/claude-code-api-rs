@@ -40,17 +40,17 @@ npm install -g @anthropic-ai/claude-code
 ### シンプルクエリ（一度きり）
 
 ```rust
-use claude_code_sdk::{query, Result};
+use cc_sdk::{query, Result};
 use futures::StreamExt;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let mut messages = query("2 + 2はいくつですか？", None).await?;
-    
+
     while let Some(msg) = messages.next().await {
         println!("{:?}", msg?);
     }
-    
+
     Ok(())
 }
 ```
@@ -58,33 +58,33 @@ async fn main() -> Result<()> {
 ### インタラクティブクライアント
 
 ```rust
-use claude_code_sdk::{InteractiveClient, ClaudeCodeOptions, Result};
+use cc_sdk::{InteractiveClient, ClaudeCodeOptions, Result};
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let mut client = InteractiveClient::new(ClaudeCodeOptions::default())?;
     client.connect().await?;
-    
+
     // メッセージを送信してレスポンスを受信
     let messages = client.send_and_receive(
         "Pythonのウェブサーバーを書いてください".to_string()
     ).await?;
-    
+
     // レスポンスを処理
     for msg in &messages {
         match msg {
-            claude_code_sdk::Message::Assistant { message } => {
+            cc_sdk::Message::Assistant { message } => {
                 println!("Claude: {:?}", message);
             }
             _ => {}
         }
     }
-    
+
     // フォローアップを送信
     let messages = client.send_and_receive(
         "async/awaitを使うようにしてください".to_string()
     ).await?;
-    
+
     client.disconnect().await?;
     Ok(())
 }
@@ -93,26 +93,26 @@ async fn main() -> Result<()> {
 ### 高度な使用方法
 
 ```rust
-use claude_code_sdk::{InteractiveClient, ClaudeCodeOptions, Result};
+use cc_sdk::{InteractiveClient, ClaudeCodeOptions, Result};
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let mut client = InteractiveClient::new(ClaudeCodeOptions::default())?;
     client.connect().await?;
-    
+
     // レスポンスを待たずにメッセージを送信
     client.send_message("円周率を100桁まで計算してください".to_string()).await?;
-    
+
     // 他の作業を実行...
-    
+
     // 準備ができたらレスポンスを受信（Resultメッセージで停止）
     let messages = client.receive_response().await?;
-    
+
     // 長時間実行される操作をキャンセル
     client.send_message("10000語のエッセイを書いてください".to_string()).await?;
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
     client.interrupt().await?;
-    
+
     client.disconnect().await?;
     Ok(())
 }
@@ -121,7 +121,7 @@ async fn main() -> Result<()> {
 ## 設定オプション
 
 ```rust
-use claude_code_sdk::{ClaudeCodeOptions, PermissionMode};
+use cc_sdk::{ClaudeCodeOptions, PermissionMode};
 
 let options = ClaudeCodeOptions::builder()
     .system_prompt("あなたは役立つコーディングアシスタントです")

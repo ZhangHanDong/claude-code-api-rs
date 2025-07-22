@@ -3,7 +3,7 @@
 //! This example demonstrates how to use the Claude Code SDK to process Rust programming
 //! questions and generate annotated code solutions with comprehensive unit tests.
 
-use claude_code_sdk::{ClaudeCodeOptions, InteractiveClient, PermissionMode, Result, ContentBlock};
+use cc_sdk::{ClaudeCodeOptions, InteractiveClient, PermissionMode, Result, ContentBlock};
 use chrono::{DateTime, Utc};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -18,7 +18,7 @@ async fn process_single_question(
     let script_start = Instant::now();
     let start_time: DateTime<Utc> = Utc::now();
 
-    println!("Starting Rust development procedure at {}", 
+    println!("Starting Rust development procedure at {}",
         start_time.format("%Y-%m-%d %H:%M:%S UTC"));
     println!("User question: {}", question);
     println!("================================================");
@@ -26,7 +26,7 @@ async fn process_single_question(
     let current_dir = std::env::current_dir()
         .expect("Failed to get current directory");
     let annotations_dir = current_dir.join("annotations");
-    
+
     // Ensure annotations directory exists
     fs::create_dir_all(&annotations_dir)
         .expect("Failed to create annotations directory");
@@ -75,7 +75,7 @@ async fn process_single_question(
     println!("Step 2: Verifying project with pipeline checks...");
     let step2_start = Instant::now();
 
-    let verification_prompt = 
+    let verification_prompt =
         "Please make sure to pass the pipeline of 'cargo check; cargo test; cargo clippy;' \
         to verify the correctness of this minimal rust project. \
         At last tell me how many times you iterated. \
@@ -94,7 +94,7 @@ async fn process_single_question(
     println!("Step 3: Generating documentation...");
     let step3_start = Instant::now();
 
-    let doc_prompt = 
+    let doc_prompt =
         "In the target directory, please execute `cargo clean` and then create a detailed \
         README.md file to record: the metadata including the llm version, date, os version, \
         rustc version, rust toolchain, rust target, and other essential info; \
@@ -136,13 +136,13 @@ async fn process_question_set(
     start_from: Option<u32>,
 ) -> Result<()> {
     if !question_set_file.exists() {
-        return Err(claude_code_sdk::SdkError::InvalidState {
+        return Err(cc_sdk::SdkError::InvalidState {
             message: format!("Question set file '{}' not found!", question_set_file.display()),
         });
     }
 
     let content = fs::read_to_string(question_set_file)
-        .map_err(|e| claude_code_sdk::SdkError::InvalidState {
+        .map_err(|e| cc_sdk::SdkError::InvalidState {
             message: format!("Failed to read question set file: {}", e),
         })?;
 
@@ -150,13 +150,13 @@ async fn process_question_set(
     let basename = question_set_file
         .file_stem()
         .and_then(|s| s.to_str())
-        .ok_or_else(|| claude_code_sdk::SdkError::InvalidState {
+        .ok_or_else(|| cc_sdk::SdkError::InvalidState {
             message: "Invalid filename".to_string(),
         })?;
 
     let qs_number = basename
         .strip_prefix("qs")
-        .ok_or_else(|| claude_code_sdk::SdkError::InvalidState {
+        .ok_or_else(|| cc_sdk::SdkError::InvalidState {
             message: "Filename should start with 'qs'".to_string(),
         })?;
 
@@ -197,7 +197,7 @@ async fn process_question_set(
             println!("----------------------------------------");
 
             let question_start = Instant::now();
-            
+
             match process_single_question(question_text, &target_dir).await {
                 Ok(_) => {
                     let question_duration = question_start.elapsed();
@@ -227,17 +227,17 @@ async fn process_question_set(
 }
 
 /// Print response from Claude
-fn print_response(messages: &[claude_code_sdk::Message]) {
+fn print_response(messages: &[cc_sdk::Message]) {
     for msg in messages {
         match msg {
-            claude_code_sdk::Message::Assistant { message } => {
+            cc_sdk::Message::Assistant { message } => {
                 for content in &message.content {
                     if let ContentBlock::Text(text) = content {
                         println!("{}", text.text);
                     }
                 }
             }
-            claude_code_sdk::Message::System { subtype, .. } => {
+            cc_sdk::Message::System { subtype, .. } => {
                 if subtype != "thinking" {
                     println!("[System: {}]", subtype);
                 }
@@ -251,10 +251,10 @@ fn print_response(messages: &[claude_code_sdk::Message]) {
 async fn main() -> Result<()> {
     // Example 1: Process a single question
     println!("Example 1: Processing a single Rust question\n");
-    
+
     let question = "Create a function that calculates the nth Fibonacci number using memoization";
     let target_dir = "fibonacci_memo";
-    
+
     if let Err(e) = process_single_question(question, target_dir).await {
         eprintln!("Failed to process question: {:?}", e);
     }
@@ -263,7 +263,7 @@ async fn main() -> Result<()> {
 
     // Example 2: Process a question set (if file exists)
     println!("Example 2: Processing a question set\n");
-    
+
     let question_set_path = PathBuf::from("qs/qs00001.txt");
     if question_set_path.exists() {
         if let Err(e) = process_question_set(&question_set_path, None).await {

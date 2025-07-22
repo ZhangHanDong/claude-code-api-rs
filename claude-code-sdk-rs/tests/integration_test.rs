@@ -1,6 +1,6 @@
 //! Integration tests for the Claude Code SDK
 
-use claude_code_sdk::{ClaudeCodeOptions, PermissionMode};
+use cc_sdk::{ClaudeCodeOptions, PermissionMode};
 
 #[test]
 fn test_options_builder() {
@@ -24,7 +24,7 @@ fn test_options_builder() {
 
 #[test]
 fn test_message_types() {
-    use claude_code_sdk::{ContentBlock, Message, TextContent, UserMessage};
+    use cc_sdk::{ContentBlock, Message, TextContent, UserMessage};
 
     let user_msg = Message::User {
         message: UserMessage {
@@ -53,7 +53,7 @@ fn test_message_types() {
 
 #[test]
 fn test_error_types() {
-    use claude_code_sdk::SdkError;
+    use cc_sdk::SdkError;
 
     let err = SdkError::timeout(30);
     assert!(err.is_recoverable());

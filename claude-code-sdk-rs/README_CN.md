@@ -1,10 +1,10 @@
 # Claude Code SDK for Rust
 
-[![Crates.io](https://img.shields.io/crates/v/claude-code-sdk.svg)](https://crates.io/crates/claude-code-sdk)
-[![Documentation](https://docs.rs/claude-code-sdk/badge.svg)](https://docs.rs/claude-code-sdk)
-[![License](https://img.shields.io/crates/l/claude-code-sdk.svg)](LICENSE)
+[![Crates.io](https://img.shields.io/crates/v/cc-sdk.svg)](https://crates.io/crates/cc-sdk)
+[![Documentation](https://docs.rs/cc-sdk/badge.svg)](https://docs.rs/cc-sdk)
+[![License](https://img.shields.io/crates/l/cc-sdk.svg)](LICENSE)
 
-一个用于与 Claude Code CLI 交互的 Rust SDK，提供简单查询接口和完整的交互式客户端功能，几乎完全对标 Python SDK。
+一个用于与 Claude Code CLI 交互的 Rust SDK，提供简单查询接口和完整的交互式客户端功能，**与官方 Python SDK 功能完全一致**。
 
 ## 功能特性
 
@@ -16,13 +16,27 @@
 - 📦 **类型安全** - 使用 serde 的强类型支持
 - ⚡ **异步/等待** - 基于 Tokio 的异步操作
 
+## 与 Python SDK 功能对等
+
+此 Rust SDK 提供与官方 Python SDK (`claude_code_sdk`) **100% 的功能对等**，包括：
+
+- ✅ **所有客户端方法**：`query()`、`send_message()`、`receive_response()`、`interrupt()`
+- ✅ **交互式会话**：完整的有状态对话支持
+- ✅ **消息流**：实时异步消息处理
+- ✅ **所有配置选项**：系统提示、模型、权限、工具等
+- ✅ **所有消息类型**：用户、助手、系统、结果消息
+- ✅ **错误处理**：与 Python SDK 匹配的全面错误类型
+- ✅ **会话管理**：支持多会话和上下文隔离
+
+API 设计对 Python SDK 用户友好，同时充分利用 Rust 的类型安全和性能优势。
+
 ## 安装
 
 在你的 `Cargo.toml` 中添加：
 
 ```toml
 [dependencies]
-claude-code-sdk = "0.1.5"
+cc-sdk = "0.1.5"
 tokio = { version = "1.0", features = ["full"] }
 futures = "0.3"
 ```
@@ -40,17 +54,17 @@ npm install -g @anthropic-ai/claude-code
 ### 简单查询（一次性）
 
 ```rust
-use claude_code_sdk::{query, Result};
+use cc_sdk::{query, Result};
 use futures::StreamExt;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let mut messages = query("2 + 2 等于多少？", None).await?;
-    
+
     while let Some(msg) = messages.next().await {
         println!("{:?}", msg?);
     }
-    
+
     Ok(())
 }
 ```
@@ -58,33 +72,33 @@ async fn main() -> Result<()> {
 ### 交互式客户端
 
 ```rust
-use claude_code_sdk::{InteractiveClient, ClaudeCodeOptions, Result};
+use cc_sdk::{InteractiveClient, ClaudeCodeOptions, Result};
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let mut client = InteractiveClient::new(ClaudeCodeOptions::default())?;
     client.connect().await?;
-    
+
     // 发送消息并接收响应
     let messages = client.send_and_receive(
         "帮我写一个 Python 网络服务器".to_string()
     ).await?;
-    
+
     // 处理响应
     for msg in &messages {
         match msg {
-            claude_code_sdk::Message::Assistant { message } => {
+            cc_sdk::Message::Assistant { message } => {
                 println!("Claude: {:?}", message);
             }
             _ => {}
         }
     }
-    
+
     // 发送后续消息
     let messages = client.send_and_receive(
         "让它使用 async/await".to_string()
     ).await?;
-    
+
     client.disconnect().await?;
     Ok(())
 }
@@ -93,26 +107,26 @@ async fn main() -> Result<()> {
 ### 高级用法
 
 ```rust
-use claude_code_sdk::{InteractiveClient, ClaudeCodeOptions, Result};
+use cc_sdk::{InteractiveClient, ClaudeCodeOptions, Result};
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let mut client = InteractiveClient::new(ClaudeCodeOptions::default())?;
     client.connect().await?;
-    
+
     // 发送消息但不等待响应
     client.send_message("计算圆周率到100位".to_string()).await?;
-    
+
     // 做其他工作...
-    
+
     // 准备好时接收响应（在 Result 消息处停止）
     let messages = client.receive_response().await?;
-    
+
     // 取消长时间运行的操作
     client.send_message("写一篇10000字的文章".to_string()).await?;
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
     client.interrupt().await?;
-    
+
     client.disconnect().await?;
     Ok(())
 }
@@ -121,7 +135,7 @@ async fn main() -> Result<()> {
 ## 配置选项
 
 ```rust
-use claude_code_sdk::{ClaudeCodeOptions, PermissionMode};
+use cc_sdk::{ClaudeCodeOptions, PermissionMode};
 
 let options = ClaudeCodeOptions::builder()
     .system_prompt("你是一个有帮助的编程助手")

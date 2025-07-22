@@ -3,14 +3,14 @@
 //! This example demonstrates how to use the SimpleInteractiveClient for
 //! interactive, stateful conversations with Claude.
 
-use claude_code_sdk::{ClaudeCodeOptions, SimpleInteractiveClient, Message, PermissionMode, Result, ContentBlock};
+use cc_sdk::{ClaudeCodeOptions, SimpleInteractiveClient, Message, PermissionMode, Result, ContentBlock};
 use std::io::{self, Write};
 
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize logging
     tracing_subscriber::fmt()
-        .with_env_filter("claude_code_sdk=debug,interactive=info")
+        .with_env_filter("cc_sdk=debug,interactive=info")
         .init();
 
     println!("Claude Code SDK - Interactive Client Example");
@@ -29,7 +29,7 @@ async fn main() -> Result<()> {
     println!("Connecting to Claude...");
     client.connect().await?;
     println!("Connected!\n");
-    
+
     println!("Ready for conversation. Type your message:");
 
     // Interactive loop
@@ -39,23 +39,23 @@ async fn main() -> Result<()> {
     loop {
         print!("You: ");
         io::stdout().flush()?;
-        
+
         input.clear();
         stdin.read_line(&mut input)?;
-        
+
         let input = input.trim();
-        
+
         if input.is_empty() {
             continue;
         }
-        
+
         if input == "quit" {
             break;
         }
 
         // Send message and receive response
         let messages = client.send_and_receive(input.to_string()).await?;
-        
+
         // Process response
         for msg in &messages {
             match msg {

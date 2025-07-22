@@ -86,6 +86,7 @@ pub trait Transport: Send + Sync {
     async fn receive_control_response(&mut self) -> Result<Option<ControlResponse>>;
 
     /// Check if the transport is connected
+    #[allow(dead_code)]
     fn is_connected(&self) -> bool;
 
     /// Disconnect from the Claude CLI
@@ -104,6 +105,7 @@ pub enum TransportState {
     /// Disconnecting
     Disconnecting,
     /// Error state
+    #[allow(dead_code)]
     Error,
 }
 

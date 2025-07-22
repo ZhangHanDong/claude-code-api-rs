@@ -3,7 +3,7 @@
 //! This example demonstrates batch processing of multiple programming questions
 //! with retry logic and progress tracking.
 
-use claude_code_sdk::{ClaudeCodeOptions, InteractiveClient, PermissionMode, Result, ContentBlock};
+use cc_sdk::{ClaudeCodeOptions, InteractiveClient, PermissionMode, Result, ContentBlock};
 use std::fs;
 use std::path::Path;
 use std::time::{Duration, Instant};
@@ -20,7 +20,7 @@ struct ProcessingStats {
 /// Process a batch of questions from a file
 async fn process_question_batch(file_path: &Path) -> Result<ProcessingStats> {
     let content = fs::read_to_string(file_path)
-        .map_err(|e| claude_code_sdk::SdkError::InvalidState {
+        .map_err(|e| cc_sdk::SdkError::InvalidState {
             message: format!("Failed to read file: {}", e),
         })?;
 
@@ -47,7 +47,7 @@ async fn process_question_batch(file_path: &Path) -> Result<ProcessingStats> {
 
     for (idx, question) in questions.iter().enumerate() {
         println!("\n🔹 Processing question {}/{}: {}", idx + 1, stats.total, question);
-        
+
         let question_start = Instant::now();
         let result = process_single_question(&mut client, question, idx + 1).await;
         let question_duration = question_start.elapsed();
@@ -60,7 +60,7 @@ async fn process_question_batch(file_path: &Path) -> Result<ProcessingStats> {
             Err(e) => {
                 stats.failed += 1;
                 println!("❌ Failed: {:?} (took {:.2}s)", e, question_duration.as_secs_f64());
-                
+
                 // Implement retry logic for rate limits
                 if is_rate_limit_error(&e) {
                     println!("⏳ Rate limit detected, waiting 30 seconds...");
@@ -87,7 +87,7 @@ async fn process_single_question(
     index: usize,
 ) -> Result<()> {
     let project_name = format!("solution_{:03}", index);
-    
+
     // Generate solution
     let prompt = format!(
         "Create a minimal Rust project called '{}' that solves: {}. \
@@ -96,10 +96,10 @@ async fn process_single_question(
     );
 
     let messages = client.send_and_receive(prompt).await?;
-    
+
     // Check if Claude successfully created the project
     let success = messages.iter().any(|msg| {
-        if let claude_code_sdk::Message::Assistant { message } = msg {
+        if let cc_sdk::Message::Assistant { message } = msg {
             message.content.iter().any(|content| {
                 if let ContentBlock::Text(text) = content {
                     text.text.contains("created") || text.text.contains("successfully")
@@ -111,7 +111,7 @@ async fn process_single_question(
     });
 
     if !success {
-        return Err(claude_code_sdk::SdkError::InvalidState {
+        return Err(cc_sdk::SdkError::InvalidState {
             message: "Failed to create project".to_string(),
         });
     }
@@ -139,7 +139,7 @@ fn create_claude_options() -> ClaudeCodeOptions {
 }
 
 /// Check if error is rate limit related
-fn is_rate_limit_error(error: &claude_code_sdk::SdkError) -> bool {
+fn is_rate_limit_error(error: &cc_sdk::SdkError) -> bool {
     let error_str = format!("{:?}", error).to_lowercase();
     error_str.contains("rate") || error_str.contains("limit") || error_str.contains("quota")
 }
@@ -149,13 +149,13 @@ fn print_stats(stats: &ProcessingStats) {
     println!("\n📊 Batch Processing Summary");
     println!("=" .repeat(60));
     println!("Total questions: {}", stats.total);
-    println!("Successful: {} ({}%)", 
-        stats.successful, 
+    println!("Successful: {} ({}%)",
+        stats.successful,
         (stats.successful as f32 / stats.total as f32 * 100.0) as u32
     );
     println!("Failed: {}", stats.failed);
     println!("Total time: {:.2} seconds", stats.total_duration.as_secs_f64());
-    println!("Average time per question: {:.2} seconds", 
+    println!("Average time per question: {:.2} seconds",
         stats.total_duration.as_secs_f64() / stats.total as f64
     );
 }
@@ -173,7 +173,7 @@ Create a function to check if a string is a valid palindrome
 Write a program to find all prime numbers up to N using the Sieve of Eratosthenes
 Implement a simple rate limiter using token bucket algorithm
 Create a generic binary tree with in-order traversal"#;
-        
+
         fs::write(questions_file, sample_questions)
             .expect("Failed to create questions file");
         println!("✅ Created {}\n", questions_file);

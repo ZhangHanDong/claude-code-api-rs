@@ -2,7 +2,7 @@
 //!
 //! This example includes more debugging output to diagnose issues.
 
-use claude_code_sdk::{ClaudeCodeOptions, ClaudeSDKClient, Message, PermissionMode, Result};
+use cc_sdk::{ClaudeCodeOptions, ClaudeSDKClient, Message, PermissionMode, Result};
 use futures::StreamExt;
 use std::io::{self, Write};
 
@@ -10,7 +10,7 @@ use std::io::{self, Write};
 async fn main() -> Result<()> {
     // Initialize logging with trace level
     tracing_subscriber::fmt()
-        .with_env_filter("claude_code_sdk=trace")
+        .with_env_filter("cc_sdk=trace")
         .with_max_level(tracing::Level::TRACE)
         .init();
 
@@ -39,9 +39,9 @@ async fn main() -> Result<()> {
     let mut messages = client.receive_messages().await;
     let mut got_response = false;
     let mut message_count = 0;
-    
+
     println!("Starting to receive messages...");
-    
+
     // Set a timeout for the first response
     let timeout = tokio::time::timeout(
         std::time::Duration::from_secs(10),
@@ -49,18 +49,18 @@ async fn main() -> Result<()> {
             while let Some(msg) = messages.next().await {
                 message_count += 1;
                 println!("Received message #{}", message_count);
-                
+
                 match msg {
                     Ok(message) => {
                         println!("Message type: {:?}", std::mem::discriminant(&message));
-                        
+
                         match message {
                             Message::Assistant { message } => {
                                 got_response = true;
                                 print!("Claude: ");
                                 for block in &message.content {
                                     match block {
-                                        claude_code_sdk::ContentBlock::Text(text) => {
+                                        cc_sdk::ContentBlock::Text(text) => {
                                             print!("{}", text.text);
                                         }
                                         _ => {}
@@ -117,16 +117,16 @@ async fn main() -> Result<()> {
     loop {
         print!("You: ");
         io::stdout().flush()?;
-        
+
         input.clear();
         stdin.read_line(&mut input)?;
-        
+
         let input = input.trim();
-        
+
         if input.is_empty() {
             continue;
         }
-        
+
         if input == "quit" {
             break;
         }
@@ -139,9 +139,9 @@ async fn main() -> Result<()> {
         // Receive response
         let mut messages = client.receive_messages().await;
         let mut got_response = false;
-        
+
         println!("[Debug] Waiting for response...");
-        
+
         while let Some(msg) = messages.next().await {
             match msg? {
                 Message::Assistant { message } => {
@@ -149,10 +149,10 @@ async fn main() -> Result<()> {
                         print!("Claude: ");
                         got_response = true;
                     }
-                    
+
                     for block in &message.content {
                         match block {
-                            claude_code_sdk::ContentBlock::Text(text) => {
+                            cc_sdk::ContentBlock::Text(text) => {
                                 print!("{}", text.text);
                             }
                             _ => {}
@@ -166,7 +166,7 @@ async fn main() -> Result<()> {
                 _ => {}
             }
         }
-        
+
         if !got_response {
             println!("[Warning] No response received\n");
         }

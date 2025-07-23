@@ -11,6 +11,7 @@ use uuid::Uuid;
 
 use crate::models::claude::ClaudeCodeOutput;
 use crate::core::config::{FileAccessConfig, MCPConfig};
+use crate::core::claude_manager::ClaudeManager;
 
 /// 交互式会话管理器 - 每个会话复用一个 Claude 进程
 #[derive(Clone)]
@@ -22,12 +23,16 @@ pub struct InteractiveSessionManager {
 }
 
 struct InteractiveSession {
+    #[allow(dead_code)]
     id: String,
+    #[allow(dead_code)]
     conversation_id: String,
     child: Child,
     stdin_tx: mpsc::Sender<String>,
     output_tx: broadcast::Sender<ClaudeCodeOutput>,
+    #[allow(dead_code)]
     model: String,
+    #[allow(dead_code)]
     created_at: std::time::Instant,
     last_used: Arc<parking_lot::Mutex<std::time::Instant>>,
     // 添加互斥锁，确保一次只有一个请求与进程交互
@@ -36,15 +41,14 @@ struct InteractiveSession {
 
 impl InteractiveSessionManager {
     pub fn new(
-        claude_command: String, 
-        file_access_config: FileAccessConfig,
-        mcp_config: MCPConfig,
+        _claude_manager: Arc<ClaudeManager>,
+        claude_command: String,
     ) -> Self {
         let manager = Self {
             sessions: Arc::new(RwLock::new(HashMap::new())),
             claude_command,
-            file_access_config,
-            mcp_config,
+            file_access_config: FileAccessConfig::default(),
+            mcp_config: MCPConfig::default(),
         };
 
         // 启动清理任务
@@ -414,6 +418,7 @@ impl InteractiveSessionManager {
     }
 
     /// 关闭指定会话
+    #[allow(dead_code)]
     pub async fn close_session(&self, conversation_id: &str) -> Result<()> {
         let mut sessions = self.sessions.write();
         if let Some(mut session) = sessions.remove(conversation_id) {
@@ -436,6 +441,7 @@ impl InteractiveSessionManager {
     }
     
     /// 获取活跃会话数
+    #[allow(dead_code)]
     pub fn active_sessions(&self) -> usize {
         self.sessions.read().len()
     }

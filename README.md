@@ -1,18 +1,19 @@
 # Claude Code API
 
-[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/yourusername/claude-code-api)
+[![Version](https://img.shields.io/badge/version-0.1.5-blue.svg)](https://github.com/ZhangHanDong/claude-code-api-rs)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Rust](https://img.shields.io/badge/rust-1.75+-orange.svg)](https://www.rust-lang.org)
 
 [中文文档](README_CN.md) | English
 
-A high-performance Rust implementation of an OpenAI-compatible API gateway for Claude Code CLI. This project provides a RESTful API interface that allows you to interact with Claude Code using the familiar OpenAI API format.
+A high-performance Rust implementation of an OpenAI-compatible API gateway for Claude Code CLI. Built on top of the robust [claude-code-sdk-rs](https://github.com/ZhangHanDong/claude-code-api-rs/tree/main/claude-code-sdk-rs), this project provides a RESTful API interface that allows you to interact with Claude Code using the familiar OpenAI API format.
 
 ## ✨ Features
 
 - **🔌 OpenAI API Compatibility** - Drop-in replacement for OpenAI API, works with existing OpenAI client libraries
 - **🚀 High Performance** - Built with Rust, Axum, and Tokio for exceptional performance
-- **⚡ Interactive Sessions** - Reuse Claude processes across requests for 5-10x faster responses
+- **📦 Powered by claude-code-sdk-rs** - Built on a robust SDK with full Claude Code CLI integration
+- **⚡ Connection Pooling** - Reuse Claude processes with optimized connection pooling for 5-10x faster responses
 - **💬 Conversation Management** - Built-in session support for multi-turn conversations
 - **🖼️ Multimodal Support** - Process images alongside text in your requests
 - **⚡ Response Caching** - Intelligent caching system to reduce latency and costs
@@ -21,6 +22,7 @@ A high-performance Rust implementation of an OpenAI-compatible API gateway for C
 - **🌊 Streaming Responses** - Real-time streaming support for long-form content
 - **🛡️ Robust Error Handling** - Comprehensive error handling with automatic retries
 - **📊 Statistics API** - Monitor usage and performance metrics
+- **🔄 Multiple Client Modes** - OneShot, Interactive, and Batch processing modes
 
 ## 🚀 Quick Start
 
@@ -32,32 +34,27 @@ A high-performance Rust implementation of an OpenAI-compatible API gateway for C
 
 ### Installation
 
-**Option 1**
+**Option 1: Install from crates.io**
 
-```
+```bash
 cargo install claude-code-api
 ```
 
-then run:
-
-```
+Then run:
+```bash
 RUST_LOG=info claude-code-api
-```
-
-or
-
-```
+# or use the short alias
 RUST_LOG=info ccapi
 ```
 
-**Option 2**
+**Option 2: Build from source**
 
 ```bash
-git clone https://github.com/yourusername/claude-code-api.git
-cd claude-code-api/rust-claude-code-api
+git clone https://github.com/ZhangHanDong/claude-code-api-rs.git
+cd claude-code-api-rs
 ```
 
- Build the project:
+Build the entire workspace (API server + SDK):
 ```bash
 cargo build --release
 ```
@@ -66,6 +63,8 @@ Start the server:
 ```bash
 ./target/release/claude-code-api
 ```
+
+**Note**: The API server automatically includes and uses `claude-code-sdk-rs` for all Claude Code CLI interactions.
 
 The API server will start on `http://localhost:8080` by default.
 
@@ -257,6 +256,51 @@ strict = false
 debug = false
 ```
 
+## 📦 Built on claude-code-sdk-rs
+
+This API server is built on top of [claude-code-sdk-rs](https://github.com/ZhangHanDong/claude-code-api-rs/tree/main/claude-code-sdk-rs), a powerful Rust SDK for Claude Code CLI that provides:
+
+- **Full Feature Parity** with the official Python SDK
+- **Multiple Client Types**: 
+  - `query()` - Simple one-shot queries
+  - `InteractiveClient` - Stateful conversations with context
+  - `OptimizedClient` - Advanced client with connection pooling and performance features
+- **Streaming Support** - Real-time message streaming
+- **Complete Type Safety** - Strongly typed with serde support
+- **Async/Await** - Built on Tokio for high-performance async operations
+
+### Using the SDK Directly
+
+If you prefer to build your own integration, you can use the SDK directly:
+
+```toml
+[dependencies]
+cc-sdk = "0.1.5"
+tokio = { version = "1.0", features = ["full"] }
+```
+
+```rust
+use cc_sdk::{query, ClaudeCodeOptions, PermissionMode};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Simple query
+    let response = query("Explain quantum computing").await?;
+    println!("{}", response);
+
+    // With options
+    let options = ClaudeCodeOptions::builder()
+        .model("claude-3.5-sonnet")
+        .permission_mode(PermissionMode::AcceptAll)
+        .build();
+    
+    let response = cc_sdk::query_with_options("Write a haiku", options).await?;
+    println!("{}", response);
+    
+    Ok(())
+}
+```
+
 ## 📚 API Endpoints
 
 ### Chat Completions
@@ -358,29 +402,51 @@ curl -X POST http://localhost:8080/v1/chat/completions \
 
 ## ⚡ Performance Optimization
 
-### Interactive Sessions
+### Advanced Performance Features (via claude-code-sdk-rs)
 
-The API supports interactive session management for dramatically improved performance:
+The API leverages advanced performance optimizations from the underlying SDK:
 
-- **First request**: 5-15 seconds (Claude process startup)
-- **Subsequent requests**: < 0.1 seconds (with cache)
+#### Connection Pooling
+- **First request**: 2-5 seconds (with pre-warmed connection pool)
+- **Subsequent requests**: < 0.1 seconds (reusing existing connections)
+- **Concurrent handling**: Multiple requests can share the connection pool
 
-Interactive sessions are currently disabled by default due to stability issues:
-```toml
-[claude]
-use_interactive_sessions = false  # Default value
+#### Client Modes
+1. **OneShot Mode**: Simple, stateless queries (default)
+2. **Interactive Mode**: Maintains conversation context across requests
+3. **Batch Mode**: Process multiple queries concurrently for high throughput
+
+#### Performance Metrics
+```bash
+# Example performance improvements with OptimizedClient:
+- Sequential queries: ~5s for 5 queries
+- Batch processing: ~1.5s for 5 queries (3x speedup)
+- With connection pooling: < 100ms per query after warm-up
 ```
 
-**Note**: Interactive session mode has known concurrency issues and is not recommended for production use.
+### Configuration for Performance
+
+```toml
+[claude]
+max_concurrent_sessions = 10  # Increase for higher throughput
+use_interactive_sessions = true  # Enable for conversation context
+timeout_seconds = 300  # Adjust based on query complexity
+
+[cache]
+enabled = true
+max_entries = 1000
+ttl_seconds = 3600
+```
 
 ### Best Practices
 
-1. **Use conversation IDs** for related requests to reuse sessions
-2. **Enable response caching** for frequently repeated queries
-3. **Configure appropriate timeouts** based on your use case
-4. **Monitor active sessions** via the `/stats` endpoint
+1. **Use the optimized REST endpoints** that leverage `OptimizedClient` from the SDK
+2. **Enable connection pooling** for frequently used endpoints
+3. **Use batch endpoints** for processing multiple queries
+4. **Monitor performance** via the `/stats` endpoint
+5. **Configure appropriate connection pool size** based on load
 
-For detailed information, see [Interactive Session Guide](doc/INTERACTIVE_SESSION_GUIDE.md).
+For detailed performance tuning, see the [SDK Performance Guide](https://github.com/ZhangHanDong/claude-code-api-rs/tree/main/claude-code-sdk-rs#performance-optimization).
 
 ## 🐛 Troubleshooting
 
@@ -422,15 +488,17 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
-- Built on top of [Claude Code CLI](https://claude.ai/download)
-- Inspired by OpenAI's API design
-- Powered by [Axum](https://github.com/tokio-rs/axum) web framework
+- Built on top of [claude-code-sdk-rs](https://github.com/ZhangHanDong/claude-code-api-rs/tree/main/claude-code-sdk-rs) - The robust Rust SDK for Claude Code CLI
+- Powered by [Claude Code CLI](https://claude.ai/download) from Anthropic
+- Inspired by OpenAI's API design for maximum compatibility
+- Web framework: [Axum](https://github.com/tokio-rs/axum) for high-performance HTTP serving
+- Async runtime: [Tokio](https://tokio.rs/) for blazing-fast async I/O
 
 ## 📞 Support
 
-- [Report Issues](https://github.com/yourusername/claude-code-api/issues)
-- [Documentation](https://github.com/yourusername/claude-code-api/wiki)
-- [Discussions](https://github.com/yourusername/claude-code-api/discussions)
+- [Report Issues](https://github.com/ZhangHanDong/claude-code-api-rs/issues)
+- [Documentation](https://github.com/ZhangHanDong/claude-code-api-rs/wiki)
+- [Discussions](https://github.com/ZhangHanDong/claude-code-api-rs/discussions)
 
 ---
 

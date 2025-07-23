@@ -120,7 +120,7 @@ pub async fn query(
     let prompt = prompt.into();
 
     // Set environment variable to indicate SDK usage
-    std::env::set_var("CLAUDE_CODE_ENTRYPOINT", "sdk-rust");
+    unsafe {std::env::set_var("CLAUDE_CODE_ENTRYPOINT", "sdk-rust");}
 
     match prompt {
         QueryInput::Text(text) => {

@@ -1,7 +1,7 @@
 use anyhow::Result;
 use axum::{routing::{get, post}, Router};
 use tower_http::cors::CorsLayer;
-use tracing::{info, error};
+use tracing::info;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use std::net::SocketAddr;
 
@@ -81,15 +81,14 @@ async fn create_app(settings: Settings) -> Result<Router> {
     // 初始化交互式会话管理器
     info!("Initializing interactive session manager");
     let interactive_session_manager = Arc::new(InteractiveSessionManager::new(
-        settings.claude.command.clone(),
-        settings.file_access.clone(),
-        settings.mcp.clone()
+        claude_manager.clone(),
+        settings.claude.command.clone()
     ));
     
     // 如果启用了交互式会话，预热一个默认进程
     if settings.claude.use_interactive_sessions {
         if let Err(e) = interactive_session_manager.prewarm_default_session().await {
-            error!("Failed to pre-warm Claude process: {}", e);
+            tracing::error!("Failed to pre-warm Claude process: {}", e);
         }
     }
     

@@ -23,24 +23,30 @@ struct ProcessPoolInner {
 
 struct Pool {
     idle: VecDeque<PooledProcess>,
+    #[allow(dead_code)]
     active: Vec<ActiveProcess>,
 }
 
 struct PooledProcess {
     session_id: String,
+    #[allow(dead_code)]
     model: String,
     created_at: std::time::Instant,
 }
 
 struct ActiveProcess {
+    #[allow(dead_code)]
     session_id: String,
+    #[allow(dead_code)]
     in_use_since: std::time::Instant,
 }
 
 #[derive(Clone)]
 pub struct PoolConfig {
     pub min_idle: usize,
+    #[allow(dead_code)]
     pub max_idle: usize,
+    #[allow(dead_code)]
     pub max_active: usize,
     pub idle_timeout_secs: u64,
     pub default_model: String,
@@ -94,6 +100,7 @@ impl ProcessPool {
             .await
     }
 
+    #[allow(dead_code)]
     pub async fn acquire(&self, model: Option<String>) -> Result<(String, mpsc::Receiver<ClaudeCodeOutput>)> {
         let model = model.unwrap_or_else(|| self.inner.config.default_model.clone());
 
@@ -151,6 +158,7 @@ impl ProcessPool {
         }
     }
 
+    #[allow(dead_code)]
     pub async fn release(&self, session_id: String, model: String) {
         // 检查是否需要关闭进程
         let should_close = {

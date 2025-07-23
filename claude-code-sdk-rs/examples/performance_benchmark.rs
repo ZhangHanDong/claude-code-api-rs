@@ -11,6 +11,7 @@ use tokio::time::sleep;
 /// Benchmark result structure
 #[derive(Debug)]
 struct BenchmarkResult {
+    #[allow(dead_code)]
     method: String,
     total_duration: Duration,
     per_query_avg: Duration,
@@ -117,7 +118,7 @@ async fn benchmark_sdk(queries: &[&str]) -> Result<BenchmarkResult> {
 /// Print benchmark comparison
 fn print_comparison(cmd_result: &BenchmarkResult, sdk_result: &BenchmarkResult) {
     println!("\n📊 BENCHMARK RESULTS");
-    println!("=" .repeat(60));
+    println!("{}", "=".repeat(60));
 
     println!("\n📌 Command Line:");
     println!("  Total time: {:.2}s", cmd_result.total_duration.as_secs_f64());
@@ -156,7 +157,7 @@ fn print_comparison(cmd_result: &BenchmarkResult, sdk_result: &BenchmarkResult) 
 #[tokio::main]
 async fn main() -> Result<()> {
     println!("🏁 Claude SDK Performance Benchmark");
-    println!("=" .repeat(60));
+    println!("{}", "=".repeat(60));
 
     // Test queries - simple to avoid long processing times
     let test_queries = vec![

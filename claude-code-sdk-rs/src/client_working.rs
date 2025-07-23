@@ -33,8 +33,8 @@ pub struct ClaudeSDKClientWorking {
 impl ClaudeSDKClientWorking {
     /// Create a new client
     pub fn new(options: ClaudeCodeOptions) -> Self {
-        std::env::set_var("CLAUDE_CODE_ENTRYPOINT", "sdk-rust");
-        
+        unsafe {std::env::set_var("CLAUDE_CODE_ENTRYPOINT", "sdk-rust");}
+
         Self {
             options,
             transport: Arc::new(Mutex::new(None)),
@@ -42,7 +42,7 @@ impl ClaudeSDKClientWorking {
             state: Arc::new(RwLock::new(ClientState::Disconnected)),
         }
     }
-    
+
     /// Connect to Claude
     pub async fn connect(&mut self, initial_prompt: Option<String>) -> Result<()> {
         // Check if already connected
@@ -52,37 +52,37 @@ impl ClaudeSDKClientWorking {
                 return Ok(());
             }
         }
-        
+
         // Create transport
         let mut new_transport = SubprocessTransport::new(self.options.clone())?;
         new_transport.connect().await?;
-        
+
         // Create message channel
         let (tx, rx) = mpsc::channel::<Message>(100);
-        
+
         // Store transport
         {
             let mut transport = self.transport.lock().await;
             *transport = Some(new_transport);
         }
-        
+
         // Store receiver
         {
             let mut message_rx = self.message_rx.lock().await;
             *message_rx = Some(rx);
         }
-        
+
         // Update state
         {
             let mut state = self.state.write().await;
             *state = ClientState::Connected;
         }
-        
+
         // Start background task to read messages
         let transport_clone = self.transport.clone();
         let state_clone = self.state.clone();
         let tx_clone = tx.clone();
-        
+
         tokio::spawn(async move {
             loop {
                 // Get one message at a time
@@ -96,7 +96,7 @@ impl ClaudeSDKClientWorking {
                         break;
                     }
                 };
-                
+
                 // Process the message if we got one
                 if let Some(result) = msg_result {
                     match result {
@@ -117,33 +117,33 @@ impl ClaudeSDKClientWorking {
                     // No message available, wait a bit
                     tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
                 }
-                
+
                 // Stream ended, check if we should reconnect
                 tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-                
+
                 let should_continue = {
                     let state = state_clone.read().await;
                     *state == ClientState::Connected
                 };
-                
+
                 if !should_continue {
                     break;
                 }
             }
-            
+
             debug!("Message reader task ended");
         });
-        
+
         info!("Connected to Claude CLI");
-        
+
         // Send initial prompt if provided
         if let Some(prompt) = initial_prompt {
             self.send_user_message(prompt).await?;
         }
-        
+
         Ok(())
     }
-    
+
     /// Send a user message
     pub async fn send_user_message(&mut self, prompt: String) -> Result<()> {
         // Check connection
@@ -155,10 +155,10 @@ impl ClaudeSDKClientWorking {
                 });
             }
         }
-        
+
         // Create message
         let message = InputMessage::user(prompt, "default".to_string());
-        
+
         // Send message
         {
             let mut transport_guard = self.transport.lock().await;
@@ -171,10 +171,10 @@ impl ClaudeSDKClientWorking {
                 });
             }
         }
-        
+
         Ok(())
     }
-    
+
     /// Receive next message
     pub async fn receive_message(&mut self) -> Result<Option<Message>> {
         let mut rx_guard = self.message_rx.lock().await;
@@ -186,11 +186,11 @@ impl ClaudeSDKClientWorking {
             })
         }
     }
-    
+
     /// Receive all messages until result
     pub async fn receive_response(&mut self) -> Result<Vec<Message>> {
         let mut messages = Vec::new();
-        
+
         while let Some(msg) = self.receive_message().await? {
             let is_result = matches!(msg, Message::Result { .. });
             messages.push(msg);
@@ -198,10 +198,10 @@ impl ClaudeSDKClientWorking {
                 break;
             }
         }
-        
+
         Ok(messages)
     }
-    
+
     /// Disconnect
     pub async fn disconnect(&mut self) -> Result<()> {
         // Update state
@@ -212,7 +212,7 @@ impl ClaudeSDKClientWorking {
             }
             *state = ClientState::Disconnected;
         }
-        
+
         // Disconnect transport
         {
             let mut transport_guard = self.transport.lock().await;
@@ -220,17 +220,17 @@ impl ClaudeSDKClientWorking {
                 transport.disconnect().await?;
             }
         }
-        
+
         // Clear receiver
         {
             let mut rx_guard = self.message_rx.lock().await;
             rx_guard.take();
         }
-        
+
         info!("Disconnected from Claude CLI");
         Ok(())
     }
-    
+
     /// Check if connected
     pub async fn is_connected(&self) -> bool {
         let state = self.state.read().await;

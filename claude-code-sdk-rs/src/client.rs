@@ -112,7 +112,7 @@ impl ClaudeSDKClient {
     /// Create a new client with the given options
     pub fn new(options: ClaudeCodeOptions) -> Self {
         // Set environment variable to indicate SDK usage
-        std::env::set_var("CLAUDE_CODE_ENTRYPOINT", "sdk-rust");
+        unsafe {std::env::set_var("CLAUDE_CODE_ENTRYPOINT", "sdk-rust");}
 
         let transport = match SubprocessTransport::new(options.clone()) {
             Ok(t) => t,
@@ -227,7 +227,7 @@ impl ClaudeSDKClient {
     ///
     /// Returns a stream of messages. The stream will end when a Result message
     /// is received or the connection is closed.
-    pub async fn receive_messages(&mut self) -> impl Stream<Item = Result<Message>> {
+    pub async fn receive_messages(&mut self) -> impl Stream<Item = Result<Message>> + use<> {
         // Create a new channel for this receiver
         let (tx, rx) = mpsc::channel(100);
 
@@ -443,7 +443,7 @@ mod tests {
     #[tokio::test]
     async fn test_client_lifecycle() {
         let options = ClaudeCodeOptions::default();
-        let mut client = ClaudeSDKClient::new(options);
+        let client = ClaudeSDKClient::new(options);
 
         assert!(!client.is_connected().await);
         assert_eq!(client.get_sessions().await.len(), 0);

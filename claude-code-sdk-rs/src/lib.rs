@@ -40,6 +40,8 @@ mod errors;
 mod message_parser;
 mod query;
 mod interactive;
+mod optimized_client;
+mod perf_utils;
 mod transport;
 mod types;
 
@@ -53,6 +55,8 @@ pub use query::query;
 pub use interactive::InteractiveClient;
 // Keep the old name as an alias for backward compatibility
 pub use interactive::InteractiveClient as SimpleInteractiveClient;
+pub use optimized_client::{OptimizedClient, ClientMode};
+pub use perf_utils::{MessageBatcher, RetryConfig, PerformanceMetrics};
 
 /// Default interactive client - the recommended client for interactive use
 pub type ClaudeSDKClientDefault = InteractiveClient;

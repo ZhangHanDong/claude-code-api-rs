@@ -23,6 +23,7 @@ pub struct ClaudeProcess {
 pub struct ClaudeManager {
     processes: Arc<RwLock<HashMap<String, ClaudeProcess>>>,
     claude_command: String,
+    #[allow(dead_code)]
     file_access_config: FileAccessConfig,
     mcp_config: MCPConfig,
 }

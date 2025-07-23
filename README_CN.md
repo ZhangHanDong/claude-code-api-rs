@@ -1,18 +1,19 @@
 # Claude Code API
 
-[![版本](https://img.shields.io/badge/版本-0.1.0-blue.svg)](https://github.com/yourusername/claude-code-api)
+[![版本](https://img.shields.io/badge/版本-0.1.5-blue.svg)](https://github.com/ZhangHanDong/claude-code-api-rs)
 [![许可证](https://img.shields.io/badge/许可证-MIT-green.svg)](LICENSE)
 [![Rust](https://img.shields.io/badge/rust-1.75+-orange.svg)](https://www.rust-lang.org)
 
 中文文档 | [English](README.md)
 
-一个高性能的 Rust 实现的 OpenAI 兼容 API 网关，用于 Claude Code CLI。该项目提供了一个 RESTful API 接口，让您可以使用熟悉的 OpenAI API 格式与 Claude Code 进行交互。
+一个高性能的 Rust 实现的 OpenAI 兼容 API 网关，用于 Claude Code CLI。基于强大的 [claude-code-sdk-rs](https://github.com/ZhangHanDong/claude-code-api-rs/tree/main/claude-code-sdk-rs) 构建，该项目提供了一个 RESTful API 接口，让您可以使用熟悉的 OpenAI API 格式与 Claude Code 进行交互。
 
 ## ✨ 特性
 
 - **🔌 OpenAI API 兼容** - 可直接替换 OpenAI API，兼容现有的 OpenAI 客户端库
 - **🚀 高性能** - 使用 Rust、Axum 和 Tokio 构建，性能卓越
-- **⚡ 交互式会话** - 跨请求复用 Claude 进程，响应速度提升 5-10 倍
+- **📦 基于 claude-code-sdk-rs** - 使用强大的 SDK 实现与 Claude Code CLI 的完整集成
+- **⚡ 连接池优化** - 通过优化的连接池复用 Claude 进程，响应速度提升 5-10 倍
 - **💬 会话管理** - 内置会话支持，实现多轮对话
 - **🖼️ 多模态支持** - 在请求中同时处理图片和文本
 - **⚡ 响应缓存** - 智能缓存系统，减少延迟和成本
@@ -21,6 +22,7 @@
 - **🌊 流式响应** - 支持长文本的实时流式传输
 - **🛡️ 健壮的错误处理** - 全面的错误处理和自动重试机制
 - **📊 统计 API** - 监控使用情况和性能指标
+- **🔄 多种客户端模式** - OneShot（单次查询）、Interactive（交互式）和 Batch（批处理）模式
 
 ## 🚀 快速开始
 
@@ -32,40 +34,37 @@
 
 ### 安装
 
-方式一：
+**方式一：从 crates.io 安装**
 
-```
+```bash
 cargo install claude-code-api
 ```
 
-然后允许命令:
-
-```
+然后运行：
+```bash
 RUST_LOG=info claude-code-api
-```
-
-或者
-
-```
+# 或使用短别名
 RUST_LOG=info ccapi
 ```
 
-方式二：
+**方式二：从源码构建**
 
 ```bash
-git clone https://github.com/yourusername/claude-code-api.git
-cd claude-code-api/rust-claude-code-api
+git clone https://github.com/ZhangHanDong/claude-code-api-rs.git
+cd claude-code-api-rs
 ```
 
-2. 构建项目：
+构建整个工作区（API 服务器 + SDK）：
 ```bash
 cargo build --release
 ```
 
-3. 启动服务器：
+启动服务器：
 ```bash
 ./target/release/claude-code-api
 ```
+
+**注意**：API 服务器自动包含并使用 `claude-code-sdk-rs` 来处理所有与 Claude Code CLI 的交互。
 
 API 服务器将默认在 `http://localhost:8080` 启动。
 
@@ -255,6 +254,51 @@ enabled = true
 config_file = "./mcp_config.json"
 strict = false
 debug = false
+```
+
+## 📦 基于 claude-code-sdk-rs 构建
+
+本 API 服务器基于 [claude-code-sdk-rs](https://github.com/ZhangHanDong/claude-code-api-rs/tree/main/claude-code-sdk-rs) 构建，这是一个功能强大的 Claude Code CLI Rust SDK，提供：
+
+- **与官方 Python SDK 完全兼容** - 100% 功能对等
+- **多种客户端类型**：
+  - `query()` - 简单的一次性查询
+  - `InteractiveClient` - 有状态的会话，保持上下文
+  - `OptimizedClient` - 带连接池和性能优化的高级客户端
+- **流式支持** - 实时消息流
+- **完整的类型安全** - 使用 serde 提供强类型支持
+- **异步/等待** - 基于 Tokio 的高性能异步操作
+
+### 直接使用 SDK
+
+如果您想构建自己的集成，可以直接使用 SDK：
+
+```toml
+[dependencies]
+cc-sdk = "0.1.5"
+tokio = { version = "1.0", features = ["full"] }
+```
+
+```rust
+use cc_sdk::{query, ClaudeCodeOptions, PermissionMode};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // 简单查询
+    let response = query("解释量子计算").await?;
+    println!("{}", response);
+
+    // 使用选项
+    let options = ClaudeCodeOptions::builder()
+        .model("claude-3.5-sonnet")
+        .permission_mode(PermissionMode::AcceptAll)
+        .build();
+    
+    let response = cc_sdk::query_with_options("写一首俳句", options).await?;
+    println!("{}", response);
+    
+    Ok(())
+}
 ```
 
 ## 📚 API 端点

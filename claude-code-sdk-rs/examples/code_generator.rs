@@ -9,7 +9,7 @@ use std::time::Instant;
 async fn generate_rust_solution(question: &str, project_name: &str) -> Result<()> {
     println!("🚀 Generating Rust solution for: {}", question);
     println!("📁 Project name: {}", project_name);
-    println!("=" .repeat(60));
+    println!("{}", "=".repeat(60));
 
     // Configure Claude for code generation
     let options = ClaudeCodeOptions::builder()
@@ -74,7 +74,7 @@ async fn generate_rust_solution(question: &str, project_name: &str) -> Result<()
     let duration = start_time.elapsed();
     println!("\n✨ Solution generated successfully!");
     println!("⏱️  Total time: {:.2} seconds", duration.as_secs_f64());
-    println!("=" .repeat(60));
+    println!("{}", "=".repeat(60));
 
     Ok(())
 }

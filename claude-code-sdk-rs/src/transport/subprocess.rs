@@ -514,7 +514,7 @@ mod tests {
     #[tokio::test]
     async fn test_transport_lifecycle() {
         let options = ClaudeCodeOptions::default();
-        let mut transport = SubprocessTransport::new(options).unwrap_or_else(|_| {
+        let transport = SubprocessTransport::new(options).unwrap_or_else(|_| {
             // Use a dummy path for testing
             SubprocessTransport::with_cli_path(ClaudeCodeOptions::default(), "/usr/bin/true")
         });

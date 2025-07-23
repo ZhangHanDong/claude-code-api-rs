@@ -2,7 +2,41 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.1.5] - 2025-01-22
+## [0.1.5] - 2025-01-23
+
+### Major Changes
+- **Restructured as Workspace**: Reorganized project into a Cargo workspace with two crates:
+  - `claude-code-api` - The OpenAI-compatible REST API server
+  - `claude-code-sdk-rs` - The underlying Rust SDK for Claude Code CLI integration
+- **Built on claude-code-sdk-rs**: The API server now uses the robust SDK internally for all Claude interactions
+
+### Added
+- **Performance Optimizations via SDK**:
+  - Connection pooling with `OptimizedClient` for 5-10x faster responses
+  - Multiple client modes: OneShot, Interactive, and Batch processing
+  - Pre-warming of connection pools for reduced first-request latency
+  - Batch processing endpoints for high-throughput scenarios
+- **Enhanced OpenAI Compatibility**:
+  - Better conversation history handling in chat completions
+  - Proper token counting in responses
+  - Streaming response improvements
+- **New Examples and Testing Tools**:
+  - Manual interactive test tools for both SDK and OpenAI API modes
+  - OpenAI-compatible server with proper history support
+  - Comprehensive testing scripts for all modes
+  - Performance benchmarking examples
+
+### Changed
+- **Architecture**: API server now leverages `cc-sdk` for all Claude operations
+- **Performance**: Default configuration now uses optimized clients with connection pooling
+- **Documentation**: Updated to reflect the workspace structure and SDK integration
+
+### Fixed
+- OpenAI chat completions now properly handle full conversation history
+- Token counting now accurately reflects the entire conversation context
+- Improved error handling and recovery in connection pool management
+
+## [0.1.5] - 2025-01-22 (SDK Release)
 
 ### Fixed
 - Fixed interactive mode hang issue in Rust SDK with new SimpleInteractiveClient implementation

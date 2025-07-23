@@ -20,7 +20,7 @@ path = "src/main.rs"
 
 [[bin]]
 name = "ccapi"
-path = "src/main.rs"
+path = "src/bin/ccapi.rs"
 
 [dependencies]
 # Workspace dependencies

@@ -38,7 +38,7 @@ async fn process_question_batch(file_path: &Path) -> Result<ProcessingStats> {
 
     let batch_start = Instant::now();
     println!("📊 Starting batch processing of {} questions", stats.total);
-    println!("=" .repeat(60));
+    println!("{}", "=".repeat(60));
 
     // Create a single client for the entire batch
     let options = create_claude_options();
@@ -147,7 +147,7 @@ fn is_rate_limit_error(error: &cc_sdk::SdkError) -> bool {
 /// Print processing statistics
 fn print_stats(stats: &ProcessingStats) {
     println!("\n📊 Batch Processing Summary");
-    println!("=" .repeat(60));
+    println!("{}", "=".repeat(60));
     println!("Total questions: {}", stats.total);
     println!("Successful: {} ({}%)",
         stats.successful,

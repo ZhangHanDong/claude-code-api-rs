@@ -278,12 +278,3 @@ async fn main() -> Result<()> {
 
     Ok(())
 }
-
-/// Example question set file format (save as qs/qs00001.txt):
-/// ```
-/// 1. Create a binary search tree implementation with insert, search, and delete operations
-/// 2. Implement a thread-safe counter using Arc and Mutex
-/// 3. Write a parser for simple arithmetic expressions using nom
-/// 4. Create a simple HTTP server using tokio and hyper
-/// 5. Implement a LRU cache with generic key-value types
-/// ```

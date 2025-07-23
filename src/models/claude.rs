@@ -94,8 +94,8 @@ impl ClaudeModel {
     pub fn all() -> Vec<Self> {
         vec![
             Self {
-                id: "claude-3-5-sonnet-20241022".to_string(),
-                display_name: "Claude 3.5 Sonnet".to_string(),
+                id: "claude-sonnet-4-20250514".to_string(),
+                display_name: "Claude 4 Sonnet".to_string(),
                 context_window: 200000,
             },
             Self {
@@ -104,8 +104,8 @@ impl ClaudeModel {
                 context_window: 200000,
             },
             Self {
-                id: "claude-3-opus-20240229".to_string(),
-                display_name: "Claude 3 Opus".to_string(),
+                id: "claude-opus-4-20250514".to_string(),
+                display_name: "Claude 4 Opus".to_string(),
                 context_window: 200000,
             },
         ]

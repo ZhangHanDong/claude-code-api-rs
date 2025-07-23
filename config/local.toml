@@ -1,0 +1,18 @@
+[server]
+host = "0.0.0.0"
+port = 8080
+
+[claude]
+command = "claude"
+timeout_seconds = 300
+max_concurrent_sessions = 10
+
+[file_access]
+skip_permissions = false
+
+
+[mcp]
+enabled = false
+config_file = "./mcp_config.json"
+strict = false
+debug = false

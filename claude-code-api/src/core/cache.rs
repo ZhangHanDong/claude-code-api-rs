@@ -66,10 +66,10 @@ impl ResponseCache {
         for msg in messages {
             hasher.update(msg.role.as_bytes());
             match &msg.content {
-                crate::models::openai::MessageContent::Text(text) => {
+                Some(crate::models::openai::MessageContent::Text(text)) => {
                     hasher.update(text.as_bytes());
                 }
-                crate::models::openai::MessageContent::Array(parts) => {
+                Some(crate::models::openai::MessageContent::Array(parts)) => {
                     for part in parts {
                         match part {
                             crate::models::openai::ContentPart::Text { text } => {
@@ -80,6 +80,9 @@ impl ResponseCache {
                             }
                         }
                     }
+                }
+                None => {
+                    // Function calls don't affect cache key
                 }
             }
         }

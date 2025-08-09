@@ -36,7 +36,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-cc-sdk = "0.1.5"
+cc-sdk = "0.1.6"
 tokio = { version = "1.0", features = ["full"] }
 futures = "0.3"
 ```
@@ -145,6 +145,10 @@ let options = ClaudeCodeOptions::builder()
     .max_thinking_tokens(10000)
     .allowed_tools(vec!["read_file".to_string(), "write_file".to_string()])
     .cwd("/path/to/project")
+    // New in v0.1.6
+    .settings("claude-settings.json")  // Use custom settings file
+    .add_dir("/path/to/related/project")  // Add additional working directories
+    .add_dirs(vec![PathBuf::from("/dir1"), PathBuf::from("/dir2")])  // Add multiple dirs
     .build();
 ```
 
@@ -198,6 +202,27 @@ Check the `examples/` directory for more usage examples:
 - `interactive_demo.rs` - Interactive conversation demo
 - `query_simple.rs` - Simple query example
 - `file_operations.rs` - File manipulation example
+
+### New Features (v0.1.6)
+
+Test the latest features with these examples:
+
+- `test_settings.rs` - Using custom settings files
+- `test_settings_safe.rs` - Safe settings file handling with path detection
+- `test_add_dirs.rs` - Adding multiple working directories
+- `test_combined_features.rs` - Combining settings and add_dirs
+- `test_new_options.rs` - Testing the new builder methods
+
+Example settings files are provided:
+- `examples/claude-settings.json` - Basic settings configuration
+- `examples/custom-claude-settings.json` - Advanced settings with MCP servers
+
+**Note**: When running examples from the project root, use:
+```bash
+cargo run --example test_settings
+```
+
+The settings files use relative paths from the project root (e.g., `examples/claude-settings.json`)
 
 ## License
 

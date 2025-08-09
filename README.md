@@ -8,6 +8,10 @@
 
 A high-performance Rust implementation of an OpenAI-compatible API gateway for Claude Code CLI. Built on top of the robust [claude-code-sdk-rs](https://github.com/ZhangHanDong/claude-code-api-rs/tree/main/claude-code-sdk-rs), this project provides a RESTful API interface that allows you to interact with Claude Code using the familiar OpenAI API format.
 
+## 🎉 Who's Using Claude Code API
+
+- **[url-preview v0.6.0](https://github.com/ZhangHanDong/url-preview/releases/tag/0.6.0)** - A Rust library for extracting structured data from web pages using LLMs. It leverages claude-code-api to provide Claude-powered web content extraction alongside OpenAI support.
+
 ## ✨ Features
 
 - **🔌 OpenAI API Compatibility** - Drop-in replacement for OpenAI API, works with existing OpenAI client libraries
@@ -23,6 +27,7 @@ A high-performance Rust implementation of an OpenAI-compatible API gateway for C
 - **🛡️ Robust Error Handling** - Comprehensive error handling with automatic retries
 - **📊 Statistics API** - Monitor usage and performance metrics
 - **🔄 Multiple Client Modes** - OneShot, Interactive, and Batch processing modes
+- **🔧 Tool Calling** - OpenAI tools format support for AI tool integrations
 
 ## 🚀 Quick Start
 
@@ -194,6 +199,55 @@ export CLAUDE_CODE__MCP__ENABLED=true
 export CLAUDE_CODE__MCP__CONFIG_FILE="./mcp_config.json"
 ./target/release/claude-code-api
 ```
+
+### 6. Tool Calling (OpenAI Compatible)
+
+Use tools for AI integrations:
+
+```python
+response = client.chat.completions.create(
+    model="claude-3-5-haiku-20241022",
+    messages=[
+        {"role": "user", "content": "Please preview this URL: https://rust-lang.org"}
+    ],
+    tools=[
+        {
+            "type": "function",
+            "function": {
+                "name": "url_preview",
+                "description": "Preview a URL and extract its content",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "url": {"type": "string", "description": "The URL to preview"}
+                    },
+                    "required": ["url"]
+                }
+            }
+        }
+    ],
+    tool_choice="auto"
+)
+
+# Response will include tool_calls:
+# {
+#   "choices": [{
+#     "message": {
+#       "role": "assistant",
+#       "tool_calls": [{
+#         "id": "call_xxx",
+#         "type": "function",
+#         "function": {
+#           "name": "url_preview",
+#           "arguments": "{\"url\": \"https://rust-lang.org\"}"
+#         }
+#       }]
+#     }
+#   }]
+# }
+```
+
+This feature enables seamless integration with modern AI tools like [url-preview](https://github.com/ZhangHanDong/url-preview) and other OpenAI-compatible tool chains. url-preview v0.6.0+ uses this exact format to extract structured data from web pages using Claude.
 
 ## 🔧 Configuration
 

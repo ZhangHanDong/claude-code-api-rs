@@ -178,6 +178,16 @@ impl SubprocessTransport {
             cmd.arg("--resume").arg(resume_id);
         }
 
+        // Settings file
+        if let Some(ref settings) = self.options.settings {
+            cmd.arg("--settings").arg(settings);
+        }
+
+        // Additional directories
+        for dir in &self.options.add_dirs {
+            cmd.arg("--add-dir").arg(dir);
+        }
+
         // Set up process pipes
         cmd.stdin(Stdio::piped())
             .stdout(Stdio::piped())

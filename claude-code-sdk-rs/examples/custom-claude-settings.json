@@ -1,0 +1,54 @@
+{
+  "claude": {
+    "model": "claude-3-opus-20240229",
+    "maxTokens": 8192,
+    "temperature": 0.5,
+    "systemPrompt": "You are a specialized AI assistant for multi-project code analysis and development.",
+    "appendSystemPrompt": "Always provide concise, actionable insights when analyzing code across multiple projects.",
+    "permissionMode": "acceptEdits",
+    "maxThinkingTokens": 10000,
+    "maxTurns": 20
+  },
+  "tools": {
+    "allowedTools": [
+      "Read",
+      "Write", 
+      "Edit",
+      "MultiEdit",
+      "Grep",
+      "Glob",
+      "LS",
+      "Bash",
+      "WebSearch",
+      "WebFetch"
+    ],
+    "disallowedTools": [],
+    "permissionPromptToolName": "ApprovalRequired"
+  },
+  "mcp": {
+    "servers": {
+      "git": {
+        "type": "stdio",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-git"],
+        "env": {
+          "GIT_SHOW_DIFF": "true"
+        }
+      },
+      "filesystem": {
+        "type": "stdio", 
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-filesystem", "/"]
+      }
+    }
+  },
+  "session": {
+    "continueConversation": false,
+    "resumeId": null
+  },
+  "performance": {
+    "enableCaching": true,
+    "connectionPoolSize": 5,
+    "requestTimeout": 600
+  }
+}

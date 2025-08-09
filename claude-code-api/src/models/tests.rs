@@ -7,8 +7,9 @@ mod tests {
     fn test_chat_message_serialization() {
         let message = ChatMessage {
             role: "user".to_string(),
-            content: MessageContent::Text("Hello".to_string()),
+            content: Some(MessageContent::Text("Hello".to_string())),
             name: None,
+            tool_calls: None,
         };
         
         let json = serde_json::to_string(&message).unwrap();

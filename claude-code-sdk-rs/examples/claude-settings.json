@@ -1,0 +1,43 @@
+{
+  "claude": {
+    "model": "claude-3-opus-20240229",
+    "maxTokens": 4096,
+    "temperature": 0.7,
+    "systemPrompt": "You are an expert software engineer with deep knowledge of Rust, Python, and modern software architecture.",
+    "dangerouslySkipPermissions": false,
+    "permissionMode": "acceptEdits",
+    "maxThinkingTokens": 8000
+  },
+  "tools": {
+    "allowedTools": [
+      "Read",
+      "Write",
+      "Edit",
+      "Grep",
+      "Glob",
+      "LS",
+      "Bash"
+    ],
+    "disallowedTools": []
+  },
+  "mcp": {
+    "servers": {
+      "filesystem": {
+        "type": "stdio",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"]
+      }
+    }
+  },
+  "directories": {
+    "defaultWorkingDirectory": "/Users/zhangalex/Work/Projects",
+    "additionalDirectories": [
+      "/Users/zhangalex/Documents",
+      "/Users/zhangalex/Downloads"
+    ]
+  },
+  "logging": {
+    "level": "info",
+    "outputFormat": "stream-json"
+  }
+}

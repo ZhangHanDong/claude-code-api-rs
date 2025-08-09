@@ -27,14 +27,21 @@ pub struct ChatCompletionRequest {
     pub user: Option<String>,
     #[serde(default)]
     pub conversation_id: Option<String>,
+    #[serde(default)]
+    pub tools: Option<Vec<Tool>>,
+    #[serde(default)]
+    pub tool_choice: Option<ToolChoice>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ChatMessage {
     pub role: String,
-    pub content: MessageContent,
+    #[serde(default)]
+    pub content: Option<MessageContent>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_calls: Option<Vec<ToolCall>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -118,6 +125,53 @@ pub struct Model {
     pub owned_by: String,
 }
 
+// Tool calling support (functions are deprecated)
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct FunctionDefinition {
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    pub parameters: Value,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct FunctionCall {
+    pub name: String,
+    pub arguments: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Tool {
+    #[serde(rename = "type")]
+    pub tool_type: String,
+    pub function: FunctionDefinition,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(untagged)]
+pub enum ToolChoice {
+    Auto,
+    None,
+    Tool { 
+        #[serde(rename = "type")]
+        tool_type: String,
+        function: ToolChoiceFunction,
+    },
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ToolChoiceFunction {
+    pub name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ToolCall {
+    pub id: String,
+    #[serde(rename = "type")]
+    pub tool_type: String,
+    pub function: FunctionCall,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ModelList {
     pub object: String,
@@ -140,6 +194,8 @@ impl Default for ChatCompletionRequest {
             logit_bias: None,
             user: None,
             conversation_id: None,
+            tools: None,
+            tool_choice: None,
         }
     }
 }

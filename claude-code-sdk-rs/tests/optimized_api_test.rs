@@ -8,6 +8,7 @@ use std::time::{Duration, Instant};
 
 /// Test basic one-shot query functionality
 #[tokio::test]
+#[ignore = "Requires Claude CLI to be installed and configured"]
 async fn test_oneshot_query() -> Result<()> {
     let options = ClaudeCodeOptions::builder()
         .permission_mode(PermissionMode::AcceptEdits)
@@ -59,6 +60,7 @@ async fn test_retry_logic() -> Result<()> {
 
 /// Test interactive mode
 #[tokio::test]
+#[ignore = "Requires Claude CLI to be installed and configured"]
 async fn test_interactive_mode() -> Result<()> {
     let options = ClaudeCodeOptions::builder()
         .permission_mode(PermissionMode::AcceptEdits)
@@ -89,6 +91,7 @@ async fn test_interactive_mode() -> Result<()> {
 
 /// Test batch processing
 #[tokio::test]
+#[ignore = "Requires Claude CLI to be installed and configured"]
 async fn test_batch_processing() -> Result<()> {
     let options = ClaudeCodeOptions::builder()
         .permission_mode(PermissionMode::AcceptEdits)
@@ -196,6 +199,7 @@ fn test_client_modes() {
 
 /// Test connection pooling behavior
 #[tokio::test]
+#[ignore = "Requires Claude CLI to be installed and configured"]
 async fn test_connection_pooling() -> Result<()> {
     let options = ClaudeCodeOptions::builder()
         .permission_mode(PermissionMode::AcceptEdits)

@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.6] - 2025-01-23
+
+### Added
+- Support for `settings` field in `ClaudeCodeOptions` for `--settings` CLI parameter
+- Support for `add_dirs` field in `ClaudeCodeOptions` for `--add-dir` CLI parameter
+- New builder methods: `settings()`, `add_dirs()`, and `add_dir()`
+- Full parity with Python SDK version 0.0.19
+
+### Changed
+- Updated subprocess transport to pass new CLI arguments
+
 ## [0.1.5] - 2025-01-22
 
 ### Added

@@ -2,7 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.6] - 2025-01-23
+
+### Added
+- **SDK Updates**: Updated claude-code-sdk-rs to version 0.1.6 with:
+  - Support for `settings` field in `ClaudeCodeOptions` for `--settings` CLI parameter
+  - Support for `add_dirs` field in `ClaudeCodeOptions` for `--add-dir` CLI parameter
+  - New builder methods: `settings()`, `add_dirs()`, and `add_dir()`
+  - Full parity with Python SDK version 0.0.19
+
+### Changed
+- Bumped workspace version to 0.1.6
+
 ## [0.1.5] - 2025-01-23
+
+### Integrations
+- **url-preview v0.6.0** - First external project to integrate claude-code-api for LLM-powered web content extraction
 
 ### Major Changes
 - **Restructured as Workspace**: Reorganized project into a Cargo workspace with two crates:
@@ -25,6 +40,15 @@ All notable changes to this project will be documented in this file.
   - OpenAI-compatible server with proper history support
   - Comprehensive testing scripts for all modes
   - Performance benchmarking examples
+- **Tool Calling Support**:
+  - Full OpenAI tools format compatibility (removed deprecated functions format)
+  - Automatic detection and formatting of tool calls in Claude's responses
+  - Returns proper `tool_calls` array format
+  - Seamless integration with modern AI tools like url-preview
+- **Extended Timeout Support**:
+  - Configurable timeout via CLAUDE_CODE__CLAUDE__TIMEOUT_SECONDS
+  - Default timeout increased to 600 seconds for long-running tasks
+  - Proper session cleanup on timeout to prevent EPIPE errors
 
 ### Changed
 - **Architecture**: API server now leverages `cc-sdk` for all Claude operations
@@ -35,6 +59,9 @@ All notable changes to this project will be documented in this file.
 - OpenAI chat completions now properly handle full conversation history
 - Token counting now accurately reflects the entire conversation context
 - Improved error handling and recovery in connection pool management
+- Fixed timeout errors for long-running tasks (WebSearch, etc.)
+- Fixed EPIPE errors by properly closing sessions on timeout
+- Resolved all compilation warnings
 
 ## [0.1.5] - 2025-01-22 (SDK Release)
 

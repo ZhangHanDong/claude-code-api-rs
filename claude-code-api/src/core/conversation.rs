@@ -156,8 +156,9 @@ impl ConversationManager {
         let estimate_tokens = |msgs: &[ChatMessage]| -> usize {
             msgs.iter()
                 .map(|m| match &m.content {
-                    MessageContent::Text(text) => text.len() / 4,
-                    MessageContent::Array(parts) => parts.len() * 100, // 粗略估计
+                    Some(MessageContent::Text(text)) => text.len() / 4,
+                    Some(MessageContent::Array(parts)) => parts.len() * 100, // 粗略估计
+                    None => 50, // Estimate for function calls
                 })
                 .sum()
         };

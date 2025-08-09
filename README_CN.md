@@ -8,6 +8,10 @@
 
 一个高性能的 Rust 实现的 OpenAI 兼容 API 网关，用于 Claude Code CLI。基于强大的 [claude-code-sdk-rs](https://github.com/ZhangHanDong/claude-code-api-rs/tree/main/claude-code-sdk-rs) 构建，该项目提供了一个 RESTful API 接口，让您可以使用熟悉的 OpenAI API 格式与 Claude Code 进行交互。
 
+## 🎉 谁在使用 Claude Code API
+
+- **[url-preview v0.6.0](https://github.com/ZhangHanDong/url-preview/releases/tag/0.6.0)** - 一个用于从网页提取结构化数据的 Rust 库，使用 LLM 技术。它通过 claude-code-api 提供 Claude 驱动的网页内容提取功能，同时支持 OpenAI。
+
 ## ✨ 特性
 
 - **🔌 OpenAI API 兼容** - 可直接替换 OpenAI API，兼容现有的 OpenAI 客户端库
@@ -23,6 +27,7 @@
 - **🛡️ 健壮的错误处理** - 全面的错误处理和自动重试机制
 - **📊 统计 API** - 监控使用情况和性能指标
 - **🔄 多种客户端模式** - OneShot（单次查询）、Interactive（交互式）和 Batch（批处理）模式
+- **🔧 工具调用** - 支持 OpenAI tools 格式，用于 AI 工具集成
 
 ## 🚀 快速开始
 

@@ -102,6 +102,7 @@ async fn create_app(settings: Settings) -> Result<Router> {
         conversation_manager.clone(),
         cache.clone(),
         settings.claude.use_interactive_sessions,
+        Arc::new(settings.clone()),
     );
 
     let conversation_state = api::conversations::ConversationState {

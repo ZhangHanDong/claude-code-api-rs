@@ -64,6 +64,7 @@ pub struct ChatState {
     pub conversation_manager: Arc<crate::core::conversation::ConversationManager>,
     pub cache: Arc<crate::core::cache::ResponseCache>,
     pub use_interactive_sessions: bool,
+    pub settings: Arc<crate::core::config::Settings>,
 }
 
 impl ChatState {
@@ -74,6 +75,7 @@ impl ChatState {
         conversation_manager: Arc<crate::core::conversation::ConversationManager>,
         cache: Arc<crate::core::cache::ResponseCache>,
         use_interactive_sessions: bool,
+        settings: Arc<crate::core::config::Settings>,
     ) -> Self {
         Self {
             claude_manager,
@@ -82,6 +84,7 @@ impl ChatState {
             conversation_manager,
             cache,
             use_interactive_sessions,
+            settings,
         }
     }
 }
@@ -140,7 +143,14 @@ pub async fn chat_completions(
         Ok(handle_streaming_response(request.model, rx).await?.into_response())
     } else {
         let cache_key = ResponseCache::generate_key(&request.model, &context_messages);
-        let response = handle_non_streaming_response(request.model.clone(), rx, session_id, state.claude_manager.clone()).await?;
+        let response = handle_non_streaming_response(
+            request.model.clone(), 
+            rx, 
+            session_id, 
+            state.claude_manager.clone(),
+            state.settings.claude.timeout_seconds,
+            request.tools.clone()
+        ).await?;
 
         for msg in &request.messages {
             state.conversation_manager.add_message(&conversation_id, msg.clone())
@@ -196,10 +206,10 @@ async fn extract_content_and_images(message: &ChatMessage) -> ApiResult<(String,
     let mut image_paths = Vec::new();
 
     match &message.content {
-        MessageContent::Text(text) => {
+        Some(MessageContent::Text(text)) => {
             text_parts.push(text.clone());
         }
-        MessageContent::Array(parts) => {
+        Some(MessageContent::Array(parts)) => {
             for part in parts {
                 match part {
                     crate::models::openai::ContentPart::Text { text } => {
@@ -211,6 +221,9 @@ async fn extract_content_and_images(message: &ChatMessage) -> ApiResult<(String,
                     }
                 }
             }
+        }
+        None => {
+            // No content, which is valid for function calls
         }
     }
 
@@ -307,15 +320,17 @@ async fn handle_non_streaming_response(
     mut rx: mpsc::Receiver<ClaudeCodeOutput>,
     session_id: String,
     claude_manager: Arc<ClaudeManager>,
+    timeout_seconds: u64,
+    requested_tools: Option<Vec<crate::models::openai::Tool>>,
 ) -> ApiResult<Json<ChatCompletionResponse>> {
     use tokio::time::{timeout, Duration};
 
     let mut full_content = String::new();
     let mut token_count = 0;
 
-    info!("Waiting for Claude response...");
+    info!("Waiting for Claude response (timeout: {}s)...", timeout_seconds);
 
-    let timeout_duration = Duration::from_secs(30);
+    let timeout_duration = Duration::from_secs(timeout_seconds);
     let start = std::time::Instant::now();
 
     loop {
@@ -335,8 +350,10 @@ async fn handle_non_streaming_response(
             }
             Err(_) => {
                 if start.elapsed() > timeout_duration {
-                    error!("Timeout waiting for Claude response");
-                    return Err(ApiError::ClaudeProcess("Timeout waiting for response".to_string()));
+                    error!("Timeout waiting for Claude response after {:?}", start.elapsed());
+                    // Close the session to avoid EPIPE error
+                    let _ = claude_manager.close_session(&session_id).await;
+                    return Err(ApiError::ClaudeProcess(format!("Timeout waiting for response after {} seconds", timeout_seconds)));
                 }
                 info!("No data received in 5s, but still waiting... (elapsed: {:?})", start.elapsed());
             }
@@ -345,6 +362,33 @@ async fn handle_non_streaming_response(
 
     let _ = claude_manager.close_session(&session_id).await;
 
+    // Check if the response should be formatted as tool calls
+    let message = if let Some(function_call) = crate::utils::function_calling::detect_and_convert_tool_call(
+        &full_content,
+        &requested_tools,
+    ) {
+        // Always use tool_calls format
+        let tool_call = crate::models::openai::ToolCall {
+            id: format!("call_{}", uuid::Uuid::new_v4()),
+            tool_type: "function".to_string(),
+            function: function_call,
+        };
+        ChatMessage {
+            role: "assistant".to_string(),
+            content: None,
+            name: None,
+            tool_calls: Some(vec![tool_call]),
+        }
+    } else {
+        // Return a regular text response
+        ChatMessage {
+            role: "assistant".to_string(),
+            content: Some(MessageContent::Text(full_content)),
+            name: None,
+            tool_calls: None,
+        }
+    };
+
     let response = ChatCompletionResponse {
         id: Uuid::new_v4().to_string(),
         object: "chat.completion".to_string(),
@@ -352,11 +396,7 @@ async fn handle_non_streaming_response(
         model,
         choices: vec![ChatChoice {
             index: 0,
-            message: ChatMessage {
-                role: "assistant".to_string(),
-                content: MessageContent::Text(full_content),
-                name: None,
-            },
+            message: message.clone(),
             finish_reason: Some("stop".to_string()),
         }],
         usage: Usage {
@@ -366,6 +406,13 @@ async fn handle_non_streaming_response(
         },
         conversation_id: None,
     };
+
+    // Log the response for debugging
+    info!("Returning response with message: role={}, has_content={}, has_tool_calls={}", 
+        message.role, 
+        message.content.is_some(), 
+        message.tool_calls.is_some()
+    );
 
     Ok(Json(response))
 }

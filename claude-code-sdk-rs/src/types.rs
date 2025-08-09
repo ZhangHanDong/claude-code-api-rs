@@ -89,6 +89,10 @@ pub struct ClaudeCodeOptions {
     pub resume: Option<String>,
     /// Custom permission prompt tool name
     pub permission_prompt_tool_name: Option<String>,
+    /// Settings file path for Claude Code CLI
+    pub settings: Option<String>,
+    /// Additional directories to add as working directories
+    pub add_dirs: Vec<PathBuf>,
 }
 
 impl ClaudeCodeOptions {
@@ -198,6 +202,24 @@ impl ClaudeCodeOptionsBuilder {
     /// Set permission prompt tool name
     pub fn permission_prompt_tool_name(mut self, name: impl Into<String>) -> Self {
         self.options.permission_prompt_tool_name = Some(name.into());
+        self
+    }
+
+    /// Set settings file path
+    pub fn settings(mut self, settings: impl Into<String>) -> Self {
+        self.options.settings = Some(settings.into());
+        self
+    }
+
+    /// Add directories as working directories
+    pub fn add_dirs(mut self, dirs: Vec<PathBuf>) -> Self {
+        self.options.add_dirs = dirs;
+        self
+    }
+
+    /// Add a single directory as working directory
+    pub fn add_dir(mut self, dir: impl Into<PathBuf>) -> Self {
+        self.options.add_dirs.push(dir.into());
         self
     }
 

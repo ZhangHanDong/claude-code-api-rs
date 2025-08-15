@@ -14,10 +14,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New `CliJsonDecodeError` error type for better JSON decode error handling
 - Builder methods: `extra_args()` and `add_extra_arg()` for flexible CLI argument passing
 - Full parity with Python SDK version 0.0.20
+- Documentation for 2025 Claude models (Opus 4.1, Sonnet 4)
+- Example code for model selection and fallback strategies
 
 ### Changed
 - `PermissionMode` enum now includes `Plan` variant
 - Enhanced error handling with more specific error types
+- Updated documentation to reflect 2025 model availability
+
+### Model Support
+- **Opus 4.1**: Use `"opus-4.1"` or `"claude-opus-4-1-20250805"`
+- **Sonnet 4**: Use `"sonnet-4"` or `"claude-sonnet-4-20250514"`
+- **Aliases**: `"opus"` and `"sonnet"` for latest versions
 
 ## [0.1.6] - 2025-01-23
 

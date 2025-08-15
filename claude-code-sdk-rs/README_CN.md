@@ -36,7 +36,7 @@ API 设计对 Python SDK 用户友好，同时充分利用 Rust 的类型安全�
 
 ```toml
 [dependencies]
-cc-sdk = "0.1.5"
+cc-sdk = "0.1.7"
 tokio = { version = "1.0", features = ["full"] }
 futures = "0.3"
 ```
@@ -47,6 +47,41 @@ futures = "0.3"
 
 ```bash
 npm install -g @anthropic-ai/claude-code
+```
+
+## 支持的模型（2025年）
+
+SDK 支持 2025 年最新的 Claude 模型：
+
+### 最新模型
+- **Opus 4.1** - 最强大的模型
+  - 使用：`"opus-4.1"` 或 `"claude-opus-4-1-20250805"`
+  - 别名：`"opus"`（最新版）
+  
+- **Sonnet 4** - 平衡的性能
+  - 使用：`"sonnet-4"` 或 `"claude-sonnet-4-20250514"`
+  - 别名：`"sonnet"`（最新版）
+
+### 上一代模型
+- **Claude 3.5 Sonnet** - `"claude-3-5-sonnet-20241022"`
+- **Claude 3.5 Haiku** - `"claude-3-5-haiku-20241022"`（最快）
+
+### 在代码中使用模型
+
+```rust
+use cc_sdk::{query, ClaudeCodeOptions, Result};
+
+// 使用 Opus 4.1
+let options = ClaudeCodeOptions::builder()
+    .model("opus-4.1")  // 或 "opus" 使用最新版
+    .build();
+
+// 使用 Sonnet 4
+let options = ClaudeCodeOptions::builder()
+    .model("sonnet-4")  // 或 "sonnet" 使用最新版
+    .build();
+
+let mut messages = query("你的提示", Some(options)).await?;
 ```
 
 ## 快速开始

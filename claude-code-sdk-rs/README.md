@@ -36,7 +36,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-cc-sdk = "0.1.6"
+cc-sdk = "0.1.7"
 tokio = { version = "1.0", features = ["full"] }
 futures = "0.3"
 ```
@@ -47,6 +47,41 @@ Install Claude Code CLI:
 
 ```bash
 npm install -g @anthropic-ai/claude-code
+```
+
+## Supported Models (2025)
+
+The SDK supports the latest Claude models available in 2025:
+
+### Latest Models
+- **Opus 4.1** - Most capable model
+  - Use: `"opus-4.1"` or `"claude-opus-4-1-20250805"`
+  - Alias: `"opus"` (latest)
+  
+- **Sonnet 4** - Balanced performance
+  - Use: `"sonnet-4"` or `"claude-sonnet-4-20250514"`
+  - Alias: `"sonnet"` (latest)
+
+### Previous Generation
+- **Claude 3.5 Sonnet** - `"claude-3-5-sonnet-20241022"`
+- **Claude 3.5 Haiku** - `"claude-3-5-haiku-20241022"` (fastest)
+
+### Using Models in Code
+
+```rust
+use cc_sdk::{query, ClaudeCodeOptions, Result};
+
+// Using Opus 4.1
+let options = ClaudeCodeOptions::builder()
+    .model("opus-4.1")  // or "opus" for latest
+    .build();
+
+// Using Sonnet 4
+let options = ClaudeCodeOptions::builder()
+    .model("sonnet-4")  // or "sonnet" for latest
+    .build();
+
+let mut messages = query("Your prompt", Some(options)).await?;
 ```
 
 ## Quick Start

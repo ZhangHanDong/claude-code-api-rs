@@ -4,17 +4,21 @@
 
 Claude Code CLI uses specific model names that may differ from the standard Claude API model names. This document lists the valid model names that can be used with claude-code-api.
 
-## Valid Model Names
+## Valid Model Names (2025)
 
 ### Full Model Names
-- `claude-3-5-sonnet-20241022` - Claude 3.5 Sonnet
+- `claude-opus-4-1-20250805` - Claude Opus 4.1 (most capable, latest)
+- `claude-sonnet-4-20250514` - Claude Sonnet 4 (balanced performance)
+- `claude-3-5-sonnet-20241022` - Claude 3.5 Sonnet (previous generation)
 - `claude-3-5-haiku-20241022` - Claude 3.5 Haiku (fastest)
-- `claude-opus-4-20250514` - Claude Opus 4 (most capable)
-- `claude-sonnet-4-20250514` - Claude Sonnet 4
 
 ### Model Aliases (Shortcuts)
-- `opus` - Alias for the latest Opus model
-- `sonnet` - Alias for the latest Sonnet model
+- `opus-4.1` - Alias for Claude Opus 4.1
+- `opus-4` - Alias for Claude Opus 4.x series
+- `opus` - Alias for the latest Opus model (currently 4.1)
+- `sonnet-4` - Alias for Claude Sonnet 4
+- `sonnet` - Alias for the latest Sonnet model (currently 4)
+- `haiku` - Alias for the latest Haiku model
 
 ## Invalid Model Names
 

@@ -99,6 +99,7 @@ pub async fn handle_enhanced_streaming_response(
 
 /// Configuration for streaming enhancement
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct StreamingConfig {
     /// Whether to enable text chunking
     pub enable_chunking: bool,

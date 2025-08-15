@@ -5,6 +5,7 @@
 
 use cc_sdk::{InteractiveClient, ClaudeCodeOptions, Message, Result};
 use futures::StreamExt;
+use tokio::pin;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -34,16 +35,19 @@ async fn main() -> Result<()> {
     client.send_message("What is 2 + 2?".to_string()).await?;
     
     // Receive messages as a stream
-    let mut stream = client.receive_messages_stream().await;
-    while let Some(result) = stream.next().await {
-        match result {
-            Ok(message) => {
-                display_message(&message);
-                if matches!(message, Message::Result { .. }) {
-                    break;
+    {
+        let stream = client.receive_messages_stream().await;
+        pin!(stream);
+        while let Some(result) = stream.next().await {
+            match result {
+                Ok(message) => {
+                    display_message(&message);
+                    if matches!(message, Message::Result { .. }) {
+                        break;
+                    }
                 }
+                Err(e) => eprintln!("Error: {}", e),
             }
-            Err(e) => eprintln!("Error: {}", e),
         }
     }
     
@@ -52,11 +56,14 @@ async fn main() -> Result<()> {
     client.send_message("Tell me a short joke".to_string()).await?;
     
     // Use the convenience method that stops at Result message
-    let mut stream = client.receive_response_stream().await;
-    while let Some(result) = stream.next().await {
-        match result {
-            Ok(message) => display_message(&message),
-            Err(e) => eprintln!("Error: {}", e),
+    {
+        let stream = client.receive_response_stream().await;
+        pin!(stream);
+        while let Some(result) = stream.next().await {
+            match result {
+                Ok(message) => display_message(&message),
+                Err(e) => eprintln!("Error: {}", e),
+            }
         }
     }
     
@@ -66,11 +73,14 @@ async fn main() -> Result<()> {
     println!("User: What's the capital of France?");
     client.send_message("What's the capital of France?".to_string()).await?;
     
-    let mut stream = client.receive_response_stream().await;
-    while let Some(result) = stream.next().await {
-        match result {
-            Ok(message) => display_message(&message),
-            Err(e) => eprintln!("Error: {}", e),
+    {
+        let stream = client.receive_response_stream().await;
+        pin!(stream);
+        while let Some(result) = stream.next().await {
+            match result {
+                Ok(message) => display_message(&message),
+                Err(e) => eprintln!("Error: {}", e),
+            }
         }
     }
     
@@ -78,11 +88,14 @@ async fn main() -> Result<()> {
     println!("\nUser: What's the population of that city?");
     client.send_message("What's the population of that city?".to_string()).await?;
     
-    let mut stream = client.receive_response_stream().await;
-    while let Some(result) = stream.next().await {
-        match result {
-            Ok(message) => display_message(&message),
-            Err(e) => eprintln!("Error: {}", e),
+    {
+        let stream = client.receive_response_stream().await;
+        pin!(stream);
+        while let Some(result) = stream.next().await {
+            match result {
+                Ok(message) => display_message(&message),
+                Err(e) => eprintln!("Error: {}", e),
+            }
         }
     }
     
@@ -91,26 +104,30 @@ async fn main() -> Result<()> {
     client.send_message("List 3 programming languages briefly".to_string()).await?;
     
     // Process messages as they arrive
-    let mut stream = client.receive_messages_stream().await;
-    let mut message_count = 0;
-    
-    while let Some(result) = stream.next().await {
-        match result {
-            Ok(message) => {
-                message_count += 1;
-                println!("[Message {}] Type: {}", message_count, message_type(&message));
-                display_message(&message);
-                
-                if matches!(message, Message::Result { .. }) {
+    let message_count = {
+        let stream = client.receive_messages_stream().await;
+        pin!(stream);
+        let mut count = 0;
+        
+        while let Some(result) = stream.next().await {
+            match result {
+                Ok(message) => {
+                    count += 1;
+                    println!("[Message {}] Type: {}", count, message_type(&message));
+                    display_message(&message);
+                    
+                    if matches!(message, Message::Result { .. }) {
+                        break;
+                    }
+                }
+                Err(e) => {
+                    eprintln!("Error: {}", e);
                     break;
                 }
             }
-            Err(e) => {
-                eprintln!("Error: {}", e);
-                break;
-            }
         }
-    }
+        count
+    };
     
     println!("\nTotal messages received: {}", message_count);
     
@@ -125,27 +142,26 @@ async fn main() -> Result<()> {
 /// Helper function to display messages
 fn display_message(msg: &Message) {
     match msg {
-        Message::User { content, .. } => {
-            for block in content {
-                if let Some(text) = block.as_text() {
-                    println!("User: {}", text);
-                }
-            }
+        Message::User { message } => {
+            println!("User: {}", message.content);
         }
-        Message::Assistant { content, .. } => {
-            for block in content {
-                if let Some(text) = block.as_text() {
-                    println!("Claude: {}", text);
+        Message::Assistant { message } => {
+            for block in &message.content {
+                match block {
+                    cc_sdk::ContentBlock::Text(text_content) => {
+                        println!("Claude: {}", text_content.text);
+                    }
+                    _ => {}
                 }
             }
         }
         Message::System { .. } => {
             // Skip system messages in output
         }
-        Message::Result { cost, .. } => {
+        Message::Result { total_cost_usd, .. } => {
             println!("=== Result ===");
-            if let Some(cost) = cost {
-                println!("Total cost: ${:.4} USD", cost.total_cost);
+            if let Some(cost) = total_cost_usd {
+                println!("Total cost: ${:.4} USD", cost);
             }
         }
     }

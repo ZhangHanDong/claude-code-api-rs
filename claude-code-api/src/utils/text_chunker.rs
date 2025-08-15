@@ -3,7 +3,7 @@
 //! Since Claude CLI returns complete messages, we need to chunk them
 //! to provide a better streaming experience.
 
-use futures::stream::{Stream, StreamExt};
+use futures::stream::Stream;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 use std::time::Duration;

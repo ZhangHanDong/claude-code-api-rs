@@ -87,6 +87,7 @@ let options = ClaudeCodeOptions::builder()
   - 可选值：
     - `Default` - 默认模式，危险操作需要用户确认
     - `AcceptEdits` - 自动接受文件编辑操作
+    - `Plan` - 计划模式，用于规划任务（v0.1.7 新增）
     - `BypassPermissions` - 允许所有工具操作无需确认（谨慎使用）
 
 #### MCP (Model Context Protocol) 配置

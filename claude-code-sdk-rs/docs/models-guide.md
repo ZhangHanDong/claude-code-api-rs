@@ -125,7 +125,7 @@ extra_args.insert("verbose".to_string(), None);
 
 let options = ClaudeCodeOptions::builder()
     .model("opus-4.1")
-    .permission_mode(PermissionMode::Plan)  // New in v0.1.7
+    .permission_mode(PermissionMode::Plan)  // Fully supported in v0.1.7
     .extra_args(extra_args)  // New in v0.1.7
     .max_thinking_tokens(15000)
     .build();

@@ -1,6 +1,6 @@
 # Claude Code API
 
-[![Version](https://img.shields.io/badge/version-0.1.7-blue.svg)](https://github.com/ZhangHanDong/claude-code-api-rs)
+[![Version](https://img.shields.io/badge/version-0.1.8-blue.svg)](https://github.com/ZhangHanDong/claude-code-api-rs)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Rust](https://img.shields.io/badge/rust-1.75+-orange.svg)](https://www.rust-lang.org)
 

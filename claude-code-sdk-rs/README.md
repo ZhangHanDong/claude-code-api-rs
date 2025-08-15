@@ -35,7 +35,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-cc-sdk = "0.1.7"
+cc-sdk = "0.1.8"
 tokio = { version = "1.0", features = ["full"] }
 futures = "0.3"
 ```

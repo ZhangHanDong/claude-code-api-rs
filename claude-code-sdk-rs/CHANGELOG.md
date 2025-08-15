@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.8] - 2025-01-15
+
+### Fixed
+- Fixed async execution order in comprehensive test to avoid future not being awaited
+- Improved process cleanup in `query_print_mode` to prevent zombie processes
+- Added automatic process termination when stream is dropped to prevent resource leaks
+
+### Added
+- Process lifecycle management with Arc<Mutex> for shared ownership
+- Automatic cleanup task that kills Claude CLI process when stream is dropped
+- Better logging for process lifecycle events (debug, info, warn levels)
+
+### Changed
+- Refactored test execution to await futures immediately instead of collecting them
+- Enhanced error handling with more detailed warning messages for process management
+
 ## [0.1.7] - 2025-01-14
 
 ### Added

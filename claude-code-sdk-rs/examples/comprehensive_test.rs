@@ -303,19 +303,20 @@ async fn main() {
     println!("• Interactive sessions\n");
     
     // Run all test suites
-    let tests = vec![
-        ("Models", test_all_models()),
-        ("Plan Mode", test_plan_mode_scenarios()),
-        ("Extra Args", test_extra_args()),
-        ("Interactive", test_interactive_with_new_features()),
-        ("Thinking", test_thinking_content()),
-    ];
-    
     let mut passed = 0;
     let mut failed = 0;
     
-    for (name, test) in tests {
-        match test.await {
+    // Run each test suite
+    let test_results = vec![
+        ("Models", test_all_models().await),
+        ("Plan Mode", test_plan_mode_scenarios().await),
+        ("Extra Args", test_extra_args().await),
+        ("Interactive", test_interactive_with_new_features().await),
+        ("Thinking", test_thinking_content().await),
+    ];
+    
+    for (name, result) in test_results {
+        match result {
             Ok(_) => {
                 passed += 1;
                 println!("\n✅ {} test suite completed", name);

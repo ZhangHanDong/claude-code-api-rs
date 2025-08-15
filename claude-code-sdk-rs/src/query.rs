@@ -12,7 +12,7 @@ use futures::stream::Stream;
 use std::pin::Pin;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 /// Query input type
 pub enum QueryInput {
@@ -144,8 +144,10 @@ async fn query_print_mode(
     prompt: String,
     options: ClaudeCodeOptions,
 ) -> Result<impl Stream<Item = Result<Message>>> {
+    use std::sync::Arc;
     use tokio::io::{AsyncBufReadExt, BufReader};
     use tokio::process::Command;
+    use tokio::sync::Mutex;
 
     let cli_path = crate::transport::subprocess::find_claude_cli()?;
     let mut cmd = Command::new(&cli_path);
@@ -249,6 +251,10 @@ async fn query_print_mode(
         .take()
         .ok_or_else(|| crate::SdkError::ConnectionError("Failed to get stderr".into()))?;
 
+    // Wrap child process in Arc<Mutex> for shared ownership
+    let child = Arc::new(Mutex::new(child));
+    let child_clone = Arc::clone(&child);
+
     // Create a channel to collect messages
     let (tx, rx) = mpsc::channel(100);
 
@@ -263,6 +269,9 @@ async fn query_print_mode(
         }
     });
 
+    // Clone tx for cleanup task
+    let tx_cleanup = tx.clone();
+    
     // Spawn stdout handler
     tokio::spawn(async move {
         let reader = BufReader::new(stdout);
@@ -300,7 +309,8 @@ async fn query_print_mode(
             }
         }
 
-        // Wait for process to complete
+        // Wait for process to complete and ensure cleanup
+        let mut child = child_clone.lock().await;
         match child.wait().await {
             Ok(status) => {
                 if !status.success() {
@@ -313,6 +323,35 @@ async fn query_print_mode(
             }
             Err(e) => {
                 let _ = tx.send(Err(crate::SdkError::ProcessError(e))).await;
+            }
+        }
+    });
+
+    // Spawn cleanup task that will ensure process is killed when stream is dropped
+    tokio::spawn(async move {
+        // Wait for the channel to be closed (all receivers dropped)
+        tx_cleanup.closed().await;
+        
+        // Kill the process if it's still running
+        let mut child = child.lock().await;
+        match child.try_wait() {
+            Ok(Some(_)) => {
+                // Process already exited
+                debug!("Claude CLI process already exited");
+            }
+            Ok(None) => {
+                // Process still running, kill it
+                info!("Killing Claude CLI process on stream drop");
+                if let Err(e) = child.kill().await {
+                    warn!("Failed to kill Claude CLI process: {}", e);
+                } else {
+                    // Wait for the process to actually exit
+                    let _ = child.wait().await;
+                    debug!("Claude CLI process killed and cleaned up");
+                }
+            }
+            Err(e) => {
+                warn!("Failed to check process status: {}", e);
             }
         }
     });

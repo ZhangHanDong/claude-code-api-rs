@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.8] - 2025-01-15
+
+### SDK Updates
+- **claude-code-sdk-rs v0.1.8**: Process management improvements and test fixes
+  - Fixed async execution order in comprehensive test suite
+  - Improved process cleanup to prevent zombie processes
+  - Added automatic process termination when stream is dropped
+  - Enhanced process lifecycle management with Arc<Mutex>
+  - Better logging for debugging process lifecycle events
+
+### Changed
+- Bumped workspace version to 0.1.8
+
 ## [0.1.6] - 2025-01-23
 
 ### Added

@@ -1,6 +1,6 @@
 # Claude Code API
 
-[![Version](https://img.shields.io/badge/version-0.1.5-blue.svg)](https://github.com/ZhangHanDong/claude-code-api-rs)
+[![Version](https://img.shields.io/badge/version-0.1.7-blue.svg)](https://github.com/ZhangHanDong/claude-code-api-rs)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Rust](https://img.shields.io/badge/rust-1.75+-orange.svg)](https://www.rust-lang.org)
 
@@ -79,11 +79,44 @@ The API server will start on `http://localhost:8080` by default.
 curl -X POST http://localhost:8080/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "claude-opus-4-20250514",
+    "model": "opus-4.1",
     "messages": [
       {"role": "user", "content": "Hello, Claude!"}
     ]
   }'
+```
+
+## 🤖 Supported Models (2025)
+
+The API supports the latest Claude models available in 2025:
+
+### Latest Models
+- **Opus 4.1** (`opus-4.1` or `claude-opus-4-1-20250805`) - Most capable model
+- **Sonnet 4** (`sonnet-4` or `claude-sonnet-4-20250514`) - Balanced performance
+- **Opus** (`opus`) - Alias for latest Opus model
+- **Sonnet** (`sonnet`) - Alias for latest Sonnet model
+
+### Previous Generation
+- **Claude 3.5 Sonnet** (`claude-3-5-sonnet-20241022`)
+- **Claude 3.5 Haiku** (`claude-3-5-haiku-20241022`) - Fastest response times
+
+### Model Usage Examples
+
+```bash
+# Using Opus 4.1
+curl -X POST http://localhost:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model": "opus-4.1", "messages": [{"role": "user", "content": "Hello"}]}'
+
+# Using Sonnet 4
+curl -X POST http://localhost:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model": "sonnet-4", "messages": [{"role": "user", "content": "Hello"}]}'
+
+# Using latest aliases
+curl -X POST http://localhost:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model": "opus", "messages": [{"role": "user", "content": "Hello"}]}'
 ```
 
 ## 📖 Core Features
@@ -100,7 +133,7 @@ client = openai.OpenAI(
 )
 
 response = client.chat.completions.create(
-    model="claude-opus-4-20250514",
+    model="opus-4.1",  # or "sonnet-4" for faster responses
     messages=[
         {"role": "user", "content": "Write a hello world in Python"}
     ]
@@ -116,7 +149,7 @@ Maintain context across multiple requests:
 ```python
 # First request - creates a new conversation
 response = client.chat.completions.create(
-    model="claude-opus-4-20250514",
+    model="sonnet-4",
     messages=[
         {"role": "user", "content": "My name is Alice"}
     ]
@@ -125,7 +158,7 @@ conversation_id = response.conversation_id
 
 # Subsequent request - continues the conversation
 response = client.chat.completions.create(
-    model="claude-opus-4-20250514",
+    model="sonnet-4",
     conversation_id=conversation_id,
     messages=[
         {"role": "user", "content": "What's my name?"}

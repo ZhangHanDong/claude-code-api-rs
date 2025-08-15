@@ -4,7 +4,7 @@
 [![Documentation](https://docs.rs/cc-sdk/badge.svg)](https://docs.rs/cc-sdk)
 [![License](https://img.shields.io/crates/l/cc-sdk.svg)](LICENSE)
 
-一个用于与 Claude Code CLI 交互的 Rust SDK，提供简单查询接口和完整的交互式客户端功能，**与官方 Python SDK 功能完全一致**。
+一个用于与 Claude Code CLI 交互的 Rust SDK，提供简单查询接口和完整的交互式客户端功能。
 
 ## 功能特性
 
@@ -12,23 +12,22 @@
 - 💬 **交互式客户端** - 支持有状态的对话，保持上下文
 - 🔄 **流式支持** - 实时消息流
 - 🛑 **中断功能** - 取消正在进行的操作
-- 🔧 **完整配置** - 与 Python SDK 匹配的全面选项
+- 🔧 **完整配置** - Claude Code 的全面配置选项
 - 📦 **类型安全** - 使用 serde 的强类型支持
 - ⚡ **异步/等待** - 基于 Tokio 的异步操作
 
-## 与 Python SDK 功能对等
+## 完整功能集
 
-此 Rust SDK 提供与官方 Python SDK (`claude_code_sdk`) **100% 的功能对等**，包括：
+此 Rust SDK 提供全面的 Claude Code 交互功能：
 
-- ✅ **所有客户端方法**：`query()`、`send_message()`、`receive_response()`、`interrupt()`
+- ✅ **客户端方法**：`query()`、`send_message()`、`receive_response()`、`interrupt()`
 - ✅ **交互式会话**：完整的有状态对话支持
 - ✅ **消息流**：实时异步消息处理
-- ✅ **所有配置选项**：系统提示、模型、权限、工具等
-- ✅ **所有消息类型**：用户、助手、系统、结果消息
-- ✅ **错误处理**：与 Python SDK 匹配的全面错误类型
+- ✅ **配置选项**：系统提示、模型、权限、工具等
+- ✅ **消息类型**：用户、助手、系统、结果消息
+- ✅ **错误处理**：全面的错误类型和详细诊断
 - ✅ **会话管理**：支持多会话和上下文隔离
-
-API 设计对 Python SDK 用户友好，同时充分利用 Rust 的类型安全和性能优势。
+- ✅ **类型安全**：充分利用 Rust 的类型系统确保代码可靠性
 
 ## 安装
 

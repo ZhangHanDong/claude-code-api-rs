@@ -4,7 +4,7 @@
 [![Documentation](https://docs.rs/cc-sdk/badge.svg)](https://docs.rs/cc-sdk)
 [![License](https://img.shields.io/crates/l/cc-sdk.svg)](LICENSE)
 
-A Rust SDK for interacting with Claude Code CLI, providing both simple query interfaces and full interactive client capabilities with **complete feature parity with the official Python SDK**.
+A Rust SDK for interacting with Claude Code CLI, providing both simple query interfaces and full interactive client capabilities.
 
 ## Features
 
@@ -12,23 +12,22 @@ A Rust SDK for interacting with Claude Code CLI, providing both simple query int
 - 💬 **Interactive Client** - Stateful conversations with context retention
 - 🔄 **Streaming Support** - Real-time message streaming
 - 🛑 **Interrupt Capability** - Cancel ongoing operations
-- 🔧 **Full Configuration** - Comprehensive options matching Python SDK
+- 🔧 **Full Configuration** - Comprehensive options for Claude Code
 - 📦 **Type Safety** - Strongly typed with serde support
 - ⚡ **Async/Await** - Built on Tokio for async operations
 
-## Python SDK Feature Parity
+## Complete Feature Set
 
-This Rust SDK provides **100% feature parity** with the official Python SDK (`claude_code_sdk`), including:
+This Rust SDK provides comprehensive functionality for Claude Code interactions:
 
-- ✅ **All client methods**: `query()`, `send_message()`, `receive_response()`, `interrupt()`
+- ✅ **Client methods**: `query()`, `send_message()`, `receive_response()`, `interrupt()`
 - ✅ **Interactive sessions**: Full stateful conversation support
 - ✅ **Message streaming**: Real-time async message handling
-- ✅ **All configuration options**: System prompts, models, permissions, tools, etc.
-- ✅ **All message types**: User, Assistant, System, Result messages
-- ✅ **Error handling**: Comprehensive error types matching Python SDK
+- ✅ **Configuration options**: System prompts, models, permissions, tools, etc.
+- ✅ **Message types**: User, Assistant, System, Result messages
+- ✅ **Error handling**: Comprehensive error types with detailed diagnostics
 - ✅ **Session management**: Multi-session support with context isolation
-
-The API is designed to be familiar to Python SDK users while leveraging Rust's type safety and performance benefits.
+- ✅ **Type safety**: Leveraging Rust's type system for reliable code
 
 ## Installation
 

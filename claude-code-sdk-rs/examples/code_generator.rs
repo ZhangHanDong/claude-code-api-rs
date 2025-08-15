@@ -17,7 +17,7 @@ async fn generate_rust_solution(question: &str, project_name: &str) -> Result<()
             "You are an expert Rust developer. Create clean, idiomatic Rust code \
             with comprehensive tests and documentation.",
         )
-        .model("claude-3-5-sonnet-20241022")
+        .model("sonnet")
         .permission_mode(PermissionMode::AcceptEdits)
         .allowed_tools(vec![
             "bash".to_string(),

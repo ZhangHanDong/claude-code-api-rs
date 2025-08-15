@@ -42,7 +42,7 @@ async fn process_single_question(question: &str, target_dir: &str) -> Result<()>
     // Configure Claude with appropriate permissions for file operations
     let options = ClaudeCodeOptions::builder()
         .system_prompt(&system_prompt)
-        .model("claude-3-5-sonnet-20241022")
+        .model("sonnet")
         .permission_mode(PermissionMode::AcceptEdits)
         .allowed_tools(vec![
             "bash".to_string(),

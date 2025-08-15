@@ -8,9 +8,10 @@ This guide provides comprehensive information about using different Claude model
 The latest and most powerful model, suitable for complex reasoning, creative tasks, and detailed analysis.
 
 **Model identifiers:**
-- `"opus-4.1"` - Recommended alias
-- `"claude-opus-4-1-20250805"` - Full model name
-- `"opus"` - Latest Opus (currently 4.1)
+- `"opus"` - Recommended alias (uses latest Opus 4.1)
+- `"claude-opus-4-1-20250805"` - Full model name for specific version
+
+**Note:** The short alias `"opus-4.1"` is NOT supported and will return a 404 error.
 
 **Example usage:**
 ```rust
@@ -20,7 +21,7 @@ use futures::StreamExt;
 #[tokio::main]
 async fn main() -> Result<()> {
     let options = ClaudeCodeOptions::builder()
-        .model("opus-4.1")
+        .model("opus")  // Use the general alias
         .max_thinking_tokens(10000)  // Opus 4.1 supports advanced reasoning
         .build();
     
@@ -41,9 +42,10 @@ async fn main() -> Result<()> {
 Excellent balance between capability and speed, ideal for most applications.
 
 **Model identifiers:**
-- `"sonnet-4"` - Recommended alias
-- `"claude-sonnet-4-20250514"` - Full model name
-- `"sonnet"` - Latest Sonnet (currently 4)
+- `"sonnet"` - Recommended alias (uses latest Sonnet 4)
+- `"claude-sonnet-4-20250514"` - Full model name for specific version
+
+**Note:** The short alias `"sonnet-4"` is NOT supported and will return a 404 error.
 
 **Example usage:**
 ```rust
@@ -52,7 +54,7 @@ use cc_sdk::{InteractiveClient, ClaudeCodeOptions, Result};
 #[tokio::main]
 async fn main() -> Result<()> {
     let options = ClaudeCodeOptions::builder()
-        .model("sonnet-4")
+        .model("sonnet")  // Use the general alias
         .permission_mode(cc_sdk::PermissionMode::AcceptEdits)
         .build();
     

@@ -142,7 +142,7 @@ async fn process_single_question(
 fn create_claude_options() -> ClaudeCodeOptions {
     ClaudeCodeOptions::builder()
         .system_prompt("You are a Rust expert. Create concise, working solutions.")
-        .model("claude-3-5-sonnet-20241022")
+        .model("sonnet")
         .permission_mode(PermissionMode::AcceptEdits)
         .allowed_tools(vec![
             "bash".to_string(),

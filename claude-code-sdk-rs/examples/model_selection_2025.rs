@@ -39,7 +39,7 @@ async fn use_opus_4_1() -> Result<()> {
     println!("\n=== Using Opus 4.1 ===");
     
     let options = ClaudeCodeOptions::builder()
-        .model("opus-4.1")  // or "claude-opus-4-1-20250805"
+        .model("opus")  // or "claude-opus-4-1-20250805"
         .max_thinking_tokens(15000)  // Opus 4.1 supports extended thinking
         .system_prompt("You are an expert Rust developer")
         .build();
@@ -76,7 +76,7 @@ async fn use_sonnet_4() -> Result<()> {
     println!("\n=== Using Sonnet 4 ===");
     
     let options = ClaudeCodeOptions::builder()
-        .model("sonnet-4")  // or "claude-sonnet-4-20250514"
+        .model("sonnet")  // or "claude-sonnet-4-20250514"
         .build();
     
     let mut messages = query(
@@ -117,13 +117,13 @@ async fn interactive_with_model_choice() -> Result<()> {
     io::stdin().read_line(&mut input).unwrap();
     
     let model = match input.trim() {
-        "1" => "opus-4.1",
-        "2" => "sonnet-4",
+        "1" => "opus",
+        "2" => "sonnet",
         "3" => "opus",
         "4" => "sonnet",
         _ => {
             println!("Invalid choice, using Sonnet 4");
-            "sonnet-4"
+            "sonnet"
         }
     };
     
@@ -162,7 +162,7 @@ async fn interactive_with_model_choice() -> Result<()> {
 async fn with_fallback() -> Result<()> {
     println!("\n=== Query with Automatic Fallback ===");
     
-    let models = vec!["opus-4.1", "sonnet-4", "sonnet", "claude-3-5-sonnet-20241022"];
+    let models = vec!["opus", "sonnet", "sonnet", "sonnet"];
     let mut success = false;
     
     for model in models {
@@ -210,10 +210,10 @@ async fn main() -> Result<()> {
     // Check which models are available
     println!("Checking model availability...");
     let models_to_test = vec![
-        "opus-4.1",
+        "opus",
         "opus-4",
         "opus",
-        "sonnet-4", 
+        "sonnet", 
         "sonnet",
         "claude-opus-4-1-20250805",
         "claude-sonnet-4-20250514",
@@ -244,11 +244,11 @@ async fn main() -> Result<()> {
         }
     } else {
         // Default: test all available models
-        if available_models.contains(&"opus-4.1") {
+        if available_models.contains(&"opus") {
             use_opus_4_1().await?;
         }
         
-        if available_models.contains(&"sonnet-4") {
+        if available_models.contains(&"sonnet") {
             use_sonnet_4().await?;
         }
         

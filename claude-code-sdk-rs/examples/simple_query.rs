@@ -44,7 +44,7 @@ async fn main() -> Result<()> {
 
     let options = ClaudeCodeOptions::builder()
         .system_prompt("You are a helpful coding assistant. Keep responses concise.")
-        .model("claude-3-5-sonnet-20241022")
+        .model("sonnet")
         .max_thinking_tokens(1000)
         .build();
 

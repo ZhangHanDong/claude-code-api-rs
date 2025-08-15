@@ -20,7 +20,7 @@ async fn main() -> Result<()> {
     let options = ClaudeCodeOptions::builder()
         .system_prompt("You are a helpful assistant.")
         .permission_mode(PermissionMode::AcceptEdits)
-        .model("claude-3-5-sonnet-20241022")
+        .model("sonnet")
         .build();
 
     let mut client = ClaudeSDKClient::new(options);

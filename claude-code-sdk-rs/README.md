@@ -54,12 +54,12 @@ The SDK supports the latest Claude models available in 2025:
 
 ### Latest Models
 - **Opus 4.1** - Most capable model
-  - Use: `"opus-4.1"` or `"claude-opus-4-1-20250805"`
-  - Alias: `"opus"` (latest)
+  - Full name: `"claude-opus-4-1-20250805"`
+  - Alias: `"opus"` (recommended - uses latest Opus)
   
 - **Sonnet 4** - Balanced performance
-  - Use: `"sonnet-4"` or `"claude-sonnet-4-20250514"`
-  - Alias: `"sonnet"` (latest)
+  - Full name: `"claude-sonnet-4-20250514"`
+  - Alias: `"sonnet"` (recommended - uses latest Sonnet)
 
 ### Previous Generation
 - **Claude 3.5 Sonnet** - `"claude-3-5-sonnet-20241022"`
@@ -70,14 +70,14 @@ The SDK supports the latest Claude models available in 2025:
 ```rust
 use cc_sdk::{query, ClaudeCodeOptions, Result};
 
-// Using Opus 4.1
+// Using Opus 4.1 (recommended: use alias)
 let options = ClaudeCodeOptions::builder()
-    .model("opus-4.1")  // or "opus" for latest
+    .model("opus")  // or "claude-opus-4-1-20250805" for specific version
     .build();
 
-// Using Sonnet 4
+// Using Sonnet 4 (recommended: use alias)
 let options = ClaudeCodeOptions::builder()
-    .model("sonnet-4")  // or "sonnet" for latest
+    .model("sonnet")  // or "claude-sonnet-4-20250514" for specific version
     .build();
 
 let mut messages = query("Your prompt", Some(options)).await?;

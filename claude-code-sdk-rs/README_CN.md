@@ -54,12 +54,12 @@ SDK 支持 2025 年最新的 Claude 模型：
 
 ### 最新模型
 - **Opus 4.1** - 最强大的模型
-  - 使用：`"opus-4.1"` 或 `"claude-opus-4-1-20250805"`
-  - 别名：`"opus"`（最新版）
+  - 完整名称：`"claude-opus-4-1-20250805"`
+  - 别名：`"opus"`（推荐 - 使用最新 Opus）
   
 - **Sonnet 4** - 平衡的性能
-  - 使用：`"sonnet-4"` 或 `"claude-sonnet-4-20250514"`
-  - 别名：`"sonnet"`（最新版）
+  - 完整名称：`"claude-sonnet-4-20250514"`
+  - 别名：`"sonnet"`（推荐 - 使用最新 Sonnet）
 
 ### 上一代模型
 - **Claude 3.5 Sonnet** - `"claude-3-5-sonnet-20241022"`
@@ -70,14 +70,14 @@ SDK 支持 2025 年最新的 Claude 模型：
 ```rust
 use cc_sdk::{query, ClaudeCodeOptions, Result};
 
-// 使用 Opus 4.1
+// 使用 Opus 4.1（推荐使用别名）
 let options = ClaudeCodeOptions::builder()
-    .model("opus-4.1")  // 或 "opus" 使用最新版
+    .model("opus")  // 或 "claude-opus-4-1-20250805" 指定版本
     .build();
 
-// 使用 Sonnet 4
+// 使用 Sonnet 4（推荐使用别名）
 let options = ClaudeCodeOptions::builder()
-    .model("sonnet-4")  // 或 "sonnet" 使用最新版
+    .model("sonnet")  // 或 "claude-sonnet-4-20250514" 指定版本
     .build();
 
 let mut messages = query("你的提示", Some(options)).await?;

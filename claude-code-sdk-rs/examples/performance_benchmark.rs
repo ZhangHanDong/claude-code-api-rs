@@ -34,7 +34,7 @@ fn benchmark_command_line(queries: &[&str]) -> BenchmarkResult {
                 "--max-turns",
                 "5",
                 "--model",
-                "claude-3-5-sonnet-20241022",
+                "sonnet",
                 query,
             ])
             .output();
@@ -78,7 +78,7 @@ async fn benchmark_sdk(queries: &[&str]) -> Result<BenchmarkResult> {
     // Create client with optimized settings for benchmarking
     let options = ClaudeCodeOptions::builder()
         .system_prompt("You are a helpful Rust expert. Provide concise answers.")
-        .model("claude-3-5-sonnet-20241022")
+        .model("sonnet")
         .permission_mode(PermissionMode::Default)
         .max_turns(5) // Limit turns for faster responses
         .build();

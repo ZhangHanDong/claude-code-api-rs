@@ -23,7 +23,7 @@ async fn main() -> Result<()> {
 
     let options = ClaudeCodeOptions::builder()
         .system_prompt("You are a helpful coding assistant.")
-        .model("claude-3-5-sonnet-20241022")
+        .model("sonnet")
         .permission_mode(PermissionMode::BypassPermissions) // Allow all operations
         .allowed_tools(vec!["write".to_string()]) // Still good practice to limit tools
         .build();

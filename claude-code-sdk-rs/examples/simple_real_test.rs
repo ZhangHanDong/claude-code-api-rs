@@ -1,6 +1,6 @@
 //! Simple real API test - the easiest way to test
 
-use cc_sdk::{query, ClaudeCodeOptions, PermissionMode, Result};
+use cc_sdk::{ClaudeCodeOptions, PermissionMode, Result, query};
 use futures::StreamExt;
 
 #[tokio::main]
@@ -10,7 +10,7 @@ async fn main() -> Result<()> {
     // Method 1: Using the simplest query function
     println!("Method 1: Simple query function");
     println!("Query: What is 2 + 2?");
-    
+
     match query("What is 2 + 2?", None).await {
         Ok(mut stream) => {
             while let Some(result) = stream.next().await {
@@ -33,7 +33,7 @@ async fn main() -> Result<()> {
         .build();
 
     println!("Query: Write a haiku about programming");
-    
+
     match query("Write a haiku about programming", Some(options)).await {
         Ok(mut stream) => {
             while let Some(result) = stream.next().await {

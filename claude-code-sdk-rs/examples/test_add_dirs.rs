@@ -1,8 +1,8 @@
 //! Example demonstrating the use of add_dirs parameter
-//! 
+//!
 //! This example shows how to add multiple directories as working directories
 
-use cc_sdk::{ClaudeCodeOptions, query, Result};
+use cc_sdk::{ClaudeCodeOptions, Result, query};
 use futures::StreamExt;
 use std::path::PathBuf;
 
@@ -61,7 +61,11 @@ async fn main() -> Result<()> {
                     }
                 }
             }
-            cc_sdk::Message::Result { duration_ms, total_cost_usd, .. } => {
+            cc_sdk::Message::Result {
+                duration_ms,
+                total_cost_usd,
+                ..
+            } => {
                 println!("\n---");
                 println!("Completed in {}ms", duration_ms);
                 if let Some(cost) = total_cost_usd {

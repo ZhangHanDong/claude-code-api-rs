@@ -63,7 +63,7 @@ impl From<&str> for QueryInput {
 /// # Arguments
 ///
 /// * `prompt` - The prompt to send to Claude. Can be a string for single-shot queries
-///              or a Stream of InputMessage for streaming mode.
+///   or a Stream of InputMessage for streaming mode.
 /// * `options` - Optional configuration. If None, defaults to `ClaudeCodeOptions::default()`.
 ///
 /// # Returns
@@ -120,7 +120,9 @@ pub async fn query(
     let prompt = prompt.into();
 
     // Set environment variable to indicate SDK usage
-    unsafe {std::env::set_var("CLAUDE_CODE_ENTRYPOINT", "sdk-rust");}
+    unsafe {
+        std::env::set_var("CLAUDE_CODE_ENTRYPOINT", "sdk-rust");
+    }
 
     match prompt {
         QueryInput::Text(text) => {
@@ -142,8 +144,8 @@ async fn query_print_mode(
     prompt: String,
     options: ClaudeCodeOptions,
 ) -> Result<impl Stream<Item = Result<Message>>> {
-    use tokio::process::Command;
     use tokio::io::{AsyncBufReadExt, BufReader};
+    use tokio::process::Command;
 
     let cli_path = crate::transport::subprocess::find_claude_cli()?;
     let mut cmd = Command::new(&cli_path);
@@ -162,7 +164,8 @@ async fn query_print_mode(
     }
 
     if !options.allowed_tools.is_empty() {
-        cmd.arg("--allowedTools").arg(options.allowed_tools.join(","));
+        cmd.arg("--allowedTools")
+            .arg(options.allowed_tools.join(","));
     }
 
     if let Some(max_turns) = options.max_turns {
@@ -170,7 +173,8 @@ async fn query_print_mode(
     }
 
     if !options.disallowed_tools.is_empty() {
-        cmd.arg("--disallowedTools").arg(options.disallowed_tools.join(","));
+        cmd.arg("--disallowedTools")
+            .arg(options.disallowed_tools.join(","));
     }
 
     if let Some(ref model) = options.model {
@@ -187,6 +191,9 @@ async fn query_print_mode(
         }
         PermissionMode::AcceptEdits => {
             cmd.arg("--permission-mode").arg("acceptEdits");
+        }
+        PermissionMode::Plan => {
+            cmd.arg("--permission-mode").arg("plan");
         }
         PermissionMode::BypassPermissions => {
             cmd.arg("--permission-mode").arg("bypassPermissions");
@@ -208,6 +215,19 @@ async fn query_print_mode(
         cmd.arg("--mcp-config").arg(mcp_config.to_string());
     }
 
+    // Extra arguments
+    for (key, value) in &options.extra_args {
+        let flag = if key.starts_with("--") || key.starts_with("-") {
+            key.clone()
+        } else {
+            format!("--{key}")
+        };
+        cmd.arg(&flag);
+        if let Some(val) = value {
+            cmd.arg(val);
+        }
+    }
+
     // Add the prompt with --print
     cmd.arg("--print").arg(&prompt);
 
@@ -220,9 +240,13 @@ async fn query_print_mode(
 
     let mut child = cmd.spawn().map_err(crate::SdkError::ProcessError)?;
 
-    let stdout = child.stdout.take()
+    let stdout = child
+        .stdout
+        .take()
         .ok_or_else(|| crate::SdkError::ConnectionError("Failed to get stdout".into()))?;
-    let stderr = child.stderr.take()
+    let stderr = child
+        .stderr
+        .take()
         .ok_or_else(|| crate::SdkError::ConnectionError("Failed to get stderr".into()))?;
 
     // Create a channel to collect messages
@@ -280,9 +304,11 @@ async fn query_print_mode(
         match child.wait().await {
             Ok(status) => {
                 if !status.success() {
-                    let _ = tx.send(Err(crate::SdkError::ProcessExited {
-                        code: status.code(),
-                    })).await;
+                    let _ = tx
+                        .send(Err(crate::SdkError::ProcessExited {
+                            code: status.code(),
+                        }))
+                        .await;
                 }
             }
             Err(e) => {

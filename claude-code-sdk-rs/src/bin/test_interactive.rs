@@ -1,12 +1,14 @@
 //! Simple test for interactive client
 
-use cc_sdk::{ClaudeSDKClient, ClaudeCodeOptions, Result};
+use cc_sdk::{ClaudeCodeOptions, ClaudeSDKClient, Result};
 use futures::StreamExt;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     // Set up simple println-based debugging
-    unsafe {std::env::set_var("RUST_LOG", "cc_sdk=debug");}
+    unsafe {
+        std::env::set_var("RUST_LOG", "cc_sdk=debug");
+    }
 
     println!("Creating client with default options...");
     let options = ClaudeCodeOptions::default();
@@ -17,7 +19,9 @@ async fn main() -> Result<()> {
     println!("Connected!");
 
     println!("Sending message: What is 1+1?");
-    client.send_request("What is 1+1?".to_string(), None).await?;
+    client
+        .send_request("What is 1+1?".to_string(), None)
+        .await?;
     println!("Message sent!");
 
     println!("Receiving messages...");

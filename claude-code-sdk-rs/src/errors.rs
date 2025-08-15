@@ -10,7 +10,9 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum SdkError {
     /// Claude CLI executable was not found
-    #[error("Claude CLI not found. Install with: npm install -g @anthropic-ai/claude-code\n\nSearched in:\n{searched_paths}")]
+    #[error(
+        "Claude CLI not found. Install with: npm install -g @anthropic-ai/claude-code\n\nSearched in:\n{searched_paths}"
+    )]
     CliNotFound {
         /// Paths that were searched for the CLI
         searched_paths: String,
@@ -36,6 +38,16 @@ pub enum SdkError {
     /// JSON serialization/deserialization errors
     #[error("JSON error: {0}")]
     JsonError(#[from] serde_json::Error),
+
+    /// CLI JSON decode error
+    #[error("Failed to decode JSON from CLI output: {line}")]
+    CliJsonDecodeError {
+        /// Line that failed to decode
+        line: String,
+        /// Original error
+        #[source]
+        original_error: serde_json::Error,
+    },
 
     /// Transport layer errors
     #[error("Transport error: {0}")]
@@ -209,10 +221,12 @@ mod tests {
     #[test]
     fn test_is_config_error() {
         assert!(SdkError::ConfigError("test".into()).is_config_error());
-        assert!(SdkError::CliNotFound {
-            searched_paths: "test".into()
-        }
-        .is_config_error());
+        assert!(
+            SdkError::CliNotFound {
+                searched_paths: "test".into()
+            }
+            .is_config_error()
+        );
         assert!(!SdkError::timeout(30).is_config_error());
     }
 }

@@ -1,9 +1,6 @@
 //! Performance utilities for the Claude Code SDK
 
-use crate::{
-    errors::Result,
-    types::Message,
-};
+use crate::{errors::Result, types::Message};
 use std::collections::VecDeque;
 use std::time::Duration;
 use tokio::sync::mpsc;
@@ -52,7 +49,7 @@ impl RetryConfig {
                 Ok(result) => return Ok(result),
                 Err(e) if retries < self.max_retries => {
                     retries += 1;
-                    
+
                     // Add jitter to delay
                     let jitter = if self.jitter_factor > 0.0 {
                         let jitter_range = delay.as_secs_f64() * self.jitter_factor;
@@ -61,15 +58,19 @@ impl RetryConfig {
                     } else {
                         Duration::ZERO
                     };
-                    
+
                     let actual_delay = delay + jitter;
-                    warn!("Attempt {} failed, retrying in {:?}: {}", retries, actual_delay, e);
-                    
+                    warn!(
+                        "Attempt {} failed, retrying in {:?}: {}",
+                        retries, actual_delay, e
+                    );
+
                     sleep(actual_delay).await;
-                    
+
                     // Calculate next delay with exponential backoff
                     delay = Duration::from_secs_f64(
-                        (delay.as_secs_f64() * self.backoff_multiplier).min(self.max_delay.as_secs_f64())
+                        (delay.as_secs_f64() * self.backoff_multiplier)
+                            .min(self.max_delay.as_secs_f64()),
                     );
                 }
                 Err(e) => return Err(e),
@@ -121,7 +122,7 @@ impl MessageBatcher {
             match timeout_result {
                 Ok(Some(msg)) => {
                     self.buffer.push_back(msg);
-                    
+
                     // Check if we should emit a batch
                     if self.buffer.len() >= self.max_batch_size {
                         self.emit_batch().await;
@@ -215,7 +216,6 @@ impl PerformanceMetrics {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -231,11 +231,11 @@ mod tests {
     #[test]
     fn test_performance_metrics() {
         let mut metrics = PerformanceMetrics::default();
-        
+
         metrics.record_success(100);
         metrics.record_success(200);
         metrics.record_failure();
-        
+
         assert_eq!(metrics.total_requests, 3);
         assert_eq!(metrics.successful_requests, 2);
         assert_eq!(metrics.failed_requests, 1);

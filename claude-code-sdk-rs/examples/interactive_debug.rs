@@ -43,52 +43,50 @@ async fn main() -> Result<()> {
     println!("Starting to receive messages...");
 
     // Set a timeout for the first response
-    let timeout = tokio::time::timeout(
-        std::time::Duration::from_secs(10),
-        async {
-            while let Some(msg) = messages.next().await {
-                message_count += 1;
-                println!("Received message #{}", message_count);
+    let timeout = tokio::time::timeout(std::time::Duration::from_secs(10), async {
+        while let Some(msg) = messages.next().await {
+            message_count += 1;
+            println!("Received message #{}", message_count);
 
-                match msg {
-                    Ok(message) => {
-                        println!("Message type: {:?}", std::mem::discriminant(&message));
+            match msg {
+                Ok(message) => {
+                    println!("Message type: {:?}", std::mem::discriminant(&message));
 
-                        match message {
-                            Message::Assistant { message } => {
-                                got_response = true;
-                                print!("Claude: ");
-                                for block in &message.content {
-                                    match block {
-                                        cc_sdk::ContentBlock::Text(text) => {
-                                            print!("{}", text.text);
-                                        }
-                                        _ => {}
+                    match message {
+                        Message::Assistant { message } => {
+                            got_response = true;
+                            print!("Claude: ");
+                            for block in &message.content {
+                                match block {
+                                    cc_sdk::ContentBlock::Text(text) => {
+                                        print!("{}", text.text);
                                     }
+                                    _ => {}
                                 }
-                                println!();
                             }
-                            Message::System { subtype, .. } => {
-                                println!("[System: {}]", subtype);
-                            }
-                            Message::Result { duration_ms, .. } => {
-                                println!("[Response time: {}ms]", duration_ms);
-                                return Ok(());
-                            }
-                            _ => {
-                                println!("[Other message type]");
-                            }
+                            println!();
+                        }
+                        Message::System { subtype, .. } => {
+                            println!("[System: {}]", subtype);
+                        }
+                        Message::Result { duration_ms, .. } => {
+                            println!("[Response time: {}ms]", duration_ms);
+                            return Ok(());
+                        }
+                        _ => {
+                            println!("[Other message type]");
                         }
                     }
-                    Err(e) => {
-                        println!("Error receiving message: {}", e);
-                        return Err(e);
-                    }
+                }
+                Err(e) => {
+                    println!("Error receiving message: {}", e);
+                    return Err(e);
                 }
             }
-            Ok(())
         }
-    ).await;
+        Ok(())
+    })
+    .await;
 
     match timeout {
         Ok(Ok(())) => {

@@ -15,7 +15,7 @@ async fn generate_rust_solution(question: &str, project_name: &str) -> Result<()
     let options = ClaudeCodeOptions::builder()
         .system_prompt(
             "You are an expert Rust developer. Create clean, idiomatic Rust code \
-            with comprehensive tests and documentation."
+            with comprehensive tests and documentation.",
         )
         .model("claude-3-5-sonnet-20241022")
         .permission_mode(PermissionMode::AcceptEdits)

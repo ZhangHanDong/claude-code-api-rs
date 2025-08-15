@@ -3,7 +3,9 @@
 //! This example demonstrates how to use the SimpleInteractiveClient for
 //! interactive, stateful conversations with Claude.
 
-use cc_sdk::{ClaudeCodeOptions, SimpleInteractiveClient, Message, PermissionMode, Result, ContentBlock};
+use cc_sdk::{
+    ClaudeCodeOptions, ContentBlock, Message, PermissionMode, Result, SimpleInteractiveClient,
+};
 use std::io::{self, Write};
 
 #[tokio::main]
@@ -66,6 +68,9 @@ async fn main() -> Result<()> {
                             ContentBlock::Text(text) => {
                                 print!("{}", text.text);
                             }
+                            ContentBlock::Thinking(thinking) => {
+                                println!("\n[Thinking: {}]", thinking.thinking);
+                            }
                             ContentBlock::ToolUse(tool) => {
                                 println!("\n[Using tool: {} ({})]", tool.name, tool.id);
                             }
@@ -81,7 +86,11 @@ async fn main() -> Result<()> {
                         println!("[System: {}]", subtype);
                     }
                 }
-                Message::Result { duration_ms, total_cost_usd, .. } => {
+                Message::Result {
+                    duration_ms,
+                    total_cost_usd,
+                    ..
+                } => {
                     print!("[Response time: {}ms", duration_ms);
                     if let Some(cost) = total_cost_usd {
                         print!(", cost: ${:.6}", cost);

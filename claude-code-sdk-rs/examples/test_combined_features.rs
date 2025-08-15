@@ -1,12 +1,12 @@
 //! Example demonstrating combined use of new features
-//! 
+//!
 //! This example shows how to use both settings and add_dirs together
 
 use cc_sdk::{ClaudeCodeOptions, InteractiveClient, Result};
-use std::path::PathBuf;
 use std::env;
+use std::path::PathBuf;
 
-#[tokio::main]  
+#[tokio::main]
 async fn main() -> Result<()> {
     // Initialize logging
     tracing_subscriber::fmt()
@@ -18,11 +18,11 @@ async fn main() -> Result<()> {
 
     // Get the current directory to build absolute paths
     let current_dir = env::current_dir().expect("Failed to get current directory");
-    
+
     // Build absolute path for settings file
     let settings_path = current_dir.join("examples/custom-claude-settings.json");
     let settings_str = settings_path.to_str().expect("Invalid path");
-    
+
     // Check if settings file exists
     if !settings_path.exists() {
         println!("Warning: Settings file not found at: {}", settings_str);
@@ -43,15 +43,17 @@ async fn main() -> Result<()> {
         .add_dirs(project_dirs.clone())
         // Add one more directory individually
         .add_dir("/Users/zhangalex/Work/Projects/FW/url-preview");
-    
+
     // Only add settings if file exists
     if settings_path.exists() {
         builder = builder.settings(settings_str);
     }
-    
+
     let options = builder
         // Set other options
-        .system_prompt("You are an expert Rust and Python developer with access to multiple projects")
+        .system_prompt(
+            "You are an expert Rust and Python developer with access to multiple projects",
+        )
         .model("claude-3-opus-20240229")
         .permission_mode(cc_sdk::PermissionMode::AcceptEdits)
         .max_turns(10)
@@ -75,19 +77,22 @@ async fn main() -> Result<()> {
 
     // Send a message that might utilize multiple directories
     println!("Sending query...\n");
-    client.send_message(
-        "Can you analyze the structure of these projects and tell me:
+    client
+        .send_message(
+            "Can you analyze the structure of these projects and tell me:
         1. What are the main differences between the Rust and Python SDK implementations?
         2. Are there any features in one that are missing in the other?
-        Please be concise.".to_string()
-    ).await?;
+        Please be concise."
+                .to_string(),
+        )
+        .await?;
 
     // Receive the response
     println!("Claude's response:\n");
     println!("==================\n");
 
     let messages = client.receive_response().await?;
-    
+
     for msg in messages {
         match msg {
             cc_sdk::Message::Assistant { message } => {
@@ -103,7 +108,11 @@ async fn main() -> Result<()> {
                     }
                 }
             }
-            cc_sdk::Message::Result { duration_ms, total_cost_usd, .. } => {
+            cc_sdk::Message::Result {
+                duration_ms,
+                total_cost_usd,
+                ..
+            } => {
                 println!("\n---");
                 println!("Session completed");
                 println!("Duration: {}ms", duration_ms);

@@ -1,17 +1,15 @@
 //! Test interactive mode and batch requests
 
 use cc_sdk::{
-    ClaudeCodeOptions, ClientMode, OptimizedClient, InteractiveClient,
-    PermissionMode, Result, Message, ContentBlock,
+    ClaudeCodeOptions, ClientMode, ContentBlock, InteractiveClient, Message, OptimizedClient,
+    PermissionMode, Result,
 };
 use std::time::Instant;
-use tracing::{info, Level};
+use tracing::{Level, info};
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    tracing_subscriber::fmt()
-        .with_max_level(Level::INFO)
-        .init();
+    tracing_subscriber::fmt().with_max_level(Level::INFO).init();
 
     info!("=== Testing Interactive Mode and Batch Requests ===\n");
 
@@ -50,11 +48,14 @@ async fn test_interactive_mode(options: ClaudeCodeOptions) -> Result<()> {
 
     for (role, message) in conversation {
         info!("{}: {}", role, message);
-        
+
         match client.send_and_receive(message.to_string()).await {
             Ok(messages) => {
                 for msg in messages {
-                    if let Message::Assistant { message: assistant_msg } = msg {
+                    if let Message::Assistant {
+                        message: assistant_msg,
+                    } = msg
+                    {
                         for content in assistant_msg.content {
                             if let ContentBlock::Text(text) = content {
                                 info!("Assistant: {}", text.text);
@@ -73,7 +74,7 @@ async fn test_interactive_mode(options: ClaudeCodeOptions) -> Result<()> {
     // Method 2: Using OptimizedClient in Interactive mode
     info!("\nMethod 2: Using OptimizedClient in Interactive Mode");
     let client = OptimizedClient::new(options, ClientMode::Interactive)?;
-    
+
     client.start_interactive_session().await?;
     info!("Interactive session started\n");
 
@@ -87,10 +88,13 @@ async fn test_interactive_mode(options: ClaudeCodeOptions) -> Result<()> {
     for prompt in prompts {
         info!("User: {}", prompt);
         client.send_interactive(prompt.to_string()).await?;
-        
+
         let messages = client.receive_interactive().await?;
         for msg in messages {
-            if let Message::Assistant { message: assistant_msg } = msg {
+            if let Message::Assistant {
+                message: assistant_msg,
+            } = msg
+            {
                 for content in assistant_msg.content {
                     if let ContentBlock::Text(text) = content {
                         info!("Assistant: {}", text.text);
@@ -113,10 +117,7 @@ async fn test_batch_mode(options: ClaudeCodeOptions) -> Result<()> {
     info!("Process multiple independent queries concurrently\n");
 
     // Create batch client with specific concurrency
-    let client = OptimizedClient::new(
-        options,
-        ClientMode::Batch { max_concurrent: 3 },
-    )?;
+    let client = OptimizedClient::new(options, ClientMode::Batch { max_concurrent: 3 })?;
 
     // Prepare diverse queries
     let queries = vec![
@@ -135,14 +136,20 @@ async fn test_batch_mode(options: ClaudeCodeOptions) -> Result<()> {
         Ok(results) => {
             let elapsed = start.elapsed();
             let successful = results.iter().filter(|r| r.is_ok()).count();
-            
+
             info!("\nBatch Results:");
             info!("- Total queries: {}", queries.len());
             info!("- Successful: {}", successful);
             info!("- Failed: {}", queries.len() - successful);
             info!("- Total time: {:?}", elapsed);
-            info!("- Average time per query: {:?}", elapsed / queries.len() as u32);
-            info!("- Queries per second: {:.2}\n", queries.len() as f64 / elapsed.as_secs_f64());
+            info!(
+                "- Average time per query: {:?}",
+                elapsed / queries.len() as u32
+            );
+            info!(
+                "- Queries per second: {:.2}\n",
+                queries.len() as f64 / elapsed.as_secs_f64()
+            );
 
             // Show first 3 results
             for (i, (query, result)) in queries.iter().zip(results.iter()).take(3).enumerate() {
@@ -150,7 +157,10 @@ async fn test_batch_mode(options: ClaudeCodeOptions) -> Result<()> {
                 match result {
                     Ok(messages) => {
                         for msg in messages {
-                            if let Message::Assistant { message: assistant_msg } = msg {
+                            if let Message::Assistant {
+                                message: assistant_msg,
+                            } = msg
+                            {
                                 for content in &assistant_msg.content {
                                     if let ContentBlock::Text(text) = content {
                                         let preview = if text.text.len() > 100 {
@@ -168,7 +178,7 @@ async fn test_batch_mode(options: ClaudeCodeOptions) -> Result<()> {
                 }
                 info!("---");
             }
-            
+
             if queries.len() > 3 {
                 info!("... and {} more queries processed", queries.len() - 3);
             }
@@ -186,10 +196,8 @@ async fn test_mixed_workload(options: ClaudeCodeOptions) -> Result<()> {
 
     // Use batch mode for independent queries
     info!("Step 1: Gather information using batch mode");
-    let batch_client = OptimizedClient::new(
-        options.clone(),
-        ClientMode::Batch { max_concurrent: 2 },
-    )?;
+    let batch_client =
+        OptimizedClient::new(options.clone(), ClientMode::Batch { max_concurrent: 2 })?;
 
     let info_queries = vec![
         "What is Rust programming language?".to_string(),
@@ -202,10 +210,7 @@ async fn test_mixed_workload(options: ClaudeCodeOptions) -> Result<()> {
 
     // Use interactive mode to discuss the gathered information
     info!("\nStep 2: Discuss findings in interactive mode");
-    let interactive_client = OptimizedClient::new(
-        options,
-        ClientMode::Interactive,
-    )?;
+    let interactive_client = OptimizedClient::new(options, ClientMode::Interactive)?;
 
     interactive_client.start_interactive_session().await?;
 
@@ -217,11 +222,16 @@ async fn test_mixed_workload(options: ClaudeCodeOptions) -> Result<()> {
 
     for prompt in discussion {
         info!("User: {}", prompt);
-        interactive_client.send_interactive(prompt.to_string()).await?;
-        
+        interactive_client
+            .send_interactive(prompt.to_string())
+            .await?;
+
         let messages = interactive_client.receive_interactive().await?;
         for msg in messages {
-            if let Message::Assistant { message: assistant_msg } = msg {
+            if let Message::Assistant {
+                message: assistant_msg,
+            } = msg
+            {
                 for content in assistant_msg.content {
                     if let ContentBlock::Text(text) = content {
                         let preview = if text.text.len() > 150 {

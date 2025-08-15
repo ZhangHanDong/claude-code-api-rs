@@ -22,7 +22,9 @@ pub struct InteractiveClient {
 impl InteractiveClient {
     /// Create a new client
     pub fn new(options: ClaudeCodeOptions) -> Result<Self> {
-        unsafe {std::env::set_var("CLAUDE_CODE_ENTRYPOINT", "sdk-rust");}
+        unsafe {
+            std::env::set_var("CLAUDE_CODE_ENTRYPOINT", "sdk-rust");
+        }
         let transport = SubprocessTransport::new(options)?;
         Ok(Self {
             transport: Arc::new(Mutex::new(transport)),

@@ -1,21 +1,20 @@
 //! REST API server for testing with curl
 
 use axum::{
+    Router,
     extract::State,
     http::StatusCode,
     response::Json,
     routing::{get, post},
-    Router,
 };
 use cc_sdk::{
-    ClaudeCodeOptions, ClientMode, ContentBlock, Message, OptimizedClient,
-    PermissionMode,
+    ClaudeCodeOptions, ClientMode, ContentBlock, Message, OptimizedClient, PermissionMode,
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tower_http::cors::CorsLayer;
-use tracing::{info, Level};
+use tracing::{Level, info};
 
 /// Request structure for queries
 #[derive(Debug, Deserialize)]
@@ -65,9 +64,7 @@ struct AppState {
 #[tokio::main]
 async fn main() {
     // Initialize logging
-    tracing_subscriber::fmt()
-        .with_max_level(Level::INFO)
-        .init();
+    tracing_subscriber::fmt().with_max_level(Level::INFO).init();
 
     // Check if we should run in mock mode
     let mock_mode = std::env::var("MOCK_MODE")
@@ -76,7 +73,14 @@ async fn main() {
         .unwrap_or(false);
 
     info!("Starting REST API server");
-    info!("Mode: {}", if mock_mode { "MOCK (for testing without claude-code)" } else { "REAL (using claude-code CLI)" });
+    info!(
+        "Mode: {}",
+        if mock_mode {
+            "MOCK (for testing without claude-code)"
+        } else {
+            "REAL (using claude-code CLI)"
+        }
+    );
 
     // Create app state
     let state = Arc::new(AppState {
@@ -96,7 +100,7 @@ async fn main() {
     // Start server
     let addr = "127.0.0.1:3000";
     info!("Server listening on http://{}", addr);
-    
+
     axum::Server::bind(&addr.parse().unwrap())
         .serve(app.into_make_service())
         .await
@@ -118,15 +122,15 @@ async fn query_handler(
     Json(request): Json<QueryRequest>,
 ) -> Result<Json<QueryResponse>, StatusCode> {
     let start = std::time::Instant::now();
-    
+
     if state.mock_mode {
         // Mock response
         let response = generate_mock_response(&request.prompt);
         let duration_ms = start.elapsed().as_millis() as u64;
-        
+
         // Update metrics
         state.metrics.write().await.record_success(duration_ms);
-        
+
         Ok(Json(QueryResponse {
             success: true,
             message: Some(response),
@@ -136,31 +140,29 @@ async fn query_handler(
     } else {
         // Real Claude API call
         match create_real_client().await {
-            Ok(client) => {
-                match client.query(request.prompt.clone()).await {
-                    Ok(messages) => {
-                        let response = extract_response_text(messages);
-                        let duration_ms = start.elapsed().as_millis() as u64;
-                        state.metrics.write().await.record_success(duration_ms);
-                        
-                        Ok(Json(QueryResponse {
-                            success: true,
-                            message: Some(response),
-                            error: None,
-                            duration_ms,
-                        }))
-                    }
-                    Err(e) => {
-                        state.metrics.write().await.record_failure();
-                        Ok(Json(QueryResponse {
-                            success: false,
-                            message: None,
-                            error: Some(e.to_string()),
-                            duration_ms: start.elapsed().as_millis() as u64,
-                        }))
-                    }
+            Ok(client) => match client.query(request.prompt.clone()).await {
+                Ok(messages) => {
+                    let response = extract_response_text(messages);
+                    let duration_ms = start.elapsed().as_millis() as u64;
+                    state.metrics.write().await.record_success(duration_ms);
+
+                    Ok(Json(QueryResponse {
+                        success: true,
+                        message: Some(response),
+                        error: None,
+                        duration_ms,
+                    }))
                 }
-            }
+                Err(e) => {
+                    state.metrics.write().await.record_failure();
+                    Ok(Json(QueryResponse {
+                        success: false,
+                        message: None,
+                        error: Some(e.to_string()),
+                        duration_ms: start.elapsed().as_millis() as u64,
+                    }))
+                }
+            },
             Err(e) => {
                 state.metrics.write().await.record_failure();
                 Ok(Json(QueryResponse {
@@ -181,9 +183,9 @@ async fn batch_handler(
 ) -> Result<Json<BatchResponse>, StatusCode> {
     let start = std::time::Instant::now();
     let max_concurrent = request.max_concurrent.unwrap_or(5);
-    
+
     let mut results = Vec::new();
-    
+
     if state.mock_mode {
         // Mock batch processing
         for prompt in request.prompts {
@@ -199,8 +201,11 @@ async fn batch_handler(
         // Real batch processing
         match create_batch_client(max_concurrent).await {
             Ok(client) => {
-                let batch_results = client.process_batch(request.prompts.clone()).await.unwrap_or_default();
-                
+                let batch_results = client
+                    .process_batch(request.prompts.clone())
+                    .await
+                    .unwrap_or_default();
+
                 for (_i, result) in batch_results.into_iter().enumerate() {
                     match result {
                         Ok(messages) => {
@@ -232,7 +237,7 @@ async fn batch_handler(
             }
         }
     }
-    
+
     Ok(Json(BatchResponse {
         success: true,
         results,
@@ -241,11 +246,9 @@ async fn batch_handler(
 }
 
 /// Metrics endpoint
-async fn metrics_handler(
-    State(state): State<Arc<AppState>>,
-) -> Json<serde_json::Value> {
+async fn metrics_handler(State(state): State<Arc<AppState>>) -> Json<serde_json::Value> {
     let metrics = state.metrics.read().await;
-    
+
     Json(serde_json::json!({
         "total_requests": metrics.total_requests,
         "successful_requests": metrics.successful_requests,
@@ -263,7 +266,10 @@ fn generate_mock_response(prompt: &str) -> String {
         "What is 2 + 2?" => "4".to_string(),
         "What is the capital of France?" => "Paris".to_string(),
         prompt if prompt.contains("squared") => {
-            if let Some(num) = prompt.split_whitespace().find_map(|w| w.parse::<i32>().ok()) {
+            if let Some(num) = prompt
+                .split_whitespace()
+                .find_map(|w| w.parse::<i32>().ok())
+            {
                 format!("{} squared is {}", num, num * num)
             } else {
                 "Please provide a number to square.".to_string()
@@ -300,7 +306,7 @@ async fn create_real_client() -> cc_sdk::Result<OptimizedClient> {
     let options = ClaudeCodeOptions::builder()
         .permission_mode(PermissionMode::AcceptEdits)
         .build();
-    
+
     OptimizedClient::new(options, ClientMode::OneShot)
 }
 
@@ -309,6 +315,6 @@ async fn create_batch_client(max_concurrent: usize) -> cc_sdk::Result<OptimizedC
     let options = ClaudeCodeOptions::builder()
         .permission_mode(PermissionMode::AcceptEdits)
         .build();
-    
+
     OptimizedClient::new(options, ClientMode::Batch { max_concurrent })
 }

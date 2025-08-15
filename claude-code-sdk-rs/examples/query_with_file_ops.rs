@@ -3,7 +3,7 @@
 //! This example demonstrates how to use query() with BypassPermissions
 //! to allow file operations in --print mode.
 
-use cc_sdk::{query, ClaudeCodeOptions, Message, PermissionMode, Result};
+use cc_sdk::{ClaudeCodeOptions, Message, PermissionMode, Result, query};
 use futures::StreamExt;
 
 #[tokio::main]
@@ -24,8 +24,8 @@ async fn main() -> Result<()> {
     let options = ClaudeCodeOptions::builder()
         .system_prompt("You are a helpful coding assistant.")
         .model("claude-3-5-sonnet-20241022")
-        .permission_mode(PermissionMode::BypassPermissions)  // Allow all operations
-        .allowed_tools(vec!["write".to_string()])  // Still good practice to limit tools
+        .permission_mode(PermissionMode::BypassPermissions) // Allow all operations
+        .allowed_tools(vec!["write".to_string()]) // Still good practice to limit tools
         .build();
 
     let mut messages = query(
@@ -52,7 +52,11 @@ async fn main() -> Result<()> {
                     }
                 }
             }
-            Message::Result { duration_ms, is_error, .. } => {
+            Message::Result {
+                duration_ms,
+                is_error,
+                ..
+            } => {
                 if is_error {
                     println!("\nQuery completed with error in {}ms", duration_ms);
                 } else {

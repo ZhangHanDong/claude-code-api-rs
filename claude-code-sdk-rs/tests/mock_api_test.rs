@@ -1,7 +1,7 @@
 //! Mock tests for API functionality without real Claude connection
 
 use cc_sdk::{
-    ClaudeCodeOptions, Message, PermissionMode, AssistantMessage, ContentBlock, TextContent,
+    AssistantMessage, ClaudeCodeOptions, ContentBlock, Message, PermissionMode, TextContent,
 };
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -25,13 +25,13 @@ impl MockResponseGenerator {
                 text: content.to_string(),
             })],
         };
-        
+
         let message = Message::Assistant {
             message: assistant_msg,
         };
-        
+
         self.responses.write().await.push(message);
-        
+
         // Add Result message to simulate completion
         self.responses.write().await.push(Message::Result {
             subtype: "done".to_string(),
@@ -60,16 +60,16 @@ fn test_message_serialization() {
             text: "Hello, world!".to_string(),
         })],
     };
-    
+
     let message = Message::Assistant {
         message: assistant_msg,
     };
-    
+
     // Serialize to JSON
     let json = serde_json::to_string(&message).unwrap();
     assert!(json.contains("assistant"));
     assert!(json.contains("Hello, world!"));
-    
+
     // Deserialize back
     let deserialized: Message = serde_json::from_str(&json).unwrap();
     match deserialized {
@@ -95,10 +95,13 @@ fn test_options_builder() {
         .allowed_tools(vec!["Bash".to_string(), "Read".to_string()])
         .disallowed_tools(vec!["Write".to_string()])
         .build();
-    
+
     assert_eq!(options.permission_mode, PermissionMode::AcceptEdits);
     assert_eq!(options.model, Some("claude-3-opus".to_string()));
-    assert_eq!(options.system_prompt, Some("You are a helpful assistant".to_string()));
+    assert_eq!(
+        options.system_prompt,
+        Some("You are a helpful assistant".to_string())
+    );
     assert_eq!(options.allowed_tools, vec!["Bash", "Read"]);
     assert_eq!(options.disallowed_tools, vec!["Write"]);
 }
@@ -107,13 +110,13 @@ fn test_options_builder() {
 #[tokio::test]
 async fn test_mock_response_flow() {
     let mock = MockResponseGenerator::new();
-    
+
     // Simulate adding responses
     mock.add_response("The answer is 42").await;
-    
+
     let responses = mock.get_responses().await;
     assert_eq!(responses.len(), 2); // Assistant message + Result message
-    
+
     // Verify first message is assistant response
     match &responses[0] {
         Message::Assistant { message } => {
@@ -124,7 +127,7 @@ async fn test_mock_response_flow() {
         }
         _ => panic!("Expected assistant message"),
     }
-    
+
     // Verify second message is result
     match &responses[1] {
         Message::Result { .. } => (),
@@ -136,17 +139,17 @@ async fn test_mock_response_flow() {
 #[test]
 fn test_error_patterns() {
     use cc_sdk::SdkError;
-    
+
     // Test timeout error
     let timeout_err = SdkError::Timeout { seconds: 30 };
     assert!(timeout_err.is_recoverable());
     assert!(!timeout_err.is_config_error());
-    
+
     // Test config error
     let config_err = SdkError::ConfigError("Invalid model".to_string());
     assert!(!config_err.is_recoverable());
     assert!(config_err.is_config_error());
-    
+
     // Test invalid state error
     let state_err = SdkError::InvalidState {
         message: "Not connected".to_string(),
@@ -159,7 +162,7 @@ fn test_error_patterns() {
 #[tokio::test]
 async fn test_concurrent_processing() {
     let mock = MockResponseGenerator::new();
-    
+
     // Simulate concurrent responses
     let handles: Vec<_> = (0..5)
         .map(|i| {
@@ -169,12 +172,12 @@ async fn test_concurrent_processing() {
             })
         })
         .collect();
-    
+
     // Wait for all to complete
     for handle in handles {
         handle.await.unwrap();
     }
-    
+
     let responses = mock.get_responses().await;
     // Each add_response adds 2 messages (assistant + result)
     assert_eq!(responses.len(), 10);

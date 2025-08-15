@@ -1,8 +1,8 @@
 //! Safe example demonstrating the use of the settings parameter with proper file handling
-//! 
+//!
 //! This example shows how to safely use a custom settings file with Claude Code
 
-use cc_sdk::{ClaudeCodeOptions, query, Result};
+use cc_sdk::{ClaudeCodeOptions, Result, query};
 use futures::StreamExt;
 use std::path::Path;
 
@@ -24,7 +24,9 @@ async fn main() -> Result<()> {
         "claude-settings.json"
     } else {
         println!("Warning: Settings file not found, proceeding without it.");
-        println!("To use a settings file, ensure claude-settings.json exists in the current or examples directory.\n");
+        println!(
+            "To use a settings file, ensure claude-settings.json exists in the current or examples directory.\n"
+        );
         // Use None for settings
         ""
     };
@@ -34,14 +36,14 @@ async fn main() -> Result<()> {
         .system_prompt("You are a helpful assistant")
         .model("claude-3-opus-20240229")
         .permission_mode(cc_sdk::PermissionMode::AcceptEdits);
-    
+
     if !settings_path.is_empty() {
         builder = builder.settings(settings_path);
         println!("Using settings file: {}", settings_path);
     } else {
         println!("Running without settings file");
     }
-    
+
     let options = builder.build();
 
     println!("Querying Claude Code...\n");
@@ -63,7 +65,11 @@ async fn main() -> Result<()> {
                     }
                 }
             }
-            cc_sdk::Message::Result { duration_ms, total_cost_usd, .. } => {
+            cc_sdk::Message::Result {
+                duration_ms,
+                total_cost_usd,
+                ..
+            } => {
                 println!("\n---");
                 println!("Completed in {}ms", duration_ms);
                 if let Some(cost) = total_cost_usd {

@@ -3,7 +3,7 @@
 //! This example demonstrates how to use the simple `query` function
 //! for one-shot interactions with Claude.
 
-use cc_sdk::{query, ClaudeCodeOptions, Message, Result};
+use cc_sdk::{ClaudeCodeOptions, Message, Result, query};
 use futures::StreamExt;
 
 #[tokio::main]
@@ -48,11 +48,7 @@ async fn main() -> Result<()> {
         .max_thinking_tokens(1000)
         .build();
 
-    let mut messages = query(
-        "Show me a hello world program in Rust",
-        Some(options),
-    )
-    .await?;
+    let mut messages = query("Show me a hello world program in Rust", Some(options)).await?;
 
     while let Some(msg) = messages.next().await {
         match msg? {

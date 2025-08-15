@@ -1,8 +1,8 @@
 //! Manual interactive mode test - type your own messages
 
 use cc_sdk::{
-    ClaudeCodeOptions, InteractiveClient, OptimizedClient, ClientMode,
-    Message, ContentBlock, PermissionMode, Result,
+    ClaudeCodeOptions, ClientMode, ContentBlock, InteractiveClient, Message, OptimizedClient,
+    PermissionMode, Result,
 };
 use std::io::{self, Write};
 use tracing::Level;
@@ -10,9 +10,7 @@ use tracing::Level;
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize logging
-    tracing_subscriber::fmt()
-        .with_max_level(Level::INFO)
-        .init();
+    tracing_subscriber::fmt().with_max_level(Level::INFO).init();
 
     println!("=== Claude Code Interactive Mode Test ===");
     println!("Choose client type:");
@@ -46,7 +44,7 @@ async fn test_traditional_interactive(options: ClaudeCodeOptions) -> Result<()> 
     println!("Type 'exit' to quit.\n");
 
     let mut client = InteractiveClient::new(options)?;
-    
+
     println!("Connecting to Claude Code...");
     client.connect().await?;
     println!("Connected! Start chatting:\n");
@@ -106,7 +104,7 @@ async fn test_optimized_interactive(options: ClaudeCodeOptions) -> Result<()> {
     println!("Type 'exit' to quit.\n");
 
     let client = OptimizedClient::new(options, ClientMode::Interactive)?;
-    
+
     println!("Starting interactive session...");
     client.start_interactive_session().await?;
     println!("Session started! Start chatting:\n");

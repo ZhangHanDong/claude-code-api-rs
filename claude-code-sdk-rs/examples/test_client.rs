@@ -2,7 +2,7 @@
 //!
 //! This example tests basic client connectivity.
 
-use cc_sdk::{ClaudeSDKClient, ClaudeCodeOptions, Message, Result};
+use cc_sdk::{ClaudeCodeOptions, ClaudeSDKClient, Message, Result};
 use futures::StreamExt;
 
 #[tokio::main]
@@ -27,7 +27,9 @@ async fn main() -> Result<()> {
 
     // Send a simple message
     println!("Sending: What is 2 + 2?");
-    client.send_request("What is 2 + 2?".to_string(), None).await?;
+    client
+        .send_request("What is 2 + 2?".to_string(), None)
+        .await?;
 
     // Receive response
     println!("Waiting for response...");

@@ -1,11 +1,8 @@
 //! Simple API demonstration without requiring Claude CLI connection
 
-use cc_sdk::{
-    ClientMode, Result,
-    Message, AssistantMessage, ContentBlock, TextContent,
-};
+use cc_sdk::{AssistantMessage, ClientMode, ContentBlock, Message, Result, TextContent};
 use std::time::Instant;
-use tracing::{info, Level};
+use tracing::{Level, info};
 
 /// Mock client for testing without Claude CLI
 struct MockClient {
@@ -20,10 +17,10 @@ impl MockClient {
     /// Simulate a query response
     async fn query(&self, prompt: String) -> Result<Vec<Message>> {
         info!("Mock query: {}", prompt);
-        
+
         // Simulate processing delay
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-        
+
         // Generate mock response based on prompt
         let response = match prompt.as_str() {
             "What is 2 + 2?" => "The answer is 4.".to_string(),
@@ -45,9 +42,7 @@ impl MockClient {
         // Create mock assistant message
         let assistant_msg = Message::Assistant {
             message: AssistantMessage {
-                content: vec![ContentBlock::Text(TextContent {
-                    text: response,
-                })],
+                content: vec![ContentBlock::Text(TextContent { text: response })],
             },
         };
 
@@ -70,11 +65,15 @@ impl MockClient {
     /// Simulate batch processing
     async fn process_batch(&self, prompts: Vec<String>) -> Vec<Result<Vec<Message>>> {
         let mut results = Vec::new();
-        
+
         match self.mode {
             ClientMode::Batch { max_concurrent } => {
-                info!("Processing batch of {} with max concurrency {}", prompts.len(), max_concurrent);
-                
+                info!(
+                    "Processing batch of {} with max concurrency {}",
+                    prompts.len(),
+                    max_concurrent
+                );
+
                 // Simulate concurrent processing
                 for (i, prompt) in prompts.into_iter().enumerate() {
                     if i > 0 && i % max_concurrent == 0 {
@@ -90,7 +89,7 @@ impl MockClient {
                 }
             }
         }
-        
+
         results
     }
 }
@@ -98,9 +97,7 @@ impl MockClient {
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize logging
-    tracing_subscriber::fmt()
-        .with_max_level(Level::INFO)
-        .init();
+    tracing_subscriber::fmt().with_max_level(Level::INFO).init();
 
     info!("=== Claude Code SDK API Demo (Mock Mode) ===\n");
 
@@ -119,9 +116,9 @@ async fn main() -> Result<()> {
 /// Demonstrate OneShot mode
 async fn demo_oneshot_mode() -> Result<()> {
     info!("--- Demo 1: OneShot Mode ---");
-    
+
     let client = MockClient::new(ClientMode::OneShot);
-    
+
     let queries = vec![
         "What is 2 + 2?",
         "What is the capital of France?",
@@ -132,7 +129,7 @@ async fn demo_oneshot_mode() -> Result<()> {
         let start = Instant::now();
         let messages = client.query(query.to_string()).await?;
         let elapsed = start.elapsed();
-        
+
         info!("Query: {}", query);
         for msg in messages {
             if let Message::Assistant { message } = msg {
@@ -152,24 +149,30 @@ async fn demo_oneshot_mode() -> Result<()> {
 /// Demonstrate Batch mode
 async fn demo_batch_mode() -> Result<()> {
     info!("--- Demo 2: Batch Mode ---");
-    
+
     let client = MockClient::new(ClientMode::Batch { max_concurrent: 3 });
-    
+
     let queries: Vec<String> = (1..=10)
         .map(|i| format!("What is {} squared?", i))
         .collect();
 
-    info!("Processing {} queries with max concurrency 3", queries.len());
+    info!(
+        "Processing {} queries with max concurrency 3",
+        queries.len()
+    );
     let start = Instant::now();
-    
+
     let results = client.process_batch(queries.clone()).await;
     let elapsed = start.elapsed();
-    
+
     let successful = results.iter().filter(|r| r.is_ok()).count();
     info!("Completed: {}/{} successful", successful, results.len());
     info!("Total time: {:?}", elapsed);
-    info!("Average time per query: {:?}", elapsed / results.len() as u32);
-    
+    info!(
+        "Average time per query: {:?}",
+        elapsed / results.len() as u32
+    );
+
     // Show first few results
     for (i, result) in results.iter().take(3).enumerate() {
         if let Ok(messages) = result {
@@ -192,10 +195,8 @@ async fn demo_batch_mode() -> Result<()> {
 /// Compare performance between modes
 async fn demo_performance_comparison() -> Result<()> {
     info!("--- Demo 3: Performance Comparison ---");
-    
-    let queries: Vec<String> = (1..=5)
-        .map(|i| format!("What is {} squared?", i))
-        .collect();
+
+    let queries: Vec<String> = (1..=5).map(|i| format!("What is {} squared?", i)).collect();
 
     // Test with OneShot mode (sequential)
     let oneshot_client = MockClient::new(ClientMode::OneShot);

@@ -15,6 +15,8 @@ pub enum PermissionMode {
     Default,
     /// Auto-accept file edits
     AcceptEdits,
+    /// Plan mode - for planning tasks
+    Plan,
     /// Allow all tools without prompting (use with caution)
     BypassPermissions,
 }
@@ -93,6 +95,8 @@ pub struct ClaudeCodeOptions {
     pub settings: Option<String>,
     /// Additional directories to add as working directories
     pub add_dirs: Vec<PathBuf>,
+    /// Extra arbitrary CLI flags
+    pub extra_args: HashMap<String, Option<String>>,
 }
 
 impl ClaudeCodeOptions {
@@ -198,7 +202,7 @@ impl ClaudeCodeOptionsBuilder {
         self.options.resume = Some(id.into());
         self
     }
-    
+
     /// Set permission prompt tool name
     pub fn permission_prompt_tool_name(mut self, name: impl Into<String>) -> Self {
         self.options.permission_prompt_tool_name = Some(name.into());
@@ -220,6 +224,18 @@ impl ClaudeCodeOptionsBuilder {
     /// Add a single directory as working directory
     pub fn add_dir(mut self, dir: impl Into<PathBuf>) -> Self {
         self.options.add_dirs.push(dir.into());
+        self
+    }
+
+    /// Add extra CLI arguments
+    pub fn extra_args(mut self, args: HashMap<String, Option<String>>) -> Self {
+        self.options.extra_args = args;
+        self
+    }
+
+    /// Add a single extra CLI argument
+    pub fn add_extra_arg(mut self, key: impl Into<String>, value: Option<String>) -> Self {
+        self.options.extra_args.insert(key.into(), value);
         self
     }
 
@@ -290,10 +306,10 @@ pub struct AssistantMessage {
     pub content: Vec<ContentBlock>,
 }
 
-/// System message (re-export for convenience)
-pub use Message::System as SystemMessage;
 /// Result message (re-export for convenience)  
 pub use Message::Result as ResultMessage;
+/// System message (re-export for convenience)
+pub use Message::System as SystemMessage;
 
 /// Content block types
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -301,6 +317,8 @@ pub use Message::Result as ResultMessage;
 pub enum ContentBlock {
     /// Text content
     Text(TextContent),
+    /// Thinking content
+    Thinking(ThinkingContent),
     /// Tool use request
     ToolUse(ToolUseContent),
     /// Tool result
@@ -312,6 +330,15 @@ pub enum ContentBlock {
 pub struct TextContent {
     /// Text content
     pub text: String,
+}
+
+/// Thinking content block
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ThinkingContent {
+    /// Thinking content
+    pub thinking: String,
+    /// Signature
+    pub signature: String,
 }
 
 /// Tool use content block

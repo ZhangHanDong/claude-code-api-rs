@@ -1,18 +1,16 @@
 //! Test Claude Code as API service
 
 use cc_sdk::{
-    ClaudeCodeOptions, ClientMode, OptimizedClient, InteractiveClient,
-    PermissionMode, Result, Message, ContentBlock,
+    ClaudeCodeOptions, ClientMode, ContentBlock, InteractiveClient, Message, OptimizedClient,
+    PermissionMode, Result,
 };
 use std::time::Instant;
-use tracing::{info, Level};
+use tracing::{Level, info};
 
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize logging
-    tracing_subscriber::fmt()
-        .with_max_level(Level::INFO)
-        .init();
+    tracing_subscriber::fmt().with_max_level(Level::INFO).init();
 
     info!("=== Testing Claude Code API Service ===\n");
     info!("This uses claude-code CLI, no API key needed\n");
@@ -39,7 +37,7 @@ async fn main() -> Result<()> {
 
 async fn test_simple_query(options: ClaudeCodeOptions) -> Result<()> {
     let client = OptimizedClient::new(options, ClientMode::OneShot)?;
-    
+
     let queries = vec![
         "What is 2 + 2?",
         "Write a Python hello world",
@@ -49,7 +47,7 @@ async fn test_simple_query(options: ClaudeCodeOptions) -> Result<()> {
     for query in queries {
         info!("Query: {}", query);
         let start = Instant::now();
-        
+
         match client.query(query.to_string()).await {
             Ok(messages) => {
                 for msg in messages {
@@ -73,7 +71,7 @@ async fn test_simple_query(options: ClaudeCodeOptions) -> Result<()> {
 
 async fn test_interactive(options: ClaudeCodeOptions) -> Result<()> {
     let mut client = InteractiveClient::new(options)?;
-    
+
     client.connect().await?;
     info!("Connected to claude-code");
 
@@ -85,7 +83,7 @@ async fn test_interactive(options: ClaudeCodeOptions) -> Result<()> {
 
     for prompt in conversation {
         info!("You: {}", prompt);
-        
+
         match client.send_and_receive(prompt.to_string()).await {
             Ok(messages) => {
                 for msg in messages {
@@ -110,10 +108,7 @@ async fn test_interactive(options: ClaudeCodeOptions) -> Result<()> {
 }
 
 async fn test_batch(options: ClaudeCodeOptions) -> Result<()> {
-    let client = OptimizedClient::new(
-        options, 
-        ClientMode::Batch { max_concurrent: 3 }
-    )?;
+    let client = OptimizedClient::new(options, ClientMode::Batch { max_concurrent: 3 })?;
 
     let tasks = vec![
         "What is the capital of Japan?".to_string(),
@@ -131,7 +126,7 @@ async fn test_batch(options: ClaudeCodeOptions) -> Result<()> {
             let successful = results.iter().filter(|r| r.is_ok()).count();
             info!("Completed: {}/{} successful", successful, results.len());
             info!("Total time: {:?}", start.elapsed());
-            
+
             // Show first 2 results
             for (i, result) in results.iter().take(2).enumerate() {
                 if let Ok(messages) = result {

@@ -1,22 +1,20 @@
 //! OpenAI API compatible server with proper conversation history support
 
 use axum::{
+    Router,
     extract::{Path, State},
     http::{HeaderMap, StatusCode},
-    response::{Json, Response, IntoResponse},
+    response::{IntoResponse, Json, Response},
     routing::{get, post},
-    Router,
 };
-use cc_sdk::{
-    ClaudeCodeOptions, ClientMode, OptimizedClient, PermissionMode,
-};
+use cc_sdk::{ClaudeCodeOptions, ClientMode, OptimizedClient, PermissionMode};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::sync::RwLock;
 use tower_http::cors::CorsLayer;
-use tracing::{info, warn, Level};
+use tracing::{Level, info, warn};
 use uuid::Uuid;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Clone)]
 struct AppState {
@@ -84,9 +82,7 @@ struct ErrorDetail {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    tracing_subscriber::fmt()
-        .with_max_level(Level::INFO)
-        .init();
+    tracing_subscriber::fmt().with_max_level(Level::INFO).init();
 
     info!("Starting OpenAI API compatible server WITH proper history support");
 
@@ -94,10 +90,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .permission_mode(PermissionMode::AcceptEdits)
         .build();
 
-    let client = Arc::new(OptimizedClient::new(
-        options.clone(),
-        ClientMode::OneShot,
-    )?);
+    let client = Arc::new(OptimizedClient::new(options.clone(), ClientMode::OneShot)?);
 
     // Pre-warm connection
     info!("Pre-warming connection pool...");
@@ -134,11 +127,14 @@ async fn chat_completions(
     _headers: HeaderMap,
     Json(request): Json<ChatCompletionRequest>,
 ) -> Result<Json<ChatCompletionResponse>, (StatusCode, Json<ErrorResponse>)> {
-    info!("Received chat request with {} messages", request.messages.len());
+    info!(
+        "Received chat request with {} messages",
+        request.messages.len()
+    );
 
     // Build a complete conversation prompt
     let mut conversation = String::new();
-    
+
     for message in &request.messages {
         match message.role.as_str() {
             "system" => {
@@ -153,16 +149,19 @@ async fn chat_completions(
             _ => {}
         }
     }
-    
+
     // Add the final prompt for Claude to complete
     conversation.push_str("Assistant: ");
-    
-    info!("Full conversation prompt ({} chars):\n{}", conversation.len(), 
-          if conversation.len() > 200 { 
-              format!("{}...", &conversation[..200]) 
-          } else { 
-              conversation.clone() 
-          });
+
+    info!(
+        "Full conversation prompt ({} chars):\n{}",
+        conversation.len(),
+        if conversation.len() > 200 {
+            format!("{}...", &conversation[..200])
+        } else {
+            conversation.clone()
+        }
+    );
 
     // Send to Claude
     let start = std::time::Instant::now();

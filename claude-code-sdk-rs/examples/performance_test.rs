@@ -6,7 +6,7 @@ use cc_sdk::{
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
-use tracing::{info, Level};
+use tracing::{Level, info};
 
 #[derive(Debug, Clone)]
 struct TestResult {
@@ -19,9 +19,7 @@ struct TestResult {
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize logging
-    tracing_subscriber::fmt()
-        .with_max_level(Level::INFO)
-        .init();
+    tracing_subscriber::fmt().with_max_level(Level::INFO).init();
 
     info!("=== Claude Code SDK Performance Test ===\n");
 
@@ -61,7 +59,7 @@ async fn main() -> Result<()> {
 /// Test single query latency
 async fn test_single_query_latency(options: ClaudeCodeOptions) -> TestResult {
     let client = OptimizedClient::new(options, ClientMode::OneShot).unwrap();
-    
+
     let start = Instant::now();
     let result = client.query("What is 2 + 2?".to_string()).await;
     let duration = start.elapsed();
@@ -91,7 +89,7 @@ async fn test_single_query_latency(options: ClaudeCodeOptions) -> TestResult {
 /// Test connection pooling effectiveness
 async fn test_connection_pooling(options: ClaudeCodeOptions) -> TestResult {
     let client = OptimizedClient::new(options, ClientMode::OneShot).unwrap();
-    
+
     let mut durations = Vec::new();
     let start = Instant::now();
 
@@ -119,12 +117,16 @@ async fn test_connection_pooling(options: ClaudeCodeOptions) -> TestResult {
     let avg_duration = durations.iter().sum::<Duration>() / durations.len() as u32;
 
     info!("  Average query time: {:?}", avg_duration);
-    info!("  First query: {:?}, Last query: {:?}", durations[0], durations[4]);
-    
+    info!(
+        "  First query: {:?}, Last query: {:?}",
+        durations[0], durations[4]
+    );
+
     // Check if pooling is effective (later queries should be faster)
     let improvement = if durations[4] < durations[0] {
-        let percent = ((durations[0].as_millis() - durations[4].as_millis()) as f64 
-                      / durations[0].as_millis() as f64) * 100.0;
+        let percent = ((durations[0].as_millis() - durations[4].as_millis()) as f64
+            / durations[0].as_millis() as f64)
+            * 100.0;
         info!("  Performance improvement: {:.1}%", percent);
         true
     } else {
@@ -135,16 +137,18 @@ async fn test_connection_pooling(options: ClaudeCodeOptions) -> TestResult {
         name: "Connection Pooling".to_string(),
         duration: total_duration,
         success: true,
-        error: if improvement { None } else { Some("No improvement detected".to_string()) },
+        error: if improvement {
+            None
+        } else {
+            Some("No improvement detected".to_string())
+        },
     }
 }
 
 /// Test concurrent request throughput
 async fn test_concurrent_throughput(options: ClaudeCodeOptions) -> TestResult {
-    let client = Arc::new(OptimizedClient::new(
-        options,
-        ClientMode::Batch { max_concurrent: 5 },
-    ).unwrap());
+    let client =
+        Arc::new(OptimizedClient::new(options, ClientMode::Batch { max_concurrent: 5 }).unwrap());
 
     let queries = vec![
         "What is 1 + 1?",
@@ -160,9 +164,10 @@ async fn test_concurrent_throughput(options: ClaudeCodeOptions) -> TestResult {
     ];
 
     let start = Instant::now();
-    let results = client.process_batch(
-        queries.iter().map(|q| q.to_string()).collect()
-    ).await.unwrap();
+    let results = client
+        .process_batch(queries.iter().map(|q| q.to_string()).collect())
+        .await
+        .unwrap();
     let duration = start.elapsed();
 
     let successful = results.iter().filter(|r| r.is_ok()).count();
@@ -187,16 +192,16 @@ async fn test_concurrent_throughput(options: ClaudeCodeOptions) -> TestResult {
 /// Test interactive session latency
 async fn test_interactive_latency(options: ClaudeCodeOptions) -> TestResult {
     let client = OptimizedClient::new(options, ClientMode::Interactive).unwrap();
-    
+
     let start = Instant::now();
-    
+
     match client.start_interactive_session().await {
         Ok(_) => {
             let mut round_trip_times = Vec::new();
-            
+
             for i in 0..3 {
                 let msg_start = Instant::now();
-                
+
                 if let Err(e) = client.send_interactive(format!("Message {}", i)).await {
                     return TestResult {
                         name: "Interactive Session".to_string(),
@@ -205,7 +210,7 @@ async fn test_interactive_latency(options: ClaudeCodeOptions) -> TestResult {
                         error: Some(format!("Send failed: {}", e)),
                     };
                 }
-                
+
                 match client.receive_interactive().await {
                     Ok(_) => {
                         let round_trip = msg_start.elapsed();
@@ -222,13 +227,14 @@ async fn test_interactive_latency(options: ClaudeCodeOptions) -> TestResult {
                     }
                 }
             }
-            
+
             let _ = client.end_interactive_session().await;
             let total_duration = start.elapsed();
-            
-            let avg_round_trip = round_trip_times.iter().sum::<Duration>() / round_trip_times.len() as u32;
+
+            let avg_round_trip =
+                round_trip_times.iter().sum::<Duration>() / round_trip_times.len() as u32;
             info!("  Average round trip: {:?}", avg_round_trip);
-            
+
             TestResult {
                 name: "Interactive Session".to_string(),
                 duration: total_duration,
@@ -247,10 +253,8 @@ async fn test_interactive_latency(options: ClaudeCodeOptions) -> TestResult {
 
 /// Test large batch processing
 async fn test_large_batch(options: ClaudeCodeOptions) -> TestResult {
-    let client = Arc::new(OptimizedClient::new(
-        options,
-        ClientMode::Batch { max_concurrent: 10 },
-    ).unwrap());
+    let client =
+        Arc::new(OptimizedClient::new(options, ClientMode::Batch { max_concurrent: 10 }).unwrap());
 
     let metrics = Arc::new(RwLock::new(PerformanceMetrics::default()));
 
@@ -259,13 +263,16 @@ async fn test_large_batch(options: ClaudeCodeOptions) -> TestResult {
         .map(|i| format!("What is {} squared?", i))
         .collect();
 
-    info!("  Processing {} queries with max concurrency 10", queries.len());
+    info!(
+        "  Processing {} queries with max concurrency 10",
+        queries.len()
+    );
     let start = Instant::now();
 
     match client.process_batch(queries.clone()).await {
         Ok(results) => {
             let duration = start.elapsed();
-            
+
             // Update metrics
             for (_i, result) in results.iter().enumerate() {
                 match result {
@@ -281,16 +288,28 @@ async fn test_large_batch(options: ClaudeCodeOptions) -> TestResult {
 
             let final_metrics = metrics.read().await;
             info!("  Total time: {:?}", duration);
-            info!("  Success rate: {:.1}%", final_metrics.success_rate() * 100.0);
-            info!("  Average latency: {:.0}ms", final_metrics.average_latency_ms());
-            info!("  Throughput: {:.2} queries/second", queries.len() as f64 / duration.as_secs_f64());
+            info!(
+                "  Success rate: {:.1}%",
+                final_metrics.success_rate() * 100.0
+            );
+            info!(
+                "  Average latency: {:.0}ms",
+                final_metrics.average_latency_ms()
+            );
+            info!(
+                "  Throughput: {:.2} queries/second",
+                queries.len() as f64 / duration.as_secs_f64()
+            );
 
             TestResult {
                 name: "Large Batch Processing".to_string(),
                 duration,
                 success: final_metrics.success_rate() > 0.8,
                 error: if final_metrics.success_rate() < 0.8 {
-                    Some(format!("Low success rate: {:.1}%", final_metrics.success_rate() * 100.0))
+                    Some(format!(
+                        "Low success rate: {:.1}%",
+                        final_metrics.success_rate() * 100.0
+                    ))
                 } else {
                     None
                 },
@@ -308,18 +327,22 @@ async fn test_large_batch(options: ClaudeCodeOptions) -> TestResult {
 /// Print test summary
 fn print_test_summary(results: &[TestResult]) {
     info!("\n=== Test Summary ===");
-    info!("{:<30} {:<15} {:<15} {}", "Test", "Duration", "Status", "Notes");
+    info!(
+        "{:<30} {:<15} {:<15} {}",
+        "Test", "Duration", "Status", "Notes"
+    );
     info!("{}", "-".repeat(80));
 
     for result in results {
-        let status = if result.success { "✓ PASS" } else { "✗ FAIL" };
+        let status = if result.success {
+            "✓ PASS"
+        } else {
+            "✗ FAIL"
+        };
         let notes = result.error.as_deref().unwrap_or("-");
         info!(
             "{:<30} {:>12.2?} {:<15} {}",
-            result.name,
-            result.duration,
-            status,
-            notes
+            result.name, result.duration, status, notes
         );
     }
 
@@ -327,5 +350,10 @@ fn print_test_summary(results: &[TestResult]) {
     let total_duration: Duration = results.iter().map(|r| r.duration).sum();
 
     info!("{}", "-".repeat(80));
-    info!("Total: {}/{} passed, Total time: {:?}", total_passed, results.len(), total_duration);
+    info!(
+        "Total: {}/{} passed, Total time: {:?}",
+        total_passed,
+        results.len(),
+        total_duration
+    );
 }

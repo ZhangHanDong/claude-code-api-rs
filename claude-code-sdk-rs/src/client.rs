@@ -11,7 +11,7 @@ use crate::{
 use futures::stream::{Stream, StreamExt};
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::{mpsc, Mutex, RwLock};
+use tokio::sync::{Mutex, RwLock, mpsc};
 use tokio_stream::wrappers::ReceiverStream;
 use tracing::{debug, error, info};
 
@@ -112,7 +112,9 @@ impl ClaudeSDKClient {
     /// Create a new client with the given options
     pub fn new(options: ClaudeCodeOptions) -> Self {
         // Set environment variable to indicate SDK usage
-        unsafe {std::env::set_var("CLAUDE_CODE_ENTRYPOINT", "sdk-rust");}
+        unsafe {
+            std::env::set_var("CLAUDE_CODE_ENTRYPOINT", "sdk-rust");
+        }
 
         let transport = match SubprocessTransport::new(options.clone()) {
             Ok(t) => t,
@@ -170,10 +172,7 @@ impl ClaudeSDKClient {
     }
 
     /// Send a user message to Claude
-    pub async fn send_user_message(
-        &mut self,
-        prompt: String,
-    ) -> Result<()> {
+    pub async fn send_user_message(&mut self, prompt: String) -> Result<()> {
         // Check connection
         {
             let state = self.state.read().await;
@@ -317,9 +316,9 @@ impl ClaudeSDKClient {
             }
         });
 
-        ack_task.await.map_err(|_| {
-            SdkError::ControlRequestError("Interrupt task panicked".into())
-        })?
+        ack_task
+            .await
+            .map_err(|_| SdkError::ControlRequestError("Interrupt task panicked".into()))?
     }
 
     /// Check if the client is connected

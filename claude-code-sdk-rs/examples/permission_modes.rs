@@ -2,7 +2,7 @@
 //!
 //! This example demonstrates different permission modes for file operations
 
-use cc_sdk::{query, ClaudeCodeOptions, Message, PermissionMode, Result};
+use cc_sdk::{ClaudeCodeOptions, Message, PermissionMode, Result, query};
 use futures::StreamExt;
 
 #[tokio::main]
@@ -91,13 +91,20 @@ async fn run_query(prompt: &str, options: ClaudeCodeOptions) -> Result<()> {
                             println!("Claude: {}", text.text);
                         }
                         cc_sdk::ContentBlock::ToolUse(tool_use) => {
-                            println!("Claude wants to use tool: {} ({})", tool_use.name, tool_use.id);
+                            println!(
+                                "Claude wants to use tool: {} ({})",
+                                tool_use.name, tool_use.id
+                            );
                         }
                         _ => {}
                     }
                 }
             }
-            Message::Result { duration_ms, is_error, .. } => {
+            Message::Result {
+                duration_ms,
+                is_error,
+                ..
+            } => {
                 if is_error {
                     println!("Query completed with error in {}ms", duration_ms);
                 } else {

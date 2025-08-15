@@ -3,7 +3,7 @@
 //! This example demonstrates how to use the interactive client
 //! for operations that require file system access.
 
-use cc_sdk::{ClaudeSDKClient, ClaudeCodeOptions, Message, PermissionMode, Result};
+use cc_sdk::{ClaudeCodeOptions, ClaudeSDKClient, Message, PermissionMode, Result};
 use futures::StreamExt;
 
 #[tokio::main]
@@ -20,9 +20,13 @@ async fn main() -> Result<()> {
     let options = ClaudeCodeOptions::builder()
         .system_prompt("You are a helpful coding assistant.")
         .model("claude-3-5-sonnet-20241022")
-        .permission_mode(PermissionMode::BypassPermissions)  // Allow all file operations
-        .allowed_tools(vec!["write".to_string(), "edit".to_string(), "read".to_string()])
-        .cwd(std::env::current_dir().unwrap_or_default())  // Set working directory
+        .permission_mode(PermissionMode::BypassPermissions) // Allow all file operations
+        .allowed_tools(vec![
+            "write".to_string(),
+            "edit".to_string(),
+            "read".to_string(),
+        ])
+        .cwd(std::env::current_dir().unwrap_or_default()) // Set working directory
         .build();
 
     // Create client
@@ -30,7 +34,11 @@ async fn main() -> Result<()> {
 
     // Connect to Claude CLI with initial prompt
     println!("Connecting to Claude CLI...");
-    client.connect(Some("Hello! I'm ready to help with file operations.".to_string())).await?;
+    client
+        .connect(Some(
+            "Hello! I'm ready to help with file operations.".to_string(),
+        ))
+        .await?;
     println!("Connected!");
 
     // Process initial response
@@ -55,10 +63,12 @@ async fn main() -> Result<()> {
     println!("Example 1: Creating a new file");
     println!("------------------------------");
 
-    client.send_request(
-        "Create a file called hello_world.rs with a Rust hello world program".to_string(),
-        None
-    ).await?;
+    client
+        .send_request(
+            "Create a file called hello_world.rs with a Rust hello world program".to_string(),
+            None,
+        )
+        .await?;
 
     // Process response
     let mut messages = client.receive_messages().await;
@@ -91,10 +101,12 @@ async fn main() -> Result<()> {
     println!("Example 2: Reading and modifying a file");
     println!("---------------------------------------");
 
-    client.send_request(
-        "Read the hello_world.rs file and add a comment explaining what it does".to_string(),
-        None
-    ).await?;
+    client
+        .send_request(
+            "Read the hello_world.rs file and add a comment explaining what it does".to_string(),
+            None,
+        )
+        .await?;
 
     // Process response
     let mut messages = client.receive_messages().await;
@@ -107,7 +119,11 @@ async fn main() -> Result<()> {
                     }
                 }
             }
-            Message::Result { duration_ms, total_cost_usd, .. } => {
+            Message::Result {
+                duration_ms,
+                total_cost_usd,
+                ..
+            } => {
                 println!("\nOperation completed in {}ms", duration_ms);
                 if let Some(cost) = total_cost_usd {
                     println!("Total cost: ${:.4}", cost);

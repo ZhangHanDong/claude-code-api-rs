@@ -37,11 +37,11 @@ mod client;
 // mod client_final;  // Has compilation errors
 mod client_working;
 mod errors;
-mod message_parser;
-mod query;
 mod interactive;
+mod message_parser;
 mod optimized_client;
 mod perf_utils;
+mod query;
 mod transport;
 mod types;
 
@@ -51,19 +51,20 @@ pub use client::ClaudeSDKClient;
 // pub use client_final::ClaudeSDKClientFinal;  // Has compilation errors
 pub use client_working::ClaudeSDKClientWorking;
 pub use errors::{Result, SdkError};
-pub use query::query;
 pub use interactive::InteractiveClient;
+pub use query::query;
 // Keep the old name as an alias for backward compatibility
 pub use interactive::InteractiveClient as SimpleInteractiveClient;
-pub use optimized_client::{OptimizedClient, ClientMode};
-pub use perf_utils::{MessageBatcher, RetryConfig, PerformanceMetrics};
+pub use optimized_client::{ClientMode, OptimizedClient};
+pub use perf_utils::{MessageBatcher, PerformanceMetrics, RetryConfig};
 
 /// Default interactive client - the recommended client for interactive use
 pub type ClaudeSDKClientDefault = InteractiveClient;
 pub use types::{
     AssistantContent, AssistantMessage, ClaudeCodeOptions, ContentBlock, ContentValue,
     ControlRequest, ControlResponse, McpServerConfig, Message, PermissionMode, ResultMessage,
-    SystemMessage, TextContent, ToolResultContent, ToolUseContent, UserContent, UserMessage,
+    SystemMessage, TextContent, ThinkingContent, ToolResultContent, ToolUseContent, UserContent,
+    UserMessage,
 };
 
 // Re-export builder
@@ -72,6 +73,7 @@ pub use types::ClaudeCodeOptionsBuilder;
 /// Prelude module for convenient imports
 pub mod prelude {
     pub use crate::{
-        query, ClaudeCodeOptions, ClaudeSDKClient, ClaudeSDKClientWorking, Message, PermissionMode, Result, SdkError,
+        ClaudeCodeOptions, ClaudeSDKClient, ClaudeSDKClientWorking, Message, PermissionMode,
+        Result, SdkError, query,
     };
 }

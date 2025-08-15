@@ -6,8 +6,8 @@
 use crate::{
     errors::{Result, SdkError},
     types::{
-        AssistantMessage, ContentBlock, ContentValue, Message, TextContent,
-        ToolResultContent, ToolUseContent, UserMessage,
+        AssistantMessage, ContentBlock, ContentValue, Message, TextContent, ToolResultContent,
+        ToolUseContent, UserMessage,
     },
 };
 use serde_json::Value;
@@ -49,13 +49,14 @@ fn parse_user_message(json: Value) -> Result<Option<Message>> {
         debug!("Skipping user message with array content (likely tool result)");
         return Ok(None);
     } else {
-        return Err(SdkError::parse_error("Missing or invalid 'content' field", json.to_string()));
+        return Err(SdkError::parse_error(
+            "Missing or invalid 'content' field",
+            json.to_string(),
+        ));
     };
 
     Ok(Some(Message::User {
-        message: UserMessage {
-            content,
-        },
+        message: UserMessage { content },
     }))
 }
 
@@ -93,29 +94,23 @@ fn parse_content_block(json: &Value) -> Result<Option<ContentBlock>> {
     if let Some(block_type) = json.get("type").and_then(|v| v.as_str()) {
         match block_type {
             "text" => {
-                let text = json
-                    .get("text")
-                    .and_then(|v| v.as_str())
-                    .ok_or_else(|| {
-                        SdkError::parse_error("Missing 'text' field in text block", json.to_string())
-                    })?;
+                let text = json.get("text").and_then(|v| v.as_str()).ok_or_else(|| {
+                    SdkError::parse_error("Missing 'text' field in text block", json.to_string())
+                })?;
                 Ok(Some(ContentBlock::Text(TextContent {
                     text: text.to_string(),
                 })))
             }
             "tool_use" => {
-                let id = json
-                    .get("id")
-                    .and_then(|v| v.as_str())
-                    .ok_or_else(|| {
-                        SdkError::parse_error("Missing 'id' field in tool_use block", json.to_string())
-                    })?;
-                let name = json
-                    .get("name")
-                    .and_then(|v| v.as_str())
-                    .ok_or_else(|| {
-                        SdkError::parse_error("Missing 'name' field in tool_use block", json.to_string())
-                    })?;
+                let id = json.get("id").and_then(|v| v.as_str()).ok_or_else(|| {
+                    SdkError::parse_error("Missing 'id' field in tool_use block", json.to_string())
+                })?;
+                let name = json.get("name").and_then(|v| v.as_str()).ok_or_else(|| {
+                    SdkError::parse_error(
+                        "Missing 'name' field in tool_use block",
+                        json.to_string(),
+                    )
+                })?;
                 let input = json
                     .get("input")
                     .cloned()
@@ -141,10 +136,8 @@ fn parse_content_block(json: &Value) -> Result<Option<ContentBlock>> {
                 let content = if let Some(content_val) = json.get("content") {
                     if let Some(text) = content_val.as_str() {
                         Some(ContentValue::Text(text.to_string()))
-                    } else if let Some(array) = content_val.as_array() {
-                        Some(ContentValue::Structured(array.clone()))
                     } else {
-                        None
+                        content_val.as_array().map(|array| ContentValue::Structured(array.clone()))
                     }
                 } else {
                     None
@@ -227,14 +220,14 @@ fn parse_result_message(json: Value) -> Result<Option<Message>> {
                     .get("is_error")
                     .and_then(|v| v.as_bool())
                     .unwrap_or(false),
-                num_turns: json
-                    .get("num_turns")
-                    .and_then(|v| v.as_i64())
-                    .unwrap_or(0) as i32,
+                num_turns: json.get("num_turns").and_then(|v| v.as_i64()).unwrap_or(0) as i32,
                 session_id,
                 total_cost_usd: json.get("total_cost_usd").and_then(|v| v.as_f64()),
                 usage: json.get("usage").cloned(),
-                result: json.get("result").and_then(|v| v.as_str()).map(String::from),
+                result: json
+                    .get("result")
+                    .and_then(|v| v.as_str())
+                    .map(String::from),
             }))
         }
     }

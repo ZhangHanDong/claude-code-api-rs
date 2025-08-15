@@ -3,7 +3,7 @@
 //! This example demonstrates batch processing of multiple programming questions
 //! with retry logic and progress tracking.
 
-use cc_sdk::{ClaudeCodeOptions, InteractiveClient, PermissionMode, Result, ContentBlock};
+use cc_sdk::{ClaudeCodeOptions, ContentBlock, InteractiveClient, PermissionMode, Result};
 use std::fs;
 use std::path::Path;
 use std::time::{Duration, Instant};
@@ -19,10 +19,9 @@ struct ProcessingStats {
 
 /// Process a batch of questions from a file
 async fn process_question_batch(file_path: &Path) -> Result<ProcessingStats> {
-    let content = fs::read_to_string(file_path)
-        .map_err(|e| cc_sdk::SdkError::InvalidState {
-            message: format!("Failed to read file: {}", e),
-        })?;
+    let content = fs::read_to_string(file_path).map_err(|e| cc_sdk::SdkError::InvalidState {
+        message: format!("Failed to read file: {}", e),
+    })?;
 
     let questions: Vec<&str> = content
         .lines()
@@ -46,7 +45,12 @@ async fn process_question_batch(file_path: &Path) -> Result<ProcessingStats> {
     client.connect().await?;
 
     for (idx, question) in questions.iter().enumerate() {
-        println!("\n🔹 Processing question {}/{}: {}", idx + 1, stats.total, question);
+        println!(
+            "\n🔹 Processing question {}/{}: {}",
+            idx + 1,
+            stats.total,
+            question
+        );
 
         let question_start = Instant::now();
         let result = process_single_question(&mut client, question, idx + 1).await;
@@ -59,7 +63,11 @@ async fn process_question_batch(file_path: &Path) -> Result<ProcessingStats> {
             }
             Err(e) => {
                 stats.failed += 1;
-                println!("❌ Failed: {:?} (took {:.2}s)", e, question_duration.as_secs_f64());
+                println!(
+                    "❌ Failed: {:?} (took {:.2}s)",
+                    e,
+                    question_duration.as_secs_f64()
+                );
 
                 // Implement retry logic for rate limits
                 if is_rate_limit_error(&e) {
@@ -71,7 +79,12 @@ async fn process_question_batch(file_path: &Path) -> Result<ProcessingStats> {
 
         // Progress update
         let progress = ((idx + 1) as f32 / stats.total as f32) * 100.0;
-        println!("📈 Progress: {:.1}% ({}/{})", progress, idx + 1, stats.total);
+        println!(
+            "📈 Progress: {:.1}% ({}/{})",
+            progress,
+            idx + 1,
+            stats.total
+        );
     }
 
     client.disconnect().await?;
@@ -103,11 +116,13 @@ async fn process_single_question(
             message.content.iter().any(|content| {
                 if let ContentBlock::Text(text) = content {
                     text.text.contains("created") || text.text.contains("successfully")
+                } else {
+                    false
                 }
-                else { false }
             })
+        } else {
+            false
         }
-        else { false }
     });
 
     if !success {
@@ -134,7 +149,7 @@ fn create_claude_options() -> ClaudeCodeOptions {
             "write_file".to_string(),
             "edit_file".to_string(),
         ])
-        .max_turns(10)  // Lower for batch processing
+        .max_turns(10) // Lower for batch processing
         .build()
 }
 
@@ -149,13 +164,18 @@ fn print_stats(stats: &ProcessingStats) {
     println!("\n📊 Batch Processing Summary");
     println!("{}", "=".repeat(60));
     println!("Total questions: {}", stats.total);
-    println!("Successful: {} ({}%)",
+    println!(
+        "Successful: {} ({}%)",
         stats.successful,
         (stats.successful as f32 / stats.total as f32 * 100.0) as u32
     );
     println!("Failed: {}", stats.failed);
-    println!("Total time: {:.2} seconds", stats.total_duration.as_secs_f64());
-    println!("Average time per question: {:.2} seconds",
+    println!(
+        "Total time: {:.2} seconds",
+        stats.total_duration.as_secs_f64()
+    );
+    println!(
+        "Average time per question: {:.2} seconds",
         stats.total_duration.as_secs_f64() / stats.total as f64
     );
 }
@@ -174,8 +194,7 @@ Write a program to find all prime numbers up to N using the Sieve of Eratosthene
 Implement a simple rate limiter using token bucket algorithm
 Create a generic binary tree with in-order traversal"#;
 
-        fs::write(questions_file, sample_questions)
-            .expect("Failed to create questions file");
+        fs::write(questions_file, sample_questions).expect("Failed to create questions file");
         println!("✅ Created {}\n", questions_file);
     }
 

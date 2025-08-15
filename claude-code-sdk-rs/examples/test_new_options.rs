@@ -24,7 +24,7 @@ async fn main() -> Result<()> {
         PathBuf::from("/path/to/dir2"),
         PathBuf::from("/path/to/dir3"),
     ];
-    
+
     let options2 = ClaudeCodeOptions::builder()
         .add_dirs(dirs)
         .settings("global-settings.json")

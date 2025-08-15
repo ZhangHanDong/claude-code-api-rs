@@ -6,7 +6,7 @@
 //! - Annotations directory structure
 //! - Start from specific question number
 
-use cc_sdk::{ClaudeCodeOptions, InteractiveClient, PermissionMode, Result, ContentBlock};
+use cc_sdk::{ClaudeCodeOptions, ContentBlock, InteractiveClient, PermissionMode, Result};
 use chrono::{DateTime, Utc};
 use regex::Regex;
 use std::fs;
@@ -22,13 +22,11 @@ struct QuestionSetProcessor {
 
 impl QuestionSetProcessor {
     async fn new(annotations_dir: PathBuf) -> Result<Self> {
-        fs::create_dir_all(&annotations_dir)
-            .map_err(|e| cc_sdk::SdkError::InvalidState {
-                message: format!("Failed to create annotations directory: {}", e),
-            })?;
+        fs::create_dir_all(&annotations_dir).map_err(|e| cc_sdk::SdkError::InvalidState {
+            message: format!("Failed to create annotations directory: {}", e),
+        })?;
 
-        let current_dir = std::env::current_dir()
-            .expect("Failed to get current directory");
+        let current_dir = std::env::current_dir().expect("Failed to get current directory");
 
         let system_prompt = format!(
             "You are a senior Rust developer, the current working directory is {}, \
@@ -91,13 +89,12 @@ impl QuestionSetProcessor {
         }
         println!("================================================");
 
-        let content = fs::read_to_string(question_set_file)
-            .map_err(|e| cc_sdk::SdkError::InvalidState {
+        let content =
+            fs::read_to_string(question_set_file).map_err(|e| cc_sdk::SdkError::InvalidState {
                 message: format!("Failed to read question set file: {}", e),
             })?;
 
-        let question_regex = Regex::new(r"^(\d+)\.\s*(.+)$")
-            .expect("Failed to compile regex");
+        let question_regex = Regex::new(r"^(\d+)\.\s*(.+)$").expect("Failed to compile regex");
 
         let mut processed_count = 0;
         let mut failed_questions = Vec::new();
@@ -131,18 +128,28 @@ impl QuestionSetProcessor {
 
                 let question_start = Instant::now();
 
-                match self.process_single_question(question_text, &target_dir).await {
+                match self
+                    .process_single_question(question_text, &target_dir)
+                    .await
+                {
                     Ok(_) => {
                         let duration = question_start.elapsed();
                         processed_count += 1;
-                        println!("✓ Completed question {} in {} seconds",
-                            question_num, duration.as_secs());
+                        println!(
+                            "✓ Completed question {} in {} seconds",
+                            question_num,
+                            duration.as_secs()
+                        );
                     }
                     Err(e) => {
                         let duration = question_start.elapsed();
                         failed_questions.push((question_num, format!("{:?}", e)));
-                        println!("✗ Failed question {} after {} seconds: {:?}",
-                            question_num, duration.as_secs(), e);
+                        println!(
+                            "✗ Failed question {} after {} seconds: {:?}",
+                            question_num,
+                            duration.as_secs(),
+                            e
+                        );
                     }
                 }
             }
@@ -155,7 +162,8 @@ impl QuestionSetProcessor {
         println!("SUMMARY for {}:", question_set_file.display());
         println!("Successfully processed: {}", processed_count);
         println!("Failed: {}", failed_questions.len());
-        println!("Total time: {} seconds ({} minutes {} seconds)",
+        println!(
+            "Total time: {} seconds ({} minutes {} seconds)",
             total_duration.as_secs(),
             total_duration.as_secs() / 60,
             total_duration.as_secs() % 60
@@ -171,11 +179,7 @@ impl QuestionSetProcessor {
         Ok(())
     }
 
-    async fn process_single_question(
-        &mut self,
-        question: &str,
-        target_dir: &str,
-    ) -> Result<()> {
+    async fn process_single_question(&mut self, question: &str, target_dir: &str) -> Result<()> {
         let full_target_path = self.annotations_dir.join(target_dir);
         let script_start = Instant::now();
         let start_time: DateTime<Utc> = Utc::now();
@@ -244,9 +248,18 @@ impl QuestionSetProcessor {
         let total_duration = script_start.elapsed();
 
         println!("\nTIMING SUMMARY:");
-        println!("Step 1 (Project Creation): {} seconds", step1_duration.as_secs());
-        println!("Step 2 (Pipeline Verification): {} seconds", step2_duration.as_secs());
-        println!("Step 3 (Documentation): {} seconds", step3_duration.as_secs());
+        println!(
+            "Step 1 (Project Creation): {} seconds",
+            step1_duration.as_secs()
+        );
+        println!(
+            "Step 2 (Pipeline Verification): {} seconds",
+            step2_duration.as_secs()
+        );
+        println!(
+            "Step 3 (Documentation): {} seconds",
+            step3_duration.as_secs()
+        );
         println!("Total: {} seconds", total_duration.as_secs());
 
         Ok(())
@@ -259,10 +272,14 @@ fn print_response_summary(messages: &[cc_sdk::Message]) {
             for content in &message.content {
                 if let ContentBlock::Text(text) = content {
                     // Print first 200 chars or look for completion indicators
-                    if text.text.contains("created") ||
-                       text.text.contains("completed") ||
-                       text.text.contains("iterated") {
-                        println!("  → {}", text.text.lines().take(3).collect::<Vec<_>>().join("\n    "));
+                    if text.text.contains("created")
+                        || text.text.contains("completed")
+                        || text.text.contains("iterated")
+                    {
+                        println!(
+                            "  → {}",
+                            text.text.lines().take(3).collect::<Vec<_>>().join("\n    ")
+                        );
                     }
                 }
             }
@@ -305,7 +322,10 @@ async fn process_all_question_sets(annotations_dir: PathBuf) -> Result<()> {
 
         stats.0 += 1;
 
-        println!("\nProcessing file: {}", path.file_name().unwrap().to_string_lossy());
+        println!(
+            "\nProcessing file: {}",
+            path.file_name().unwrap().to_string_lossy()
+        );
 
         match processor.process_question_set(&path, None).await {
             Ok(_) => {
@@ -354,11 +374,13 @@ async fn main() -> Result<()> {
         let sample_qs = PathBuf::from("qs/qs00001.txt");
         if !sample_qs.exists() {
             fs::create_dir_all("qs").unwrap();
-            fs::write(&sample_qs,
+            fs::write(
+                &sample_qs,
                 "1. Create a binary search tree implementation\n\
                  2. Implement a thread-safe counter using Arc and Mutex\n\
-                 3. Write a parser for simple arithmetic expressions\n"
-            ).unwrap();
+                 3. Write a parser for simple arithmetic expressions\n",
+            )
+            .unwrap();
             println!("Created sample question set: {}", sample_qs.display());
         }
 

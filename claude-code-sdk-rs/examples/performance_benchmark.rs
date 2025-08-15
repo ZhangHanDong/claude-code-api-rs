@@ -31,8 +31,10 @@ fn benchmark_command_line(queries: &[&str]) -> BenchmarkResult {
         let output = Command::new("claude")
             .args(&[
                 "-p",
-                "--max-turns", "5",
-                "--model", "claude-3-5-sonnet-20241022",
+                "--max-turns",
+                "5",
+                "--model",
+                "claude-3-5-sonnet-20241022",
                 query,
             ])
             .output();
@@ -41,7 +43,10 @@ fn benchmark_command_line(queries: &[&str]) -> BenchmarkResult {
             Ok(output) => {
                 if output.status.success() {
                     completed += 1;
-                    println!("    ✓ Completed in {:.2}s", query_start.elapsed().as_secs_f64());
+                    println!(
+                        "    ✓ Completed in {:.2}s",
+                        query_start.elapsed().as_secs_f64()
+                    );
                 } else {
                     println!("    ✗ Failed with status: {}", output.status);
                 }
@@ -75,7 +80,7 @@ async fn benchmark_sdk(queries: &[&str]) -> Result<BenchmarkResult> {
         .system_prompt("You are a helpful Rust expert. Provide concise answers.")
         .model("claude-3-5-sonnet-20241022")
         .permission_mode(PermissionMode::Default)
-        .max_turns(5)  // Limit turns for faster responses
+        .max_turns(5) // Limit turns for faster responses
         .build();
 
     let mut client = InteractiveClient::new(options)?;
@@ -83,7 +88,10 @@ async fn benchmark_sdk(queries: &[&str]) -> Result<BenchmarkResult> {
     // Connect once
     let connect_start = Instant::now();
     client.connect().await?;
-    println!("  Connection established in {:.2}s", connect_start.elapsed().as_secs_f64());
+    println!(
+        "  Connection established in {:.2}s",
+        connect_start.elapsed().as_secs_f64()
+    );
 
     // Process all queries with the same client
     for (idx, query) in queries.iter().enumerate() {
@@ -93,7 +101,10 @@ async fn benchmark_sdk(queries: &[&str]) -> Result<BenchmarkResult> {
         match client.send_and_receive(query.to_string()).await {
             Ok(_messages) => {
                 completed += 1;
-                println!("    ✓ Completed in {:.2}s", query_start.elapsed().as_secs_f64());
+                println!(
+                    "    ✓ Completed in {:.2}s",
+                    query_start.elapsed().as_secs_f64()
+                );
             }
             Err(e) => {
                 println!("    ✗ Error: {:?}", e);
@@ -121,36 +132,61 @@ fn print_comparison(cmd_result: &BenchmarkResult, sdk_result: &BenchmarkResult) 
     println!("{}", "=".repeat(60));
 
     println!("\n📌 Command Line:");
-    println!("  Total time: {:.2}s", cmd_result.total_duration.as_secs_f64());
-    println!("  Average per query: {:.2}s", cmd_result.per_query_avg.as_secs_f64());
+    println!(
+        "  Total time: {:.2}s",
+        cmd_result.total_duration.as_secs_f64()
+    );
+    println!(
+        "  Average per query: {:.2}s",
+        cmd_result.per_query_avg.as_secs_f64()
+    );
     println!("  Queries completed: {}", cmd_result.queries_completed);
 
     println!("\n📌 SDK:");
-    println!("  Total time: {:.2}s", sdk_result.total_duration.as_secs_f64());
-    println!("  Average per query: {:.2}s", sdk_result.per_query_avg.as_secs_f64());
+    println!(
+        "  Total time: {:.2}s",
+        sdk_result.total_duration.as_secs_f64()
+    );
+    println!(
+        "  Average per query: {:.2}s",
+        sdk_result.per_query_avg.as_secs_f64()
+    );
     println!("  Queries completed: {}", sdk_result.queries_completed);
 
     // Calculate performance improvement
-    let improvement = (cmd_result.total_duration.as_secs_f64() - sdk_result.total_duration.as_secs_f64())
-        / cmd_result.total_duration.as_secs_f64() * 100.0;
+    let improvement = (cmd_result.total_duration.as_secs_f64()
+        - sdk_result.total_duration.as_secs_f64())
+        / cmd_result.total_duration.as_secs_f64()
+        * 100.0;
 
     println!("\n🎯 Performance Improvement:");
     println!("  SDK is {:.1}% faster than command line", improvement);
-    println!("  Time saved: {:.2}s",
+    println!(
+        "  Time saved: {:.2}s",
         (cmd_result.total_duration - sdk_result.total_duration).as_secs_f64()
     );
 
     // Per-query improvement
-    let per_query_improvement = (cmd_result.per_query_avg.as_secs_f64() - sdk_result.per_query_avg.as_secs_f64())
-        / cmd_result.per_query_avg.as_secs_f64() * 100.0;
+    let per_query_improvement = (cmd_result.per_query_avg.as_secs_f64()
+        - sdk_result.per_query_avg.as_secs_f64())
+        / cmd_result.per_query_avg.as_secs_f64()
+        * 100.0;
     println!("  Per-query improvement: {:.1}%", per_query_improvement);
 
     println!("\n📈 Extrapolated Performance:");
     println!("  For 100 queries:");
-    println!("    Command line: ~{:.1} minutes", cmd_result.per_query_avg.as_secs_f64() * 100.0 / 60.0);
-    println!("    SDK: ~{:.1} minutes", sdk_result.per_query_avg.as_secs_f64() * 100.0 / 60.0);
-    println!("    Time saved: ~{:.1} minutes",
-        (cmd_result.per_query_avg.as_secs_f64() - sdk_result.per_query_avg.as_secs_f64()) * 100.0 / 60.0
+    println!(
+        "    Command line: ~{:.1} minutes",
+        cmd_result.per_query_avg.as_secs_f64() * 100.0 / 60.0
+    );
+    println!(
+        "    SDK: ~{:.1} minutes",
+        sdk_result.per_query_avg.as_secs_f64() * 100.0 / 60.0
+    );
+    println!(
+        "    Time saved: ~{:.1} minutes",
+        (cmd_result.per_query_avg.as_secs_f64() - sdk_result.per_query_avg.as_secs_f64()) * 100.0
+            / 60.0
     );
 }
 
@@ -168,7 +204,10 @@ async fn main() -> Result<()> {
         "What is the difference between String and &str in Rust?",
     ];
 
-    println!("📝 Test queries: {} simple Rust questions", test_queries.len());
+    println!(
+        "📝 Test queries: {} simple Rust questions",
+        test_queries.len()
+    );
     println!("⚠️  Note: Using simple queries for faster benchmark completion");
 
     // Run command line benchmark

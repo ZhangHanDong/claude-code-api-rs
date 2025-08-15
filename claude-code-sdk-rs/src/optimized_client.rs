@@ -8,8 +8,8 @@ use crate::{
 use futures::stream::StreamExt;
 use std::collections::VecDeque;
 use std::sync::Arc;
-use tokio::sync::{mpsc, RwLock, Semaphore};
-use tokio::time::{timeout, Duration};
+use tokio::sync::{RwLock, Semaphore, mpsc};
+use tokio::time::{Duration, timeout};
 use tracing::{debug, error, info, warn};
 
 /// Client mode for different usage patterns
@@ -62,12 +62,13 @@ impl ConnectionPool {
         }
 
         // Create new connection if under limit
-        let _permit = self.connection_semaphore
-            .acquire()
-            .await
-            .map_err(|_| SdkError::InvalidState {
-                message: "Failed to acquire connection permit".into(),
-            })?;
+        let _permit =
+            self.connection_semaphore
+                .acquire()
+                .await
+                .map_err(|_| SdkError::InvalidState {
+                    message: "Failed to acquire connection permit".into(),
+                })?;
 
         let mut transport = SubprocessTransport::new(self.base_options.clone())?;
         transport.connect().await?;
@@ -76,7 +77,9 @@ impl ConnectionPool {
     }
 
     async fn release(&self, transport: SubprocessTransport) {
-        if transport.is_connected() && self.idle_connections.read().await.len() < self.max_connections {
+        if transport.is_connected()
+            && self.idle_connections.read().await.len() < self.max_connections
+        {
             let mut idle = self.idle_connections.write().await;
             idle.push_back(transport);
             debug!("Returned connection to pool");
@@ -102,7 +105,9 @@ pub struct OptimizedClient {
 impl OptimizedClient {
     /// Create a new optimized client
     pub fn new(options: ClaudeCodeOptions, mode: ClientMode) -> Result<Self> {
-        unsafe { std::env::set_var("CLAUDE_CODE_ENTRYPOINT", "sdk-rust"); }
+        unsafe {
+            std::env::set_var("CLAUDE_CODE_ENTRYPOINT", "sdk-rust");
+        }
 
         let max_connections = match mode {
             ClientMode::Batch { max_concurrent } => max_concurrent,
@@ -121,7 +126,8 @@ impl OptimizedClient {
 
     /// Execute a one-shot query with automatic retry
     pub async fn query(&self, prompt: String) -> Result<Vec<Message>> {
-        self.query_with_retry(prompt, 3, Duration::from_millis(100)).await
+        self.query_with_retry(prompt, 3, Duration::from_millis(100))
+            .await
     }
 
     /// Execute a query with custom retry configuration
@@ -151,7 +157,7 @@ impl OptimizedClient {
     /// Internal query execution
     async fn execute_query(&self, prompt: &str) -> Result<Vec<Message>> {
         let mut transport = self.pool.acquire().await?;
-        
+
         // Send message
         let message = InputMessage::user(prompt.to_string(), "default".to_string());
         transport.send_message(message).await?;
@@ -200,10 +206,10 @@ impl OptimizedClient {
 
         // Acquire a transport for the session
         let transport = self.pool.acquire().await?;
-        
+
         // Create message channel
         let (tx, rx) = mpsc::channel::<Message>(100);
-        
+
         // Store transport and receiver
         *self.current_transport.write().await = Some(transport);
         *self.message_rx.write().await = Some(rx);
@@ -257,7 +263,7 @@ impl OptimizedClient {
         if let Some(_transport) = transport_guard.as_ref() {
             // Need to handle transport mutability properly
             drop(transport_guard);
-            
+
             let mut transport_guard = self.current_transport.write().await;
             if let Some(transport) = transport_guard.as_mut() {
                 let message = InputMessage::user(prompt, "default".to_string());
@@ -280,7 +286,7 @@ impl OptimizedClient {
         let mut rx_guard = self.message_rx.write().await;
         if let Some(rx) = rx_guard.as_mut() {
             let mut messages = Vec::new();
-            
+
             // Collect messages until Result
             while let Some(msg) = rx.recv().await {
                 let is_result = matches!(msg, Message::Result { .. });
@@ -289,7 +295,7 @@ impl OptimizedClient {
                     break;
                 }
             }
-            
+
             Ok(messages)
         } else {
             Err(SdkError::InvalidState {
@@ -302,9 +308,11 @@ impl OptimizedClient {
     pub async fn process_batch(&self, prompts: Vec<String>) -> Result<Vec<Result<Vec<Message>>>> {
         let max_concurrent = match self.mode {
             ClientMode::Batch { max_concurrent } => max_concurrent,
-            _ => return Err(SdkError::InvalidState {
-                message: "Client not in batch mode".into(),
-            }),
+            _ => {
+                return Err(SdkError::InvalidState {
+                    message: "Client not in batch mode".into(),
+                });
+            }
         };
 
         let semaphore = Arc::new(Semaphore::new(max_concurrent));
@@ -313,13 +321,13 @@ impl OptimizedClient {
         for prompt in prompts {
             let permit = semaphore.clone().acquire_owned().await.unwrap();
             let client = self.clone(); // Assume client is cloneable
-            
+
             let handle = tokio::spawn(async move {
                 let result = client.query(prompt).await;
                 drop(permit);
                 result
             });
-            
+
             handles.push(handle);
         }
 
@@ -328,9 +336,9 @@ impl OptimizedClient {
         for handle in handles {
             match handle.await {
                 Ok(result) => results.push(result),
-                Err(e) => results.push(Err(SdkError::TransportError(
-                    format!("Task failed: {}", e)
-                ))),
+                Err(e) => {
+                    results.push(Err(SdkError::TransportError(format!("Task failed: {e}"))))
+                }
             }
         }
 
@@ -342,7 +350,7 @@ impl OptimizedClient {
         let transport_guard = self.current_transport.read().await;
         if let Some(_transport) = transport_guard.as_ref() {
             drop(transport_guard);
-            
+
             let mut transport_guard = self.current_transport.write().await;
             if let Some(transport) = transport_guard.as_mut() {
                 let request = ControlRequest::Interrupt {
@@ -397,15 +405,15 @@ mod tests {
     #[test]
     fn test_client_mode_creation() {
         let options = ClaudeCodeOptions::builder().build();
-        
+
         // Test OneShot mode
         let client = OptimizedClient::new(options.clone(), ClientMode::OneShot);
         assert!(client.is_ok());
-        
+
         // Test Interactive mode
         let client = OptimizedClient::new(options.clone(), ClientMode::Interactive);
         assert!(client.is_ok());
-        
+
         // Test Batch mode
         let client = OptimizedClient::new(options, ClientMode::Batch { max_concurrent: 5 });
         assert!(client.is_ok());
@@ -415,7 +423,7 @@ mod tests {
     fn test_connection_pool_creation() {
         let options = ClaudeCodeOptions::builder().build();
         let pool = ConnectionPool::new(options, 10);
-        
+
         assert_eq!(pool.max_connections, 10);
     }
 
@@ -423,9 +431,9 @@ mod tests {
     async fn test_client_cloning() {
         let options = ClaudeCodeOptions::builder().build();
         let client = OptimizedClient::new(options, ClientMode::OneShot).unwrap();
-        
+
         let cloned = client.clone();
-        
+
         // Verify mode is preserved
         match (client.mode, cloned.mode) {
             (ClientMode::OneShot, ClientMode::OneShot) => (),

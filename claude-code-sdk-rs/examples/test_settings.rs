@@ -1,8 +1,8 @@
 //! Example demonstrating the use of the settings parameter
-//! 
+//!
 //! This example shows how to use a custom settings file with Claude Code
 
-use cc_sdk::{ClaudeCodeOptions, query, Result};
+use cc_sdk::{ClaudeCodeOptions, Result, query};
 use futures::StreamExt;
 use std::env;
 
@@ -19,12 +19,12 @@ async fn main() -> Result<()> {
     let current_dir = env::current_dir().expect("Failed to get current directory");
     let settings_path = current_dir.join("examples/claude-settings.json");
     let settings_str = settings_path.to_str().expect("Invalid path");
-    
+
     println!("Using settings file: {}", settings_str);
-    
+
     // Create options with a custom settings file
     let options = ClaudeCodeOptions::builder()
-        .settings(settings_str)  // Use absolute path
+        .settings(settings_str) // Use absolute path
         .system_prompt("You are a helpful assistant")
         .model("claude-3-opus-20240229")
         .permission_mode(cc_sdk::PermissionMode::AcceptEdits)
@@ -48,7 +48,11 @@ async fn main() -> Result<()> {
                     }
                 }
             }
-            cc_sdk::Message::Result { duration_ms, total_cost_usd, .. } => {
+            cc_sdk::Message::Result {
+                duration_ms,
+                total_cost_usd,
+                ..
+            } => {
                 println!("\n---");
                 println!("Completed in {}ms", duration_ms);
                 if let Some(cost) = total_cost_usd {

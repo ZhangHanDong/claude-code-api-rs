@@ -1,17 +1,13 @@
 //! Example demonstrating the optimized client with various performance features
 
-use cc_sdk::{
-    ClaudeCodeOptions, ClientMode, OptimizedClient, PermissionMode, Result, RetryConfig,
-};
+use cc_sdk::{ClaudeCodeOptions, ClientMode, OptimizedClient, PermissionMode, Result, RetryConfig};
 use std::time::{Duration, Instant};
-use tracing::{info, Level};
+use tracing::{Level, info};
 
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize logging
-    tracing_subscriber::fmt()
-        .with_max_level(Level::INFO)
-        .init();
+    tracing_subscriber::fmt().with_max_level(Level::INFO).init();
 
     // Configure options
     let options = ClaudeCodeOptions::builder()
@@ -52,9 +48,12 @@ async fn demo_oneshot_mode(options: ClaudeCodeOptions) -> Result<()> {
 
         info!("Query: {}", query);
         info!("Response time: {:?}", elapsed);
-        
+
         for msg in messages {
-            if let cc_sdk::Message::Assistant { message: assistant_msg } = msg {
+            if let cc_sdk::Message::Assistant {
+                message: assistant_msg,
+            } = msg
+            {
                 info!("Answer: {:?}", assistant_msg.content);
             }
         }
@@ -67,7 +66,7 @@ async fn demo_oneshot_mode(options: ClaudeCodeOptions) -> Result<()> {
 /// Demonstrate interactive mode with optimized message handling
 async fn demo_interactive_mode(options: ClaudeCodeOptions) -> Result<()> {
     let client = OptimizedClient::new(options, ClientMode::Interactive)?;
-    
+
     // Start interactive session
     client.start_interactive_session().await?;
 
@@ -80,16 +79,19 @@ async fn demo_interactive_mode(options: ClaudeCodeOptions) -> Result<()> {
 
     for prompt in prompts {
         info!("Sending: {}", prompt);
-        
+
         let start = Instant::now();
         client.send_interactive(prompt.to_string()).await?;
         let messages = client.receive_interactive().await?;
         let elapsed = start.elapsed();
 
         info!("Response time: {:?}", elapsed);
-        
+
         for msg in messages {
-            if let cc_sdk::Message::Assistant { message: assistant_msg } = msg {
+            if let cc_sdk::Message::Assistant {
+                message: assistant_msg,
+            } = msg
+            {
                 info!("Response: {:?}", assistant_msg.content);
             }
         }
@@ -98,16 +100,13 @@ async fn demo_interactive_mode(options: ClaudeCodeOptions) -> Result<()> {
 
     // End session
     client.end_interactive_session().await?;
-    
+
     Ok(())
 }
 
 /// Demonstrate batch processing mode with concurrent execution
 async fn demo_batch_mode(options: ClaudeCodeOptions) -> Result<()> {
-    let client = OptimizedClient::new(
-        options,
-        ClientMode::Batch { max_concurrent: 3 },
-    )?;
+    let client = OptimizedClient::new(options, ClientMode::Batch { max_concurrent: 3 })?;
 
     // Prepare batch of queries
     let prompts = vec![
@@ -118,14 +117,20 @@ async fn demo_batch_mode(options: ClaudeCodeOptions) -> Result<()> {
         "What is a Result type in Rust?".to_string(),
     ];
 
-    info!("Processing {} queries with max concurrency of 3", prompts.len());
+    info!(
+        "Processing {} queries with max concurrency of 3",
+        prompts.len()
+    );
     let start = Instant::now();
-    
+
     let results = client.process_batch(prompts).await?;
     let elapsed = start.elapsed();
 
     info!("Total batch processing time: {:?}", elapsed);
-    info!("Average time per query: {:?}", elapsed / results.len() as u32);
+    info!(
+        "Average time per query: {:?}",
+        elapsed / results.len() as u32
+    );
 
     // Process results
     for (i, result) in results.iter().enumerate() {
@@ -133,9 +138,17 @@ async fn demo_batch_mode(options: ClaudeCodeOptions) -> Result<()> {
             Ok(messages) => {
                 info!("Query {} completed successfully", i + 1);
                 for msg in messages {
-                    if let cc_sdk::Message::Assistant { message: assistant_msg } = msg {
-                        info!("  Response preview: {:?}", 
-                              format!("{:?}", assistant_msg.content).chars().take(50).collect::<String>());
+                    if let cc_sdk::Message::Assistant {
+                        message: assistant_msg,
+                    } = msg
+                    {
+                        info!(
+                            "  Response preview: {:?}",
+                            format!("{:?}", assistant_msg.content)
+                                .chars()
+                                .take(50)
+                                .collect::<String>()
+                        );
                     }
                 }
             }
@@ -162,7 +175,7 @@ async fn demo_retry_logic(options: ClaudeCodeOptions) -> Result<()> {
     };
 
     info!("Testing retry logic with custom configuration");
-    
+
     // This query should succeed (demonstrating retry is transparent when not needed)
     let start = Instant::now();
     let result = client
@@ -175,9 +188,12 @@ async fn demo_retry_logic(options: ClaudeCodeOptions) -> Result<()> {
     let elapsed = start.elapsed();
 
     info!("Query completed in {:?}", elapsed);
-    
+
     for msg in result {
-        if let cc_sdk::Message::Assistant { message: assistant_msg } = msg {
+        if let cc_sdk::Message::Assistant {
+            message: assistant_msg,
+        } = msg
+        {
             info!("Response: {:?}", assistant_msg.content);
         }
     }

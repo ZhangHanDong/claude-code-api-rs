@@ -6,7 +6,7 @@ use cc_sdk::{
 use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::RwLock;
-use tracing::{info, Level};
+use tracing::{Level, info};
 
 /// API wrapper that provides a high-level interface using the optimized client
 struct ClaudeAPI {
@@ -35,7 +35,10 @@ impl ClaudeAPI {
                 // Extract text content from assistant messages
                 let mut response = String::new();
                 for msg in messages {
-                    if let cc_sdk::Message::Assistant { message: assistant_msg } = msg {
+                    if let cc_sdk::Message::Assistant {
+                        message: assistant_msg,
+                    } = msg
+                    {
                         for content in &assistant_msg.content {
                             if let cc_sdk::ContentBlock::Text(text) = content {
                                 response.push_str(&text.text);
@@ -76,9 +79,7 @@ async fn handle_completion_request(api: Arc<ClaudeAPI>, prompt: String) -> Resul
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize logging
-    tracing_subscriber::fmt()
-        .with_max_level(Level::INFO)
-        .init();
+    tracing_subscriber::fmt().with_max_level(Level::INFO).init();
 
     // Configure Claude options
     let options = ClaudeCodeOptions::builder()
@@ -87,7 +88,10 @@ async fn main() -> Result<()> {
         .build();
 
     // Create API instance with batch mode for handling multiple requests
-    let api = Arc::new(ClaudeAPI::new(options, ClientMode::Batch { max_concurrent: 5 })?);
+    let api = Arc::new(ClaudeAPI::new(
+        options,
+        ClientMode::Batch { max_concurrent: 5 },
+    )?);
 
     info!("=== API Integration Example ===");
 
@@ -105,13 +109,13 @@ async fn main() -> Result<()> {
     for (i, request) in requests.iter().enumerate() {
         let api_clone = api.clone();
         let prompt = request.to_string();
-        
+
         let handle = tokio::spawn(async move {
             info!("Processing request {}", i + 1);
             let result = handle_completion_request(api_clone, prompt).await;
             (i, result)
         });
-        
+
         handles.push(handle);
     }
 
@@ -121,7 +125,10 @@ async fn main() -> Result<()> {
             Ok((i, result)) => match result {
                 Ok(response) => {
                     info!("Request {} completed:", i + 1);
-                    info!("  Response preview: {}...", response.chars().take(100).collect::<String>());
+                    info!(
+                        "  Response preview: {}...",
+                        response.chars().take(100).collect::<String>()
+                    );
                 }
                 Err(e) => {
                     info!("Request {} failed: {}", i + 1, e);
@@ -147,7 +154,10 @@ async fn main() -> Result<()> {
     // Health check
     info!("\n=== Health Check ===");
     match api.health_check().await {
-        Ok(healthy) => info!("Service health: {}", if healthy { "OK" } else { "UNHEALTHY" }),
+        Ok(healthy) => info!(
+            "Service health: {}",
+            if healthy { "OK" } else { "UNHEALTHY" }
+        ),
         Err(e) => info!("Health check failed: {}", e),
     }
 

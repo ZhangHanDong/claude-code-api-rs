@@ -80,7 +80,7 @@ impl SubprocessTransport {
     pub fn set_close_stdin_after_prompt(&mut self, close: bool) {
         self.close_stdin_after_prompt = close;
     }
-    
+
     /// Create transport for simple print mode (one-shot query)
     #[allow(dead_code)]
     pub fn for_print_mode(options: ClaudeCodeOptions, _prompt: String) -> Result<Self> {
@@ -105,7 +105,7 @@ impl SubprocessTransport {
         // Always use output-format stream-json and verbose (like Python SDK)
         cmd.arg("--output-format").arg("stream-json");
         cmd.arg("--verbose");
-        
+
         // For streaming/interactive mode, also add input-format stream-json
         cmd.arg("--input-format").arg("stream-json");
 
@@ -135,6 +135,9 @@ impl SubprocessTransport {
             PermissionMode::AcceptEdits => {
                 cmd.arg("--permission-mode").arg("acceptEdits");
             }
+            PermissionMode::Plan => {
+                cmd.arg("--permission-mode").arg("plan");
+            }
             PermissionMode::BypassPermissions => {
                 cmd.arg("--permission-mode").arg("bypassPermissions");
             }
@@ -144,7 +147,7 @@ impl SubprocessTransport {
         if let Some(ref model) = self.options.model {
             cmd.arg("--model").arg(model);
         }
-        
+
         // Permission prompt tool
         if let Some(ref tool_name) = self.options.permission_prompt_tool_name {
             cmd.arg("--permission-prompt-tool").arg(tool_name);
@@ -188,6 +191,19 @@ impl SubprocessTransport {
             cmd.arg("--add-dir").arg(dir);
         }
 
+        // Extra arguments
+        for (key, value) in &self.options.extra_args {
+            let flag = if key.starts_with("--") || key.starts_with("-") {
+                key.clone()
+            } else {
+                format!("--{key}")
+            };
+            cmd.arg(&flag);
+            if let Some(val) = value {
+                cmd.arg(val);
+            }
+        }
+
         // Set up process pipes
         cmd.stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -228,7 +244,8 @@ impl SubprocessTransport {
         // Create channels
         let (stdin_tx, mut stdin_rx) = mpsc::channel::<String>(CHANNEL_BUFFER_SIZE);
         // Use broadcast channel for messages to support multiple receivers
-        let (message_broadcast_tx, _) = tokio::sync::broadcast::channel::<Message>(CHANNEL_BUFFER_SIZE);
+        let (message_broadcast_tx, _) =
+            tokio::sync::broadcast::channel::<Message>(CHANNEL_BUFFER_SIZE);
         let (control_tx, control_rx) = mpsc::channel::<ControlResponse>(CHANNEL_BUFFER_SIZE);
 
         // Spawn stdin handler
@@ -350,7 +367,7 @@ impl Transport for SubprocessTransport {
 
         let json = serde_json::to_string(&message)?;
         debug!("Serialized message: {}", json);
-        
+
         if let Some(ref tx) = self.stdin_tx {
             debug!("Sending message to stdin channel");
             tx.send(json).await?;
@@ -368,15 +385,19 @@ impl Transport for SubprocessTransport {
             // Create a new receiver from the broadcast sender
             let rx = tx.subscribe();
             // Convert broadcast receiver to stream
-            Box::pin(tokio_stream::wrappers::BroadcastStream::new(rx).filter_map(|result| async move {
-                match result {
-                    Ok(msg) => Some(Ok(msg)),
-                    Err(tokio_stream::wrappers::errors::BroadcastStreamRecvError::Lagged(n)) => {
-                        warn!("Receiver lagged by {} messages", n);
-                        None
+            Box::pin(tokio_stream::wrappers::BroadcastStream::new(rx).filter_map(
+                |result| async move {
+                    match result {
+                        Ok(msg) => Some(Ok(msg)),
+                        Err(tokio_stream::wrappers::errors::BroadcastStreamRecvError::Lagged(
+                            n,
+                        )) => {
+                            warn!("Receiver lagged by {} messages", n);
+                            None
+                        }
                     }
-                }
-            }))
+                },
+            ))
         } else {
             Box::pin(futures::stream::empty())
         }
@@ -403,7 +424,7 @@ impl Transport for SubprocessTransport {
         };
 
         let json = serde_json::to_string(&control_msg)?;
-        
+
         if let Some(ref tx) = self.stdin_tx {
             tx.send(json).await?;
             Ok(())
@@ -466,10 +487,8 @@ pub(crate) fn find_claude_cli() -> Result<PathBuf> {
     }
 
     // Check common installation locations
-    let home = dirs::home_dir().ok_or_else(|| {
-        SdkError::CliNotFound {
-            searched_paths: "Unable to determine home directory".into(),
-        }
+    let home = dirs::home_dir().ok_or_else(|| SdkError::CliNotFound {
+        searched_paths: "Unable to determine home directory".into(),
     })?;
 
     let locations = vec![

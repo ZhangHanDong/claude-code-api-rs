@@ -1,15 +1,14 @@
 //! OpenAI API compatible server for Claude Code
 
 use axum::{
+    Router,
     extract::State,
     http::{HeaderMap, StatusCode},
     response::Json,
     routing::{get, post},
-    Router,
 };
 use cc_sdk::{
-    ClaudeCodeOptions, ClientMode, ContentBlock, Message, OptimizedClient,
-    PermissionMode,
+    ClaudeCodeOptions, ClientMode, ContentBlock, Message, OptimizedClient, PermissionMode,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -17,7 +16,7 @@ use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::sync::RwLock;
 use tower_http::cors::CorsLayer;
-use tracing::{info, warn, Level};
+use tracing::{Level, info, warn};
 use uuid::Uuid;
 
 // OpenAI API compatible structures
@@ -119,9 +118,7 @@ struct AppState {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    tracing_subscriber::fmt()
-        .with_max_level(Level::INFO)
-        .init();
+    tracing_subscriber::fmt().with_max_level(Level::INFO).init();
 
     info!("Starting OpenAI API compatible server for Claude Code");
 
@@ -130,10 +127,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .permission_mode(PermissionMode::AcceptEdits)
         .build();
 
-    let client = Arc::new(OptimizedClient::new(
-        options.clone(),
-        ClientMode::OneShot,
-    )?);
+    let client = Arc::new(OptimizedClient::new(options.clone(), ClientMode::OneShot)?);
 
     // Pre-warm connection
     info!("Pre-warming connection pool...");
@@ -158,7 +152,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let addr = "127.0.0.1:8080";
     info!("OpenAI-compatible API listening on http://{}", addr);
-    info!("Example: curl http://localhost:8080/v1/chat/completions -H 'Content-Type: application/json' -d '{{\"model\": \"gpt-3.5-turbo\", \"messages\": [{{\"role\": \"user\", \"content\": \"Hello\"}}]}}'");
+    info!(
+        "Example: curl http://localhost:8080/v1/chat/completions -H 'Content-Type: application/json' -d '{{\"model\": \"gpt-3.5-turbo\", \"messages\": [{{\"role\": \"user\", \"content\": \"Hello\"}}]}}'"
+    );
 
     axum::Server::bind(&addr.parse()?)
         .serve(app.into_make_service())
@@ -172,10 +168,14 @@ async fn chat_completions(
     _headers: HeaderMap,
     Json(request): Json<ChatCompletionRequest>,
 ) -> Result<Json<ChatCompletionResponse>, (StatusCode, Json<ErrorResponse>)> {
-    info!("Received chat completion request for model: {}", request.model);
+    info!(
+        "Received chat completion request for model: {}",
+        request.model
+    );
 
     // Extract the last user message (Claude Code works with single prompts)
-    let prompt = request.messages
+    let prompt = request
+        .messages
         .iter()
         .rev()
         .find(|m| m.role == "user")
@@ -195,7 +195,8 @@ async fn chat_completions(
         })?;
 
     // If there's a system message, prepend it to the prompt
-    let system_prompt = request.messages
+    let system_prompt = request
+        .messages
         .iter()
         .find(|m| m.role == "system")
         .map(|m| m.content.clone());
@@ -237,7 +238,8 @@ async fn chat_completions(
                 usage: Usage {
                     prompt_tokens: estimate_tokens(&prompt_for_tokens),
                     completion_tokens: estimate_tokens(&response_text),
-                    total_tokens: estimate_tokens(&prompt_for_tokens) + estimate_tokens(&response_text),
+                    total_tokens: estimate_tokens(&prompt_for_tokens)
+                        + estimate_tokens(&response_text),
                 },
             };
 
@@ -265,26 +267,24 @@ async fn completions(
     Json(request): Json<serde_json::Value>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<ErrorResponse>)> {
     // Extract prompt from completion request
-    let prompt = request["prompt"]
-        .as_str()
-        .ok_or_else(|| {
-            (
-                StatusCode::BAD_REQUEST,
-                Json(ErrorResponse {
-                    error: ErrorDetail {
-                        message: "Missing prompt".to_string(),
-                        error_type: "invalid_request_error".to_string(),
-                        param: Some("prompt".to_string()),
-                        code: None,
-                    },
-                }),
-            )
-        })?;
+    let prompt = request["prompt"].as_str().ok_or_else(|| {
+        (
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse {
+                error: ErrorDetail {
+                    message: "Missing prompt".to_string(),
+                    error_type: "invalid_request_error".to_string(),
+                    param: Some("prompt".to_string()),
+                    code: None,
+                },
+            }),
+        )
+    })?;
 
     match state.client.query(prompt.to_string()).await {
         Ok(messages) => {
             let response_text = extract_response_text(messages);
-            
+
             let response = json!({
                 "id": format!("cmpl-{}", Uuid::new_v4()),
                 "object": "text_completion",
@@ -305,19 +305,17 @@ async fn completions(
 
             Ok(Json(response))
         }
-        Err(e) => {
-            Err((
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ErrorResponse {
-                    error: ErrorDetail {
-                        message: format!("Claude Code error: {}", e),
-                        error_type: "server_error".to_string(),
-                        param: None,
-                        code: None,
-                    },
-                }),
-            ))
-        }
+        Err(e) => Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: ErrorDetail {
+                    message: format!("Claude Code error: {}", e),
+                    error_type: "server_error".to_string(),
+                    param: None,
+                    code: None,
+                },
+            }),
+        )),
     }
 }
 

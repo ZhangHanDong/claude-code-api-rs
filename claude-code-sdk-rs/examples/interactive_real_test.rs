@@ -1,8 +1,6 @@
 //! Interactive real API test
 
-use cc_sdk::{
-    ClaudeCodeOptions, InteractiveClient, Message, ContentBlock, PermissionMode, Result,
-};
+use cc_sdk::{ClaudeCodeOptions, ContentBlock, InteractiveClient, Message, PermissionMode, Result};
 use std::io::{self, Write};
 
 #[tokio::main]
@@ -17,7 +15,7 @@ async fn main() -> Result<()> {
         .build();
 
     let mut client = InteractiveClient::new(options)?;
-    
+
     // Connect to Claude
     println!("Connecting to Claude...");
     client.connect().await?;

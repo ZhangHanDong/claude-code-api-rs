@@ -6,9 +6,7 @@ use tracing::Level;
 #[tokio::main]
 async fn main() {
     // Initialize logging
-    tracing_subscriber::fmt()
-        .with_max_level(Level::INFO)
-        .init();
+    tracing_subscriber::fmt().with_max_level(Level::INFO).init();
 
     println!("=== Claude Code SDK Interactive Test ===\n");
     println!("This is a mock test that doesn't require Claude CLI.\n");
@@ -62,7 +60,7 @@ async fn test_batch_mode() {
         let mut prompt = String::new();
         io::stdin().read_line(&mut prompt).unwrap();
         let prompt = prompt.trim();
-        
+
         if prompt.is_empty() {
             break;
         }
@@ -112,7 +110,7 @@ async fn test_interactive_mode() {
         // Simulate contextual response
         let response = mock_contextual_response(input, &context).await;
         println!("Assistant: {}", response);
-        
+
         context.push(format!("Assistant: {}", response));
     }
 }
@@ -124,7 +122,7 @@ async fn test_performance() {
 
     let mut count_str = String::new();
     io::stdin().read_line(&mut count_str).unwrap();
-    
+
     let count: usize = match count_str.trim().parse() {
         Ok(n) if n > 0 && n <= 100 => n,
         _ => {
@@ -135,7 +133,7 @@ async fn test_performance() {
 
     println!("\nRunning {} queries...", count);
     let start = std::time::Instant::now();
-    
+
     let mut total_time = std::time::Duration::ZERO;
     let mut min_time = std::time::Duration::MAX;
     let mut max_time = std::time::Duration::ZERO;
@@ -144,14 +142,14 @@ async fn test_performance() {
         let query_start = std::time::Instant::now();
         let _ = mock_query(&format!("Query {}", i)).await;
         let query_time = query_start.elapsed();
-        
+
         total_time += query_time;
         min_time = min_time.min(query_time);
         max_time = max_time.max(query_time);
-        
+
         print!(".");
         io::stdout().flush().unwrap();
-        
+
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
     }
 
@@ -164,22 +162,28 @@ async fn test_performance() {
     println!("Average time per query: {:?}", avg_time);
     println!("Min query time: {:?}", min_time);
     println!("Max query time: {:?}", max_time);
-    println!("Queries per second: {:.2}", count as f64 / total_elapsed.as_secs_f64());
+    println!(
+        "Queries per second: {:.2}",
+        count as f64 / total_elapsed.as_secs_f64()
+    );
 }
 
 async fn mock_query(prompt: &str) -> String {
     // Simulate processing delay
     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-    
+
     // Generate mock responses
     match prompt.to_lowercase().as_str() {
         s if s.contains("hello") => "Hello! How can I help you today?".to_string(),
-        s if s.contains("weather") => "I'm a mock API and don't have access to real weather data.".to_string(),
-        s if s.contains("capital") && s.contains("france") => "The capital of France is Paris.".to_string(),
+        s if s.contains("weather") => {
+            "I'm a mock API and don't have access to real weather data.".to_string()
+        }
+        s if s.contains("capital") && s.contains("france") => {
+            "The capital of France is Paris.".to_string()
+        }
         s if s.contains("2 + 2") || s.contains("2+2") => "2 + 2 = 4".to_string(),
         s if s.contains("squared") => {
-            if let Some(num) = s.split_whitespace()
-                .find_map(|w| w.parse::<i32>().ok()) {
+            if let Some(num) = s.split_whitespace().find_map(|w| w.parse::<i32>().ok()) {
                 format!("{} squared is {}", num, num * num)
             } else {
                 "Please provide a number to square.".to_string()
@@ -196,6 +200,6 @@ async fn mock_contextual_response(prompt: &str, context: &[String]) -> String {
             return "Based on our conversation, we discussed various topics.".to_string();
         }
     }
-    
+
     mock_query(prompt).await
 }

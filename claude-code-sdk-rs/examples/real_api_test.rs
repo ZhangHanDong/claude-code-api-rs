@@ -1,18 +1,16 @@
 //! Real API test using actual Claude Code SDK
 
 use cc_sdk::{
-    ClaudeCodeOptions, ClientMode, OptimizedClient, PermissionMode, Result,
-    InteractiveClient, Message, ContentBlock,
+    ClaudeCodeOptions, ClientMode, ContentBlock, InteractiveClient, Message, OptimizedClient,
+    PermissionMode, Result,
 };
 use std::time::Instant;
-use tracing::{info, Level};
+use tracing::{Level, info};
 
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize logging
-    tracing_subscriber::fmt()
-        .with_max_level(Level::INFO)
-        .init();
+    tracing_subscriber::fmt().with_max_level(Level::INFO).init();
 
     info!("=== Real Claude Code SDK API Test ===\n");
 
@@ -59,7 +57,7 @@ fn is_claude_cli_available() -> bool {
 /// Test OneShot query
 async fn test_oneshot_query(options: ClaudeCodeOptions) -> Result<()> {
     let client = OptimizedClient::new(options, ClientMode::OneShot)?;
-    
+
     let queries = vec![
         "What is 2 + 2?",
         "Write a haiku about Rust programming",
@@ -69,7 +67,7 @@ async fn test_oneshot_query(options: ClaudeCodeOptions) -> Result<()> {
     for query in queries {
         info!("Query: {}", query);
         let start = Instant::now();
-        
+
         match client.query(query.to_string()).await {
             Ok(messages) => {
                 let elapsed = start.elapsed();
@@ -97,7 +95,7 @@ async fn test_oneshot_query(options: ClaudeCodeOptions) -> Result<()> {
 /// Test Interactive mode
 async fn test_interactive_mode(options: ClaudeCodeOptions) -> Result<()> {
     let client = OptimizedClient::new(options, ClientMode::Interactive)?;
-    
+
     // Start session
     client.start_interactive_session().await?;
     info!("Interactive session started");
@@ -111,10 +109,10 @@ async fn test_interactive_mode(options: ClaudeCodeOptions) -> Result<()> {
 
     for prompt in prompts {
         info!("Sending: {}", prompt);
-        
+
         client.send_interactive(prompt.to_string()).await?;
         let messages = client.receive_interactive().await?;
-        
+
         for msg in messages {
             if let Message::Assistant { message } = msg {
                 for content in message.content {
@@ -136,10 +134,7 @@ async fn test_interactive_mode(options: ClaudeCodeOptions) -> Result<()> {
 
 /// Test batch processing
 async fn test_batch_processing(options: ClaudeCodeOptions) -> Result<()> {
-    let client = OptimizedClient::new(
-        options,
-        ClientMode::Batch { max_concurrent: 3 },
-    )?;
+    let client = OptimizedClient::new(options, ClientMode::Batch { max_concurrent: 3 })?;
 
     let queries = vec![
         "What is the capital of Japan?".to_string(),
@@ -149,7 +144,10 @@ async fn test_batch_processing(options: ClaudeCodeOptions) -> Result<()> {
         "Explain recursion briefly".to_string(),
     ];
 
-    info!("Processing {} queries with max concurrency 3", queries.len());
+    info!(
+        "Processing {} queries with max concurrency 3",
+        queries.len()
+    );
     let start = Instant::now();
 
     let results = client.process_batch(queries.clone()).await?;
@@ -158,7 +156,10 @@ async fn test_batch_processing(options: ClaudeCodeOptions) -> Result<()> {
     let successful = results.iter().filter(|r| r.is_ok()).count();
     info!("Results: {}/{} successful", successful, results.len());
     info!("Total time: {:?}", elapsed);
-    info!("Average time per query: {:?}", elapsed / results.len() as u32);
+    info!(
+        "Average time per query: {:?}",
+        elapsed / results.len() as u32
+    );
 
     // Show first few results
     for (i, result) in results.iter().take(3).enumerate() {
@@ -188,7 +189,7 @@ async fn test_batch_processing(options: ClaudeCodeOptions) -> Result<()> {
 /// Test traditional InteractiveClient
 async fn test_traditional_client(options: ClaudeCodeOptions) -> Result<()> {
     let mut client = InteractiveClient::new(options)?;
-    
+
     // Connect
     client.connect().await?;
     info!("Connected with traditional client");
@@ -196,7 +197,7 @@ async fn test_traditional_client(options: ClaudeCodeOptions) -> Result<()> {
     // Send and receive
     let prompt = "What is Rust's main advantage?";
     info!("Query: {}", prompt);
-    
+
     let start = Instant::now();
     let messages = client.send_and_receive(prompt.to_string()).await?;
     let elapsed = start.elapsed();

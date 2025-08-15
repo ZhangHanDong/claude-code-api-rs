@@ -7,7 +7,7 @@ use crate::{
 };
 use futures::StreamExt;
 use std::sync::Arc;
-use tokio::sync::{mpsc, Mutex, RwLock};
+use tokio::sync::{Mutex, RwLock, mpsc};
 use tracing::{debug, error, info};
 
 /// Client state
@@ -33,7 +33,9 @@ pub struct ClaudeSDKClientWorking {
 impl ClaudeSDKClientWorking {
     /// Create a new client
     pub fn new(options: ClaudeCodeOptions) -> Self {
-        unsafe {std::env::set_var("CLAUDE_CODE_ENTRYPOINT", "sdk-rust");}
+        unsafe {
+            std::env::set_var("CLAUDE_CODE_ENTRYPOINT", "sdk-rust");
+        }
 
         Self {
             options,

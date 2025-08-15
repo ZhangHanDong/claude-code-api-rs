@@ -3,7 +3,7 @@
 //! This example demonstrates how to use the Claude Code SDK to process Rust programming
 //! questions and generate annotated code solutions with comprehensive unit tests.
 
-use cc_sdk::{ClaudeCodeOptions, InteractiveClient, PermissionMode, Result, ContentBlock};
+use cc_sdk::{ClaudeCodeOptions, ContentBlock, InteractiveClient, PermissionMode, Result};
 use chrono::{DateTime, Utc};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -11,25 +11,22 @@ use std::time::{Duration, Instant};
 use tokio::time::sleep;
 
 /// Process a single Rust programming question
-async fn process_single_question(
-    question: &str,
-    target_dir: &str,
-) -> Result<()> {
+async fn process_single_question(question: &str, target_dir: &str) -> Result<()> {
     let script_start = Instant::now();
     let start_time: DateTime<Utc> = Utc::now();
 
-    println!("Starting Rust development procedure at {}",
-        start_time.format("%Y-%m-%d %H:%M:%S UTC"));
+    println!(
+        "Starting Rust development procedure at {}",
+        start_time.format("%Y-%m-%d %H:%M:%S UTC")
+    );
     println!("User question: {}", question);
     println!("================================================");
 
-    let current_dir = std::env::current_dir()
-        .expect("Failed to get current directory");
+    let current_dir = std::env::current_dir().expect("Failed to get current directory");
     let annotations_dir = current_dir.join("annotations");
 
     // Ensure annotations directory exists
-    fs::create_dir_all(&annotations_dir)
-        .expect("Failed to create annotations directory");
+    fs::create_dir_all(&annotations_dir).expect("Failed to create annotations directory");
 
     let full_dir = annotations_dir.display();
     let system_prompt = format!(
@@ -37,7 +34,9 @@ async fn process_single_question(
         Create a minimal Rust project (use cargo) named '{}' in the subdirectory '{}' \
         as the answer to the user's question. Add comprehensive unit tests. \
         DON'T DELETE ANY OTHER DIRECTORIES IN THE DIR './annotations/'!",
-        current_dir.display(), target_dir, full_dir
+        current_dir.display(),
+        target_dir,
+        full_dir
     );
 
     // Configure Claude with appropriate permissions for file operations
@@ -75,13 +74,14 @@ async fn process_single_question(
     println!("Step 2: Verifying project with pipeline checks...");
     let step2_start = Instant::now();
 
-    let verification_prompt =
-        "Please make sure to pass the pipeline of 'cargo check; cargo test; cargo clippy;' \
+    let verification_prompt = "Please make sure to pass the pipeline of 'cargo check; cargo test; cargo clippy;' \
         to verify the correctness of this minimal rust project. \
         At last tell me how many times you iterated. \
         Don't generate any README file in this step.";
 
-    let response = client.send_and_receive(verification_prompt.to_string()).await?;
+    let response = client
+        .send_and_receive(verification_prompt.to_string())
+        .await?;
     print_response(&response);
 
     let step2_duration = step2_start.elapsed();
@@ -94,8 +94,7 @@ async fn process_single_question(
     println!("Step 3: Generating documentation...");
     let step3_start = Instant::now();
 
-    let doc_prompt =
-        "In the target directory, please execute `cargo clean` and then create a detailed \
+    let doc_prompt = "In the target directory, please execute `cargo clean` and then create a detailed \
         README.md file to record: the metadata including the llm version, date, os version, \
         rustc version, rust toolchain, rust target, and other essential info; \
         and the log of the entire procedure, step by step. \
@@ -114,35 +113,47 @@ async fn process_single_question(
     let total_duration = script_start.elapsed();
 
     println!("TIMING SUMMARY:");
-    println!("Step 1 (Project Creation): {} seconds", step1_duration.as_secs());
-    println!("Step 2 (Pipeline Verification): {} seconds", step2_duration.as_secs());
-    println!("Step 3 (Documentation): {} seconds", step3_duration.as_secs());
-    println!("Total procedure time: {} seconds ({} minutes {} seconds)",
+    println!(
+        "Step 1 (Project Creation): {} seconds",
+        step1_duration.as_secs()
+    );
+    println!(
+        "Step 2 (Pipeline Verification): {} seconds",
+        step2_duration.as_secs()
+    );
+    println!(
+        "Step 3 (Documentation): {} seconds",
+        step3_duration.as_secs()
+    );
+    println!(
+        "Total procedure time: {} seconds ({} minutes {} seconds)",
         total_duration.as_secs(),
         total_duration.as_secs() / 60,
         total_duration.as_secs() % 60
     );
 
     let end_time: DateTime<Utc> = Utc::now();
-    println!("Script completed successfully at {}!",
-        end_time.format("%Y-%m-%d %H:%M:%S UTC"));
+    println!(
+        "Script completed successfully at {}!",
+        end_time.format("%Y-%m-%d %H:%M:%S UTC")
+    );
 
     Ok(())
 }
 
 /// Process a question set file
-async fn process_question_set(
-    question_set_file: &Path,
-    start_from: Option<u32>,
-) -> Result<()> {
+async fn process_question_set(question_set_file: &Path, start_from: Option<u32>) -> Result<()> {
     if !question_set_file.exists() {
         return Err(cc_sdk::SdkError::InvalidState {
-            message: format!("Question set file '{}' not found!", question_set_file.display()),
+            message: format!(
+                "Question set file '{}' not found!",
+                question_set_file.display()
+            ),
         });
     }
 
-    let content = fs::read_to_string(question_set_file)
-        .map_err(|e| cc_sdk::SdkError::InvalidState {
+    let content =
+        fs::read_to_string(question_set_file).map_err(|e| cc_sdk::SdkError::InvalidState {
             message: format!("Failed to read question set file: {}", e),
         })?;
 
@@ -167,8 +178,7 @@ async fn process_question_set(
     }
     println!("================================================");
 
-    let question_regex = regex::Regex::new(r"^(\d+)\.\s*(.+)$")
-        .expect("Failed to compile regex");
+    let question_regex = regex::Regex::new(r"^(\d+)\.\s*(.+)$").expect("Failed to compile regex");
 
     let mut processed_count = 0;
     let set_start_time = Instant::now();
@@ -202,11 +212,17 @@ async fn process_question_set(
                 Ok(_) => {
                     let question_duration = question_start.elapsed();
                     processed_count += 1;
-                    println!("Completed question {} in {} seconds",
-                        question_num, question_duration.as_secs());
+                    println!(
+                        "Completed question {} in {} seconds",
+                        question_num,
+                        question_duration.as_secs()
+                    );
                 }
                 Err(e) => {
-                    println!("ERROR: Failed to process question {}: {:?}", question_num, e);
+                    println!(
+                        "ERROR: Failed to process question {}: {:?}",
+                        question_num, e
+                    );
                     // Continue with next question instead of stopping
                 }
             }
@@ -218,7 +234,8 @@ async fn process_question_set(
     println!("================================================");
     println!("SUMMARY for {}:", question_set_file.display());
     println!("Successfully processed: {} questions", processed_count);
-    println!("Total processing time: {} seconds ({} minutes)",
+    println!(
+        "Total processing time: {} seconds ({} minutes)",
         total_duration.as_secs(),
         total_duration.as_secs() / 60
     );

@@ -91,10 +91,14 @@ curl -X POST http://localhost:8080/v1/chat/completions \
 The API supports the latest Claude models available in 2025:
 
 ### Latest Models
-- **Opus 4.1** (`opus-4.1` or `claude-opus-4-1-20250805`) - Most capable model
-- **Sonnet 4** (`sonnet-4` or `claude-sonnet-4-20250514`) - Balanced performance
-- **Opus** (`opus`) - Alias for latest Opus model
-- **Sonnet** (`sonnet`) - Alias for latest Sonnet model
+- **Opus 4.1** - Most capable model
+  - Recommended: `"opus"` (alias for latest)
+  - Full name: `"claude-opus-4-1-20250805"`
+- **Sonnet 4** - Balanced performance
+  - Recommended: `"sonnet"` (alias for latest)
+  - Full name: `"claude-sonnet-4-20250514"`
+
+**Important:** The short aliases `"opus-4.1"` and `"sonnet-4"` are NOT supported and will return 404 errors. Use `"opus"` or `"sonnet"` instead.
 
 ### Previous Generation
 - **Claude 3.5 Sonnet** (`claude-3-5-sonnet-20241022`)
@@ -103,15 +107,15 @@ The API supports the latest Claude models available in 2025:
 ### Model Usage Examples
 
 ```bash
-# Using Opus 4.1
+# Using Opus 4.1 (recommended: use alias)
 curl -X POST http://localhost:8080/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -d '{"model": "opus-4.1", "messages": [{"role": "user", "content": "Hello"}]}'
+  -d '{"model": "opus", "messages": [{"role": "user", "content": "Hello"}]}'
 
-# Using Sonnet 4
+# Using Sonnet 4 (recommended: use alias)
 curl -X POST http://localhost:8080/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -d '{"model": "sonnet-4", "messages": [{"role": "user", "content": "Hello"}]}'
+  -d '{"model": "sonnet", "messages": [{"role": "user", "content": "Hello"}]}'
 
 # Using latest aliases
 curl -X POST http://localhost:8080/v1/chat/completions \
@@ -133,7 +137,7 @@ client = openai.OpenAI(
 )
 
 response = client.chat.completions.create(
-    model="opus-4.1",  # or "sonnet-4" for faster responses
+    model="opus",  # or "sonnet" for faster responses
     messages=[
         {"role": "user", "content": "Write a hello world in Python"}
     ]

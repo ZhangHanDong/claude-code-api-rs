@@ -17,6 +17,7 @@ use crate::{
         claude::ClaudeCodeOutput,
     },
     utils::{streaming::create_sse_stream, parser::claude_to_openai_stream},
+    api::streaming_handler::handle_enhanced_streaming_response,
 };
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
@@ -302,16 +303,10 @@ async fn download_image(url: &str) -> ApiResult<String> {
 
 async fn handle_streaming_response(
     model: String,
-    mut rx: mpsc::Receiver<ClaudeCodeOutput>,
+    rx: mpsc::Receiver<ClaudeCodeOutput>,
 ) -> ApiResult<impl IntoResponse> {
-    let stream = async_stream::stream! {
-        while let Some(output) = rx.recv().await {
-            if let Some(openai_response) = claude_to_openai_stream(output, &model) {
-                yield openai_response;
-            }
-        }
-    };
-
+    // Use enhanced streaming with text chunking for better UX
+    let stream = handle_enhanced_streaming_response(model, rx).await;
     Ok(create_sse_stream(stream))
 }
 

@@ -236,6 +236,20 @@ async fn query_print_mode(
     // Set up process pipes
     cmd.stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped());
+    
+    // Handle CLAUDE_CODE_MAX_OUTPUT_TOKENS environment variable
+    // Maximum safe value is 32000, values above this may cause issues
+    if let Ok(current_value) = std::env::var("CLAUDE_CODE_MAX_OUTPUT_TOKENS") {
+        if let Ok(tokens) = current_value.parse::<u32>() {
+            if tokens > 32000 {
+                warn!("CLAUDE_CODE_MAX_OUTPUT_TOKENS={} exceeds maximum safe value of 32000, overriding to 32000", tokens);
+                cmd.env("CLAUDE_CODE_MAX_OUTPUT_TOKENS", "32000");
+            }
+        } else {
+            warn!("Invalid CLAUDE_CODE_MAX_OUTPUT_TOKENS value: {}, setting to 8192", current_value);
+            cmd.env("CLAUDE_CODE_MAX_OUTPUT_TOKENS", "8192");
+        }
+    }
 
     info!("Starting Claude CLI with --print mode");
     debug!("Command: {:?}", cmd);

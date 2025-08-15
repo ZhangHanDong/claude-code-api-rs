@@ -5,17 +5,62 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.10] - 2025-01-15
+
+### Added
+- Comprehensive streaming documentation explaining message-level vs character-level streaming
+- Clarification about Claude CLI limitations and output format support
+- Documentation comparing Python and Rust SDK streaming capabilities
+
+### Clarified
+- Both Python and Rust Claude Code SDKs have identical streaming capabilities
+- Streaming refers to message-level streaming (complete JSON messages), not character-level
+- Claude CLI only supports `stream-json` format which outputs complete JSON objects
+- True character-level streaming requires direct Anthropic API, not Claude CLI
+
+### Technical Analysis
+- Added test scripts demonstrating that `text` format doesn't support streaming
+- Documented that all three Claude CLI output formats (`text`, `json`, `stream-json`) don't support character-level streaming
+- Created comprehensive explanation document (`STREAMING_EXPLANATION.md`)
+
+## [0.1.9] - 2025-01-15
+
+### Fixed
+- **Critical Environment Variable Fix**: Intelligent handling of `CLAUDE_CODE_MAX_OUTPUT_TOKENS`
+  - Discovered maximum safe value is 32000 (values above cause Claude CLI to crash)
+  - SDK now automatically caps values > 32000 to the maximum safe value
+  - Invalid non-numeric values are replaced with safe default (8192)
+  - Prevents "Error: Invalid env var" crashes that exit with code 1
+
+### Added
+- Documentation for environment variables (`docs/ENVIRONMENT_VARIABLES.md`)
+- Better warning logs when invalid environment variable values are detected
+
+### Improved
+- More robust environment variable validation before spawning Claude CLI
+- Smarter handling instead of simply removing problematic variables
+
 ## [0.1.8] - 2025-01-15
+
+### Added
+- **Streaming Output Support** - New methods for streaming responses
+  - `receive_messages_stream()` - Returns a stream of messages for async iteration
+  - `receive_response_stream()` - Convenience method that streams until Result message
+  - Full parity with Python SDK's streaming capabilities
+- Comprehensive streaming example (`examples/streaming_output.rs`)
+- Process lifecycle management with Arc<Mutex> for shared ownership
+- Automatic cleanup task that kills Claude CLI process when stream is dropped
+- Better logging for process lifecycle events (debug, info, warn levels)
 
 ### Fixed
 - Fixed async execution order in comprehensive test to avoid future not being awaited
 - Improved process cleanup in `query_print_mode` to prevent zombie processes
 - Added automatic process termination when stream is dropped to prevent resource leaks
-
-### Added
-- Process lifecycle management with Arc<Mutex> for shared ownership
-- Automatic cleanup task that kills Claude CLI process when stream is dropped
-- Better logging for process lifecycle events (debug, info, warn levels)
+- **Critical Fix**: Automatically handle problematic `CLAUDE_CODE_MAX_OUTPUT_TOKENS` environment variable
+  - Maximum safe value is 32000 - values above this cause Claude CLI to exit with error code 1
+  - SDK now automatically caps values > 32000 to 32000
+  - Invalid non-numeric values are replaced with safe default (8192)
+  - Prevents immediate process termination due to invalid settings
 
 ### Changed
 - Refactored test execution to await futures immediately instead of collecting them

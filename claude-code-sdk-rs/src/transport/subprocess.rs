@@ -108,6 +108,23 @@ impl SubprocessTransport {
 
         // For streaming/interactive mode, also add input-format stream-json
         cmd.arg("--input-format").arg("stream-json");
+        
+        // Handle CLAUDE_CODE_MAX_OUTPUT_TOKENS environment variable
+        // Maximum safe value is 32000, values above this may cause issues
+        // If the env var is set to an invalid value, we'll override it with a safe default
+        if let Ok(current_value) = std::env::var("CLAUDE_CODE_MAX_OUTPUT_TOKENS") {
+            if let Ok(tokens) = current_value.parse::<u32>() {
+                if tokens > 32000 {
+                    warn!("CLAUDE_CODE_MAX_OUTPUT_TOKENS={} exceeds maximum safe value of 32000, overriding to 32000", tokens);
+                    cmd.env("CLAUDE_CODE_MAX_OUTPUT_TOKENS", "32000");
+                }
+                // If it's <= 32000, leave it as is
+            } else {
+                // Invalid value, set to safe default
+                warn!("Invalid CLAUDE_CODE_MAX_OUTPUT_TOKENS value: {}, setting to 8192", current_value);
+                cmd.env("CLAUDE_CODE_MAX_OUTPUT_TOKENS", "8192");
+            }
+        }
 
         // System prompts
         if let Some(ref prompt) = self.options.system_prompt {
@@ -323,15 +340,47 @@ impl SubprocessTransport {
             info!("Stdout reader ended");
         });
 
-        // Spawn stderr handler
+        // Spawn stderr handler - capture error messages for better diagnostics
+        let message_broadcast_tx_for_error = message_broadcast_tx.clone();
         tokio::spawn(async move {
             let reader = BufReader::new(stderr);
             let mut lines = reader.lines();
-
+            let mut error_buffer = Vec::new();
+            
             while let Ok(Some(line)) = lines.next_line().await {
                 if !line.trim().is_empty() {
-                    warn!("Claude stderr: {}", line);
+                    error!("Claude CLI stderr: {}", line);
+                    error_buffer.push(line.clone());
+                    
+                    // Check for common error patterns
+                    if line.contains("command not found") || line.contains("No such file") {
+                        error!("Claude CLI binary not found or not executable");
+                    } else if line.contains("ENOENT") || line.contains("spawn") {
+                        error!("Failed to spawn Claude CLI process - binary may not be installed");
+                    } else if line.contains("authentication") || line.contains("API key") || line.contains("Unauthorized") {
+                        error!("Claude CLI authentication error - please run 'claude-code api login'");
+                    } else if line.contains("model") && (line.contains("not available") || line.contains("not found")) {
+                        error!("Model not available for your account: {}", line);
+                    } else if line.contains("Error:") || line.contains("error:") {
+                        error!("Claude CLI error detected: {}", line);
+                    }
                 }
+            }
+            
+            // If we collected any errors, log them
+            if !error_buffer.is_empty() {
+                let error_msg = error_buffer.join("\n");
+                error!("Claude CLI stderr output collected:\n{}", error_msg);
+                
+                // Try to send an error message through the broadcast channel
+                let _ = message_broadcast_tx_for_error.send(Message::System {
+                    subtype: "error".to_string(),
+                    data: serde_json::json!({
+                        "source": "stderr",
+                        "error": "Claude CLI error output",
+                        "details": error_msg
+                    }),
+                });
             }
         });
 
@@ -481,9 +530,12 @@ impl Drop for SubprocessTransport {
 
 /// Find the Claude CLI binary
 pub(crate) fn find_claude_cli() -> Result<PathBuf> {
-    // First check if it's in PATH
-    if let Ok(path) = which::which("claude") {
-        return Ok(path);
+    // First check if it's in PATH - try both 'claude' and 'claude-code'
+    for cmd_name in &["claude", "claude-code"] {
+        if let Ok(path) = which::which(cmd_name) {
+            debug!("Found Claude CLI at: {}", path.display());
+            return Ok(path);
+        }
     }
 
     // Check common installation locations
@@ -492,23 +544,40 @@ pub(crate) fn find_claude_cli() -> Result<PathBuf> {
     })?;
 
     let locations = vec![
+        // npm global installations
         home.join(".npm-global/bin/claude"),
+        home.join(".npm-global/bin/claude-code"),
         PathBuf::from("/usr/local/bin/claude"),
+        PathBuf::from("/usr/local/bin/claude-code"),
+        // Local installations
         home.join(".local/bin/claude"),
+        home.join(".local/bin/claude-code"),
         home.join("node_modules/.bin/claude"),
+        home.join("node_modules/.bin/claude-code"),
+        // Yarn installations
         home.join(".yarn/bin/claude"),
+        home.join(".yarn/bin/claude-code"),
+        // macOS specific npm location
+        PathBuf::from("/opt/homebrew/bin/claude"),
+        PathBuf::from("/opt/homebrew/bin/claude-code"),
     ];
 
     let mut searched = Vec::new();
     for path in &locations {
         searched.push(path.display().to_string());
         if path.exists() && path.is_file() {
+            debug!("Found Claude CLI at: {}", path.display());
             return Ok(path.clone());
         }
     }
 
+    // Log detailed error information
+    warn!("Claude CLI not found in any standard location");
+    warn!("Searched paths: {:?}", searched);
+
     // Check if Node.js is installed
-    if which::which("node").is_err() {
+    if which::which("node").is_err() && which::which("npm").is_err() {
+        error!("Node.js/npm not found - Claude CLI requires Node.js");
         return Err(SdkError::CliNotFound {
             searched_paths: format!(
                 "Node.js is not installed. Install from https://nodejs.org/\n\nSearched in:\n{}",

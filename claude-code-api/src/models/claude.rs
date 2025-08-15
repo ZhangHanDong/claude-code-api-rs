@@ -93,19 +93,48 @@ pub struct ClaudeModel {
 impl ClaudeModel {
     pub fn all() -> Vec<Self> {
         vec![
+            // Claude 4 Series (2025)
             Self {
-                id: "claude-3-5-sonnet-20241022".to_string(),
-                display_name: "Claude 3.5 Sonnet".to_string(),
+                id: "claude-opus-4-1-20250805".to_string(),
+                display_name: "Claude Opus 4.1".to_string(),
+                context_window: 500000,
+            },
+            Self {
+                id: "claude-opus-4-20250514".to_string(),
+                display_name: "Claude Opus 4".to_string(),
+                context_window: 500000,
+            },
+            Self {
+                id: "claude-sonnet-4-20250514".to_string(),
+                display_name: "Claude Sonnet 4".to_string(),
+                context_window: 500000,
+            },
+            // Claude 3.7 Series (2025)
+            Self {
+                id: "claude-3-7-sonnet-20250219".to_string(),
+                display_name: "Claude Sonnet 3.7".to_string(),
                 context_window: 200000,
             },
+            Self {
+                id: "claude-3-7-sonnet-latest".to_string(),
+                display_name: "Claude Sonnet 3.7 (Latest)".to_string(),
+                context_window: 200000,
+            },
+            // Claude 3.5 Series (2024)
             Self {
                 id: "claude-3-5-haiku-20241022".to_string(),
-                display_name: "Claude 3.5 Haiku".to_string(),
+                display_name: "Claude Haiku 3.5".to_string(),
                 context_window: 200000,
             },
             Self {
-                id: "claude-3-opus-20240229".to_string(),
-                display_name: "Claude 3 Opus".to_string(),
+                id: "claude-3-5-haiku-latest".to_string(),
+                display_name: "Claude Haiku 3.5 (Latest)".to_string(),
+                context_window: 200000,
+            },
+            // Claude 3 Series (2024)
+            Self {
+                id: "claude-3-haiku-20240307".to_string(),
+                display_name: "Claude Haiku 3".to_string(),
                 context_window: 200000,
             },
         ]

@@ -35,7 +35,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-cc-sdk = "0.1.8"
+cc-sdk = "0.1.9"
 tokio = { version = "1.0", features = ["full"] }
 futures = "0.3"
 ```
@@ -132,6 +132,49 @@ async fn main() -> Result<()> {
     let messages = client.send_and_receive(
         "Make it use async/await".to_string()
     ).await?;
+    
+    client.disconnect().await?;
+    Ok(())
+}
+```
+
+### Streaming Output (Since v0.1.8)
+
+```rust
+use cc_sdk::{InteractiveClient, ClaudeCodeOptions, Result};
+use futures::StreamExt;
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let mut client = InteractiveClient::new(ClaudeCodeOptions::default())?;
+    client.connect().await?;
+    
+    // Send a message
+    client.send_message("Explain quantum computing".to_string()).await?;
+    
+    // Receive messages as a stream
+    let mut stream = client.receive_messages_stream().await;
+    while let Some(result) = stream.next().await {
+        match result {
+            Ok(message) => {
+                println!("Received: {:?}", message);
+                if matches!(message, cc_sdk::Message::Result { .. }) {
+                    break;
+                }
+            }
+            Err(e) => eprintln!("Error: {}", e),
+        }
+    }
+    
+    // Or use the convenience method that stops at Result message
+    client.send_message("What's 2 + 2?".to_string()).await?;
+    let mut stream = client.receive_response_stream().await;
+    while let Some(result) = stream.next().await {
+        match result {
+            Ok(message) => println!("Message: {:?}", message),
+            Err(e) => eprintln!("Error: {}", e),
+        }
+    }
     
     client.disconnect().await?;
     Ok(())

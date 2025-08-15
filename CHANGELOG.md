@@ -2,18 +2,89 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.10] - 2025-01-15
+
+### SDK Updates
+- **claude-code-sdk-rs v0.1.10**: Streaming documentation and clarifications
+  - Added comprehensive documentation explaining message-level vs character-level streaming
+  - Clarified that both Python and Rust SDKs have identical capabilities
+  - Documented Claude CLI limitations with output formats
+  - Created technical analysis and test scripts
+
+### API Updates
+- **Model Support**: Confirmed support for all 2025 Claude models
+  - Claude 4 Series: Opus 4.1, Opus 4, Sonnet 4
+  - Claude 3.7 Series: Sonnet 3.7
+  - Claude 3.5 Series: Haiku 3.5
+  - Claude 3 Series: Haiku 3
+- **Streaming Enhancement**: Added text chunking handler (simulation for better UX)
+
+### Documentation
+- Added `STREAMING_EXPLANATION.md` with detailed technical explanation
+- Created test scripts for validating streaming behavior
+- Updated SDK documentation with streaming clarifications
+
+### Changed
+- Bumped workspace version to 0.1.10
+
+---
+
+## [0.1.9] - 2025-01-15
+
+### SDK Updates
+- **claude-code-sdk-rs v0.1.9**: Critical environment variable fixes
+  - Intelligent handling of `CLAUDE_CODE_MAX_OUTPUT_TOKENS` (max safe value: 32000)
+  - Prevents Claude CLI crashes due to invalid environment variable values
+  - Added comprehensive environment variable documentation
+
+### Changed
+- Bumped workspace version to 0.1.9
+
+---
+
 ## [0.1.8] - 2025-01-15
 
 ### SDK Updates
-- **claude-code-sdk-rs v0.1.8**: Process management improvements and test fixes
+- **claude-code-sdk-rs v0.1.8**: Streaming output support and process improvements
+  - **NEW**: Full streaming output support matching Python SDK capabilities
+  - Added `receive_messages_stream()` and `receive_response_stream()` methods
+  - Comprehensive streaming example demonstrating usage patterns
   - Fixed async execution order in comprehensive test suite
   - Improved process cleanup to prevent zombie processes
   - Added automatic process termination when stream is dropped
   - Enhanced process lifecycle management with Arc<Mutex>
   - Better logging for debugging process lifecycle events
 
+### API Updates
+- **Model List Update**: Complete update based on official Anthropic API documentation
+  - **Claude 4 Series (2025)**:
+    - Claude Opus 4.1 (claude-opus-4-1-20250805)
+    - Claude Opus 4 (claude-opus-4-20250514)
+    - Claude Sonnet 4 (claude-sonnet-4-20250514)
+  - **Claude 3.7 Series (2025)**:
+    - Claude Sonnet 3.7 (claude-3-7-sonnet-20250219)
+    - Claude Sonnet 3.7 Latest (claude-3-7-sonnet-latest)
+  - **Claude 3.5 Series (2024)**:
+    - Claude Haiku 3.5 (claude-3-5-haiku-20241022)
+    - Claude Haiku 3.5 Latest (claude-3-5-haiku-latest)
+  - **Claude 3 Series (2024)**:
+    - Claude Haiku 3 (claude-3-haiku-20240307)
+  - Default model changed to claude-sonnet-4-20250514
+  - Total of 8 models available via /v1/models endpoint
+
 ### Changed
 - Bumped workspace version to 0.1.8
+- Updated test suite to reflect new model count (8 models total)
+
+### Improved
+- Enhanced Claude CLI detection to check both 'claude' and 'claude-code' commands
+- Added more search paths including macOS Homebrew locations
+- Improved error diagnostics with detailed stderr capture and analysis
+- Better error messages for common issues:
+  - Claude CLI not installed
+  - Authentication failures  
+  - Model availability issues
+  - Node.js/npm not installed
 
 ## [0.1.6] - 2025-01-23
 

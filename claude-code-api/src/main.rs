@@ -71,7 +71,7 @@ async fn create_app(settings: Settings) -> Result<Router> {
         max_idle: settings.process_pool.max_idle,
         max_active: settings.process_pool.size,
         idle_timeout_secs: 300,
-        default_model: "claude-3-5-sonnet-20241022".to_string(),
+        default_model: "claude-sonnet-4-20250514".to_string(),
     };
     
     // 初始化进程池

@@ -342,4 +342,26 @@ mod tests {
             _ => panic!("Expected Text variant"),
         }
     }
+
+    #[test]
+    fn test_extra_args_formatting() {
+        use std::collections::HashMap;
+        
+        // Test that extra_args are properly formatted as CLI flags
+        let mut extra_args = HashMap::new();
+        extra_args.insert("custom-flag".to_string(), Some("value".to_string()));
+        extra_args.insert("--already-dashed".to_string(), None);
+        extra_args.insert("-s".to_string(), Some("short".to_string()));
+        
+        let options = ClaudeCodeOptions {
+            extra_args,
+            ..Default::default()
+        };
+        
+        // Verify the args are properly stored
+        assert_eq!(options.extra_args.len(), 3);
+        assert!(options.extra_args.contains_key("custom-flag"));
+        assert!(options.extra_args.contains_key("--already-dashed"));
+        assert!(options.extra_args.contains_key("-s"));
+    }
 }

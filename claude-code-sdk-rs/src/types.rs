@@ -429,6 +429,14 @@ mod tests {
 
         let deserialized: PermissionMode = serde_json::from_str(&json).unwrap();
         assert_eq!(deserialized, mode);
+
+        // Test Plan mode
+        let plan_mode = PermissionMode::Plan;
+        let plan_json = serde_json::to_string(&plan_mode).unwrap();
+        assert_eq!(plan_json, r#""plan""#);
+
+        let plan_deserialized: PermissionMode = serde_json::from_str(&plan_json).unwrap();
+        assert_eq!(plan_deserialized, plan_mode);
     }
 
     #[test]
@@ -463,5 +471,38 @@ mod tests {
         assert_eq!(options.permission_mode, PermissionMode::AcceptEdits);
         assert_eq!(options.allowed_tools, vec!["read", "write"]);
         assert_eq!(options.max_turns, Some(10));
+    }
+
+    #[test]
+    fn test_extra_args() {
+        let mut extra_args = HashMap::new();
+        extra_args.insert("custom-flag".to_string(), Some("value".to_string()));
+        extra_args.insert("boolean-flag".to_string(), None);
+
+        let options = ClaudeCodeOptions::builder()
+            .extra_args(extra_args.clone())
+            .add_extra_arg("another-flag", Some("another-value".to_string()))
+            .build();
+
+        assert_eq!(options.extra_args.len(), 3);
+        assert_eq!(options.extra_args.get("custom-flag"), Some(&Some("value".to_string())));
+        assert_eq!(options.extra_args.get("boolean-flag"), Some(&None));
+        assert_eq!(options.extra_args.get("another-flag"), Some(&Some("another-value".to_string())));
+    }
+
+    #[test]
+    fn test_thinking_content_serialization() {
+        let thinking = ThinkingContent {
+            thinking: "Let me think about this...".to_string(),
+            signature: "sig123".to_string(),
+        };
+
+        let json = serde_json::to_string(&thinking).unwrap();
+        assert!(json.contains(r#""thinking":"Let me think about this...""#));
+        assert!(json.contains(r#""signature":"sig123""#));
+
+        let deserialized: ThinkingContent = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.thinking, thinking.thinking);
+        assert_eq!(deserialized.signature, thinking.signature);
     }
 }

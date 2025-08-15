@@ -6,8 +6,8 @@
 use crate::{
     errors::{Result, SdkError},
     types::{
-        AssistantMessage, ContentBlock, ContentValue, Message, TextContent, ToolResultContent,
-        ToolUseContent, UserMessage,
+        AssistantMessage, ContentBlock, ContentValue, Message, TextContent, ThinkingContent,
+        ToolResultContent, ToolUseContent, UserMessage,
     },
 };
 use serde_json::Value;
@@ -99,6 +99,18 @@ fn parse_content_block(json: &Value) -> Result<Option<ContentBlock>> {
                 })?;
                 Ok(Some(ContentBlock::Text(TextContent {
                     text: text.to_string(),
+                })))
+            }
+            "thinking" => {
+                let thinking = json.get("thinking").and_then(|v| v.as_str()).ok_or_else(|| {
+                    SdkError::parse_error("Missing 'thinking' field in thinking block", json.to_string())
+                })?;
+                let signature = json.get("signature").and_then(|v| v.as_str()).ok_or_else(|| {
+                    SdkError::parse_error("Missing 'signature' field in thinking block", json.to_string())
+                })?;
+                Ok(Some(ContentBlock::Thinking(ThinkingContent {
+                    thinking: thinking.to_string(),
+                    signature: signature.to_string(),
                 })))
             }
             "tool_use" => {
@@ -285,6 +297,25 @@ mod tests {
             }
         } else {
             panic!("Expected Assistant message");
+        }
+    }
+
+    #[test]
+    fn test_parse_thinking_block() {
+        let json = json!({
+            "type": "thinking",
+            "thinking": "Let me analyze this problem...",
+            "signature": "thinking_sig_123"
+        });
+
+        let result = parse_content_block(&json).unwrap();
+        assert!(result.is_some());
+
+        if let Some(ContentBlock::Thinking(thinking)) = result {
+            assert_eq!(thinking.thinking, "Let me analyze this problem...");
+            assert_eq!(thinking.signature, "thinking_sig_123");
+        } else {
+            panic!("Expected Thinking content block");
         }
     }
 

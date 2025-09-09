@@ -5,12 +5,14 @@
 
 use crate::{
     errors::{Result, SdkError},
+    internal_query::Query,
     transport::{InputMessage, SubprocessTransport, Transport},
     types::{ClaudeCodeOptions, ControlRequest, ControlResponse, Message},
 };
 use futures::stream::{Stream, StreamExt};
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::pin::Pin;
 use tokio::sync::{Mutex, RwLock, mpsc};
 use tokio_stream::wrappers::ReceiverStream;
 use tracing::{debug, error, info};
@@ -85,6 +87,8 @@ pub struct ClaudeSDKClient {
     options: ClaudeCodeOptions,
     /// Transport layer
     transport: Arc<Mutex<SubprocessTransport>>,
+    /// Internal query handler (when control protocol is enabled)
+    query_handler: Option<Arc<Mutex<Query>>>,
     /// Client state
     state: Arc<RwLock<ClientState>>,
     /// Active sessions
@@ -125,9 +129,35 @@ impl ClaudeSDKClient {
             }
         };
 
+        // Wrap transport in Arc for sharing
+        let transport_arc = Arc::new(Mutex::new(transport));
+        
+        // Create query handler if control protocol features are enabled
+        let query_handler = if options.can_use_tool.is_some() 
+            || options.hooks.is_some() 
+            || !options.mcp_servers.is_empty() {
+            // Convert MCP servers to the expected type
+            let sdk_mcp_servers = options.mcp_servers
+                .iter()
+                .map(|(k, v)| (k.clone(), Arc::new(v.clone()) as Arc<dyn std::any::Any + Send + Sync>))
+                .collect();
+            
+            let query = Query::new(
+                transport_arc.clone(), // Share the same transport
+                false, // not streaming mode by default
+                options.can_use_tool.clone(),
+                options.hooks.clone(),
+                sdk_mcp_servers,
+            );
+            Some(Arc::new(Mutex::new(query)))
+        } else {
+            None
+        };
+
         Self {
             options,
-            transport: Arc::new(Mutex::new(transport)),
+            transport: transport_arc,
+            query_handler,
             state: Arc::new(RwLock::new(ClientState::Disconnected)),
             sessions: Arc::new(RwLock::new(HashMap::new())),
             message_tx: Arc::new(Mutex::new(None)),
@@ -152,6 +182,14 @@ impl ClaudeSDKClient {
             transport.connect().await?;
         }
 
+        // Initialize query handler if present
+        if let Some(ref query_handler) = self.query_handler {
+            let mut handler = query_handler.lock().await;
+            handler.start().await?;
+            handler.initialize().await?;
+            info!("Initialized SDK control protocol");
+        }
+
         // Update state
         {
             let mut state = self.state.write().await;
@@ -160,7 +198,7 @@ impl ClaudeSDKClient {
 
         info!("Connected to Claude CLI");
 
-        // Start message receiver task
+        // Start message receiver task (always needed for regular messages)
         self.start_message_receiver().await;
 
         // Send initial prompt if provided
@@ -227,6 +265,8 @@ impl ClaudeSDKClient {
     /// Returns a stream of messages. The stream will end when a Result message
     /// is received or the connection is closed.
     pub async fn receive_messages(&mut self) -> impl Stream<Item = Result<Message>> + use<> {
+        // Always use the regular message receiver
+        // (Query handler shares the same transport and receives control messages separately)
         // Create a new channel for this receiver
         let (tx, rx) = mpsc::channel(100);
 
@@ -267,6 +307,13 @@ impl ClaudeSDKClient {
             }
         }
 
+        // If we have a query handler, use it
+        if let Some(ref query_handler) = self.query_handler {
+            let mut handler = query_handler.lock().await;
+            return handler.interrupt().await;
+        }
+
+        // Otherwise use regular interrupt
         // Generate request ID
         let request_id = {
             let mut counter = self.request_counter.lock().await;
@@ -333,6 +380,73 @@ impl ClaudeSDKClient {
         sessions.keys().cloned().collect()
     }
 
+    /// Receive messages until and including a ResultMessage
+    ///
+    /// This is a convenience method that collects all messages from a single response.
+    /// It will automatically stop after receiving a ResultMessage.
+    pub async fn receive_response(&mut self) -> Pin<Box<dyn Stream<Item = Result<Message>> + Send + '_>> {
+        let mut messages = self.receive_messages().await;
+        
+        // Create a stream that stops after ResultMessage
+        Box::pin(async_stream::stream! {
+            while let Some(msg_result) = messages.next().await {
+                match &msg_result {
+                    Ok(Message::Result { .. }) => {
+                        yield msg_result;
+                        return;
+                    }
+                    _ => {
+                        yield msg_result;
+                    }
+                }
+            }
+        })
+    }
+
+    /// Get server information
+    ///
+    /// Returns initialization information from the Claude Code server including:
+    /// - Available commands
+    /// - Current and available output styles
+    /// - Server capabilities
+    pub async fn get_server_info(&self) -> Option<serde_json::Value> {
+        // If we have a query handler with control protocol, get from there
+        if let Some(ref query_handler) = self.query_handler {
+            let handler = query_handler.lock().await;
+            if let Some(init_result) = handler.get_initialization_result() {
+                return Some(init_result.clone());
+            }
+        }
+        
+        // Otherwise check message buffer for init message
+        let buffer = self.message_buffer.lock().await;
+        for msg in buffer.iter() {
+            if let Message::System { subtype, data } = msg {
+                if subtype == "init" {
+                    return Some(data.clone());
+                }
+            }
+        }
+        None
+    }
+
+    /// Send a query with optional session ID
+    ///
+    /// This method is similar to Python SDK's query method in ClaudeSDKClient
+    pub async fn query(&mut self, prompt: String, session_id: Option<String>) -> Result<()> {
+        let session_id = session_id.unwrap_or_else(|| "default".to_string());
+        
+        // Send the message
+        let message = InputMessage::user(prompt, session_id);
+        
+        {
+            let mut transport = self.transport.lock().await;
+            transport.send_message(message).await?;
+        }
+        
+        Ok(())
+    }
+
     /// Disconnect from Claude CLI
     pub async fn disconnect(&mut self) -> Result<()> {
         // Check if already disconnected
@@ -373,12 +487,25 @@ impl ClaudeSDKClient {
         let state = self.state.clone();
 
         tokio::spawn(async move {
-            let mut transport = transport.lock().await;
-            let mut stream = transport.receive_messages();
+            // Subscribe to messages without holding lock
+            let mut stream = {
+                let transport = transport.lock().await;
+                transport.subscribe_messages().unwrap_or_else(|| {
+                    Box::pin(futures::stream::empty())
+                })
+            }; // Lock is released here immediately
 
             while let Some(result) = stream.next().await {
                 match result {
                     Ok(message) => {
+                        // Buffer init messages for get_server_info()
+                        if let Message::System { subtype, .. } = &message {
+                            if subtype == "init" {
+                                let mut buffer = message_buffer.lock().await;
+                                buffer.push(message.clone());
+                            }
+                        }
+                        
                         // Try to send to current receiver
                         let sent = {
                             let mut tx_opt = message_tx.lock().await;

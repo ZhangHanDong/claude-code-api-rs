@@ -38,6 +38,7 @@ mod client;
 mod client_working;
 mod errors;
 mod interactive;
+mod internal_query;
 mod message_parser;
 mod optimized_client;
 mod perf_utils;
@@ -62,9 +63,17 @@ pub use perf_utils::{MessageBatcher, PerformanceMetrics, RetryConfig};
 pub type ClaudeSDKClientDefault = InteractiveClient;
 pub use types::{
     AssistantContent, AssistantMessage, ClaudeCodeOptions, ContentBlock, ContentValue,
-    ControlRequest, ControlResponse, McpServerConfig, Message, PermissionMode, ResultMessage,
-    SystemMessage, TextContent, ThinkingContent, ToolResultContent, ToolUseContent, UserContent,
-    UserMessage,
+    ControlProtocolFormat, ControlRequest, ControlResponse, McpServerConfig, Message, 
+    PermissionMode, ResultMessage, SystemMessage, TextContent, ThinkingContent, 
+    ToolResultContent, ToolUseContent, UserContent, UserMessage,
+    // New permission and hook types
+    PermissionBehavior, PermissionResult, PermissionResultAllow, PermissionResultDeny,
+    PermissionRuleValue, PermissionUpdate, PermissionUpdateDestination, PermissionUpdateType,
+    ToolPermissionContext, CanUseTool, HookCallback, HookContext, HookMatcher,
+    // SDK Control Protocol types
+    SDKControlInitializeRequest, SDKControlInterruptRequest, SDKControlMcpMessageRequest,
+    SDKControlPermissionRequest, SDKControlRequest, SDKControlSetPermissionModeRequest,
+    SDKHookCallbackRequest,
 };
 
 // Re-export builder

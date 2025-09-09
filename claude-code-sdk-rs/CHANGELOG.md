@@ -5,6 +5,70 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.11] - 2025-01-16
+
+### 🎯 Major Feature: Control Protocol Format Compatibility
+
+This release introduces configurable control protocol format support, ensuring compatibility with both current and future Claude CLI versions while maintaining full feature parity with the Python SDK.
+
+### Added
+- **Control Protocol Format Configuration** - New `ControlProtocolFormat` enum with three modes:
+  - `Legacy` (default) - Uses `sdk_control_request/response` format for maximum compatibility
+  - `Control` - Uses new unified `type=control` format for future CLI versions
+  - `Auto` - Currently defaults to Legacy, will auto-negotiate in future releases
+  
+- **Flexible Configuration Methods**:
+  - Programmatic: `ClaudeCodeOptions::builder().control_protocol_format(ControlProtocolFormat::Legacy)`
+  - Environment variable: `CLAUDE_CODE_CONTROL_FORMAT=legacy|control` (overrides programmatic setting)
+  
+- **Full Control Protocol Implementation**:
+  - Permission callbacks (`CanUseTool` trait)
+  - Hook callbacks (`HookCallback` trait) 
+  - MCP server support (SDK type)
+  - Debug stderr output redirection
+  - Initialization protocol with server info retrieval
+
+- **Documentation**:
+  - `CONTROL_PROTOCOL_COMPATIBILITY.md` - Comprehensive compatibility guide
+  - `examples/control_format_demo.rs` - Interactive demonstration of format configuration
+  - `examples/control_protocol_demo.rs` - Full control protocol features showcase
+
+### Improved
+- **Concurrency Optimizations**:
+  - Control handler uses `take_sdk_control_receiver()` to avoid holding locks across await points
+  - Client message reception uses `subscribe_messages()` for lock-free streaming
+  - Broadcast channel for multi-subscriber message distribution
+  
+- **Dual-Stack Message Reception**:
+  - Automatically handles new format: `{"type":"control","control":{...}}`
+  - Maintains compatibility with legacy: `{"type":"sdk_control_request","request":{...}}`
+  - Supports system control variants: `{"type":"system","subtype":"sdk_control:*"}`
+
+- **Initialization Strategy**:
+  - Non-blocking `initialize()` sends request without waiting
+  - Server info cached in client, accessible via `get_server_info()`
+  - Prevents Query/Client message competition
+
+### Fixed
+- **Lock Contention Issues**: Eliminated all instances of holding locks across await boundaries
+- **Message Routing**: Control messages properly routed to SDK control channel without blocking main stream
+- **Error Aggregation**: stderr output properly aggregated and forwarded as system messages
+
+### Technical Details
+- **Architecture**: Single shared `Arc<Mutex<SubprocessTransport>>` between Client and Query
+- **Compatibility**: Default Legacy format ensures zero-breaking changes for existing users
+- **Migration Path**: Smooth transition to new format when CLI support is available
+
+### Migration Guide
+1. **No action required** - Default behavior maintains full compatibility
+2. **Testing new format**: Set `CLAUDE_CODE_CONTROL_FORMAT=control` (requires updated CLI)
+3. **Future-proofing**: Use `ControlProtocolFormat::Auto` for automatic format negotiation
+
+### Notes
+- This release achieves feature parity with Python SDK while providing additional configuration flexibility
+- All control protocol features (permissions, hooks, MCP) are fully functional with current CLI versions
+- The dual-stack reception ensures forward compatibility with future CLI updates
+
 ## [0.1.10] - 2025-01-15
 
 ### Added

@@ -3,7 +3,7 @@ members = ["claude-code-api", "claude-code-sdk-rs"]
 resolver = "2"
 
 [workspace.package]
-version = "0.1.10"
+version = "0.1.11"
 edition = "2024"
 authors = ["blackanger"]
 license = "MIT"

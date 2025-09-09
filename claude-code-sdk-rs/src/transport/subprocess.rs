@@ -34,6 +34,8 @@ pub struct SubprocessTransport {
     message_broadcast_tx: Option<tokio::sync::broadcast::Sender<Message>>,
     /// Receiver for control responses
     control_rx: Option<mpsc::Receiver<ControlResponse>>,
+    /// Receiver for SDK control requests
+    sdk_control_rx: Option<mpsc::Receiver<serde_json::Value>>,
     /// Transport state
     state: TransportState,
     /// Request counter for control requests
@@ -54,10 +56,43 @@ impl SubprocessTransport {
             stdin_tx: None,
             message_broadcast_tx: None,
             control_rx: None,
+            sdk_control_rx: None,
             state: TransportState::Disconnected,
             request_counter: 0,
             close_stdin_after_prompt: false,
         })
+    }
+    
+    /// Subscribe to messages without borrowing self (for lock-free consumption)
+    pub fn subscribe_messages(&self) -> Option<Pin<Box<dyn Stream<Item = Result<Message>> + Send + 'static>>> {
+        self.message_broadcast_tx.as_ref().map(|tx| {
+            let rx = tx.subscribe();
+            Box::pin(tokio_stream::wrappers::BroadcastStream::new(rx).filter_map(
+                |result| async move {
+                    match result {
+                        Ok(msg) => Some(Ok(msg)),
+                        Err(tokio_stream::wrappers::errors::BroadcastStreamRecvError::Lagged(n)) => {
+                            warn!("Receiver lagged by {} messages", n);
+                            None
+                        }
+                    }
+                },
+            )) as Pin<Box<dyn Stream<Item = Result<Message>> + Send + 'static>>
+        })
+    }
+
+    /// Receive SDK control requests
+    pub async fn receive_sdk_control_request(&mut self) -> Option<serde_json::Value> {
+        if let Some(ref mut rx) = self.sdk_control_rx {
+            rx.recv().await
+        } else {
+            None
+        }
+    }
+    
+    /// Take the SDK control receiver (can only be called once)
+    pub fn take_sdk_control_receiver(&mut self) -> Option<mpsc::Receiver<serde_json::Value>> {
+        self.sdk_control_rx.take()
     }
 
     /// Create with a specific CLI path
@@ -69,6 +104,7 @@ impl SubprocessTransport {
             stdin_tx: None,
             message_broadcast_tx: None,
             control_rx: None,
+            sdk_control_rx: None,
             state: TransportState::Disconnected,
             request_counter: 0,
             close_stdin_after_prompt: false,
@@ -92,6 +128,7 @@ impl SubprocessTransport {
             stdin_tx: None,
             message_broadcast_tx: None,
             control_rx: None,
+            sdk_control_rx: None,
             state: TransportState::Disconnected,
             request_counter: 0,
             close_stdin_after_prompt: true,
@@ -108,6 +145,11 @@ impl SubprocessTransport {
 
         // For streaming/interactive mode, also add input-format stream-json
         cmd.arg("--input-format").arg("stream-json");
+        
+        // Add debug-to-stderr flag if debug_stderr is set
+        if self.options.debug_stderr.is_some() {
+            cmd.arg("--debug-to-stderr");
+        }
         
         // Handle CLAUDE_CODE_MAX_OUTPUT_TOKENS environment variable
         // Maximum safe value is 32000, values above this may cause issues
@@ -180,6 +222,11 @@ impl SubprocessTransport {
         // Working directory
         if let Some(ref cwd) = self.options.cwd {
             cmd.current_dir(cwd);
+        }
+        
+        // Add environment variables
+        for (key, value) in &self.options.env {
+            cmd.env(key, value);
         }
 
         // MCP servers - use --mcp-config with JSON format like Python SDK
@@ -288,9 +335,13 @@ impl SubprocessTransport {
             debug!("Stdin handler ended");
         });
 
+        // Create channel for SDK control requests
+        let (sdk_control_tx, sdk_control_rx) = mpsc::channel::<serde_json::Value>(CHANNEL_BUFFER_SIZE);
+        
         // Spawn stdout handler
         let message_broadcast_tx_clone = message_broadcast_tx.clone();
         let control_tx_clone = control_tx.clone();
+        let sdk_control_tx_clone = sdk_control_tx.clone();
         tokio::spawn(async move {
             debug!("Stdout handler started");
             let reader = BufReader::new(stdout);
@@ -306,8 +357,9 @@ impl SubprocessTransport {
                 // Try to parse as JSON
                 match serde_json::from_str::<serde_json::Value>(&line) {
                     Ok(json) => {
-                        // Check if it's a control response
+                        // Check message type
                         if let Some(msg_type) = json.get("type").and_then(|v| v.as_str()) {
+                            // Handle control responses (legacy)
                             if msg_type == "control_response" {
                                 if let Ok(control_resp) =
                                     serde_json::from_value::<ControlResponse>(json.clone())
@@ -316,9 +368,39 @@ impl SubprocessTransport {
                                     continue;
                                 }
                             }
+                            
+                            // Handle control messages (new format)
+                            if msg_type == "control" {
+                                if let Some(control) = json.get("control") {
+                                    debug!("Received control message: {:?}", control);
+                                    let _ = sdk_control_tx_clone.send(control.clone()).await;
+                                    continue;
+                                }
+                            }
+                            
+                            // Handle SDK control requests (legacy format)
+                            if msg_type == "sdk_control_request" {
+                                if let Some(request) = json.get("request") {
+                                    debug!("Received SDK control request (legacy): {:?}", request);
+                                    let _ = sdk_control_tx_clone.send(request.clone()).await;
+                                    continue;
+                                }
+                            }
+                            
+                            // Check for system messages with SDK control subtypes
+                            if msg_type == "system" {
+                                if let Some(subtype) = json.get("subtype").and_then(|v| v.as_str()) {
+                                    if subtype.starts_with("sdk_control:") {
+                                        // This is an SDK control message
+                                        debug!("Received SDK control message: {}", subtype);
+                                        let _ = sdk_control_tx_clone.send(json.clone()).await;
+                                        // Still parse as regular message for now
+                                    }
+                                }
+                            }
                         }
 
-                        // Try to parse as a message
+                        // Try to parse as a regular message
                         match crate::message_parser::parse_message(json) {
                             Ok(Some(message)) => {
                                 // Use broadcast send which doesn't fail if no receivers
@@ -342,6 +424,7 @@ impl SubprocessTransport {
 
         // Spawn stderr handler - capture error messages for better diagnostics
         let message_broadcast_tx_for_error = message_broadcast_tx.clone();
+        let debug_stderr = self.options.debug_stderr.clone();
         tokio::spawn(async move {
             let reader = BufReader::new(stderr);
             let mut lines = reader.lines();
@@ -349,6 +432,13 @@ impl SubprocessTransport {
             
             while let Ok(Some(line)) = lines.next_line().await {
                 if !line.trim().is_empty() {
+                    // If debug_stderr is set, write to it
+                    if let Some(ref debug_output) = debug_stderr {
+                        let mut output = debug_output.lock().await;
+                        let _ = writeln!(output, "{}", line);
+                        let _ = output.flush();
+                    }
+                    
                     error!("Claude CLI stderr: {}", line);
                     error_buffer.push(line.clone());
                     
@@ -389,6 +479,7 @@ impl SubprocessTransport {
         self.stdin_tx = Some(stdin_tx);
         self.message_broadcast_tx = Some(message_broadcast_tx);
         self.control_rx = Some(control_rx);
+        self.sdk_control_rx = Some(sdk_control_rx);
         self.state = TransportState::Connected;
 
         Ok(())
@@ -397,6 +488,10 @@ impl SubprocessTransport {
 
 #[async_trait]
 impl Transport for SubprocessTransport {
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+    
     async fn connect(&mut self) -> Result<()> {
         if self.state == TransportState::Connected {
             return Ok(());
@@ -429,7 +524,7 @@ impl Transport for SubprocessTransport {
         }
     }
 
-    fn receive_messages(&mut self) -> Pin<Box<dyn Stream<Item = Result<Message>> + Send + '_>> {
+    fn receive_messages(&mut self) -> Pin<Box<dyn Stream<Item = Result<Message>> + Send + 'static>> {
         if let Some(ref tx) = self.message_broadcast_tx {
             // Create a new receiver from the broadcast sender
             let rx = tx.subscribe();
@@ -489,6 +584,90 @@ impl Transport for SubprocessTransport {
             Ok(rx.recv().await)
         } else {
             Ok(None)
+        }
+    }
+    
+    async fn send_sdk_control_request(&mut self, request: serde_json::Value) -> Result<()> {
+        // Check environment variable first
+        let format = if let Ok(env_format) = std::env::var("CLAUDE_CODE_CONTROL_FORMAT") {
+            match env_format.as_str() {
+                "legacy" => crate::types::ControlProtocolFormat::Legacy,
+                "control" => crate::types::ControlProtocolFormat::Control,
+                _ => self.options.control_protocol_format,
+            }
+        } else {
+            self.options.control_protocol_format
+        };
+
+        // Format message based on protocol format setting
+        let control_msg = match format {
+            crate::types::ControlProtocolFormat::Legacy | crate::types::ControlProtocolFormat::Auto => {
+                // Use legacy format for maximum compatibility
+                serde_json::json!({
+                    "type": "sdk_control_request",
+                    "request": request
+                })
+            }
+            crate::types::ControlProtocolFormat::Control => {
+                // Use new format
+                serde_json::json!({
+                    "type": "control",
+                    "control": request
+                })
+            }
+        };
+        
+        let json = serde_json::to_string(&control_msg)?;
+        
+        if let Some(ref tx) = self.stdin_tx {
+            tx.send(json).await?;
+            Ok(())
+        } else {
+            Err(SdkError::InvalidState {
+                message: "Stdin channel not available".into(),
+            })
+        }
+    }
+    
+    async fn send_sdk_control_response(&mut self, response: serde_json::Value) -> Result<()> {
+        // Check environment variable first
+        let format = if let Ok(env_format) = std::env::var("CLAUDE_CODE_CONTROL_FORMAT") {
+            match env_format.as_str() {
+                "legacy" => crate::types::ControlProtocolFormat::Legacy,
+                "control" => crate::types::ControlProtocolFormat::Control,
+                _ => self.options.control_protocol_format,
+            }
+        } else {
+            self.options.control_protocol_format
+        };
+
+        // Format response based on protocol format setting
+        let response_msg = match format {
+            crate::types::ControlProtocolFormat::Legacy | crate::types::ControlProtocolFormat::Auto => {
+                // Use legacy format for maximum compatibility
+                serde_json::json!({
+                    "type": "sdk_control_response",
+                    "response": response
+                })
+            }
+            crate::types::ControlProtocolFormat::Control => {
+                // Use new format
+                serde_json::json!({
+                    "type": "control",
+                    "control": response
+                })
+            }
+        };
+        
+        let json = serde_json::to_string(&response_msg)?;
+        
+        if let Some(ref tx) = self.stdin_tx {
+            tx.send(json).await?;
+            Ok(())
+        } else {
+            Err(SdkError::InvalidState {
+                message: "Stdin channel not available".into(),
+            })
         }
     }
 

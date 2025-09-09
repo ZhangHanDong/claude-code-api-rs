@@ -15,6 +15,7 @@ A Rust SDK for interacting with Claude Code CLI, providing both simple query int
 - 🔧 **Full Configuration** - Comprehensive options for Claude Code
 - 📦 **Type Safety** - Strongly typed with serde support
 - ⚡ **Async/Await** - Built on Tokio for async operations
+- 🔒 **Control Protocol** - Full support for permissions, hooks, and MCP servers (v0.1.11+)
 
 ## Complete Feature Set
 
@@ -28,6 +29,8 @@ This Rust SDK provides comprehensive functionality for Claude Code interactions:
 - ✅ **Error handling**: Comprehensive error types with detailed diagnostics
 - ✅ **Session management**: Multi-session support with context isolation
 - ✅ **Type safety**: Leveraging Rust's type system for reliable code
+- ✅ **Control Protocol**: Permission callbacks, hook system, MCP servers (SDK type)
+- ✅ **CLI Compatibility**: Configurable protocol format for maximum compatibility
 
 ## Installation
 
@@ -35,7 +38,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-cc-sdk = "0.1.9"
+cc-sdk = "0.1.11"
 tokio = { version = "1.0", features = ["full"] }
 futures = "0.3"
 ```
@@ -212,7 +215,7 @@ async fn main() -> Result<()> {
 ## Configuration Options
 
 ```rust
-use cc_sdk::{ClaudeCodeOptions, PermissionMode};
+use cc_sdk::{ClaudeCodeOptions, PermissionMode, ControlProtocolFormat};
 
 let options = ClaudeCodeOptions::builder()
     .system_prompt("You are a helpful coding assistant")
@@ -226,8 +229,30 @@ let options = ClaudeCodeOptions::builder()
     .settings("claude-settings.json")  // Use custom settings file
     .add_dir("/path/to/related/project")  // Add additional working directories
     .add_dirs(vec![PathBuf::from("/dir1"), PathBuf::from("/dir2")])  // Add multiple dirs
+    // New in v0.1.11: Control protocol format configuration
+    .control_protocol_format(ControlProtocolFormat::Legacy)  // Default: maximum compatibility
     .build();
 ```
+
+### Control Protocol Compatibility (v0.1.11+)
+
+The SDK supports configurable control protocol formats for CLI compatibility:
+
+- **Legacy** (default): Uses `sdk_control_request/response` format - works with all CLI versions
+- **Control**: Uses new `type=control` format - for newer CLI versions
+- **Auto**: Currently defaults to Legacy, will auto-negotiate in future
+
+```rust
+// Use environment variable to override (useful for testing)
+// export CLAUDE_CODE_CONTROL_FORMAT=legacy  # or "control"
+
+// Or configure programmatically
+let options = ClaudeCodeOptions::builder()
+    .control_protocol_format(ControlProtocolFormat::Legacy)
+    .build();
+```
+
+See [CONTROL_PROTOCOL_COMPATIBILITY.md](CONTROL_PROTOCOL_COMPATIBILITY.md) for detailed information.
 
 ## API Reference
 

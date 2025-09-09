@@ -6,6 +6,10 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::Arc;
+use async_trait::async_trait;
+use std::io::Write;
+use tokio::sync::Mutex;
 
 /// Permission mode for tool execution
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -24,6 +28,24 @@ pub enum PermissionMode {
 impl Default for PermissionMode {
     fn default() -> Self {
         Self::Default
+    }
+}
+
+/// Control protocol format for sending messages
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ControlProtocolFormat {
+    /// Legacy format: {"type":"sdk_control_request","request":{...}}
+    Legacy,
+    /// New format: {"type":"control","control":{...}}
+    Control,
+    /// Auto-detect based on CLI capabilities (default to Legacy for compatibility)
+    Auto,
+}
+
+impl Default for ControlProtocolFormat {
+    fn default() -> Self {
+        // Default to Legacy for maximum compatibility
+        Self::Legacy
     }
 }
 
@@ -58,10 +80,172 @@ pub enum McpServerConfig {
         #[serde(skip_serializing_if = "Option::is_none")]
         headers: Option<HashMap<String, String>>,
     },
+    /// SDK MCP server (in-process)
+    #[serde(rename = "sdk")]
+    Sdk {
+        /// Server name
+        name: String,
+        /// Server instance (will be skipped in serialization)
+        #[serde(skip)]
+        instance: Option<Arc<dyn std::any::Any + Send + Sync>>,
+    },
+}
+
+/// Permission update destination
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum PermissionUpdateDestination {
+    /// User settings
+    UserSettings,
+    /// Project settings
+    ProjectSettings,
+    /// Local settings
+    LocalSettings,
+    /// Session
+    Session,
+}
+
+/// Permission behavior
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum PermissionBehavior {
+    /// Allow the action
+    Allow,
+    /// Deny the action
+    Deny,
+    /// Ask the user
+    Ask,
+}
+
+/// Permission rule value
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PermissionRuleValue {
+    /// Tool name
+    pub tool_name: String,
+    /// Rule content
+    pub rule_content: Option<String>,
+}
+
+/// Permission update type
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum PermissionUpdateType {
+    /// Add rules
+    AddRules,
+    /// Replace rules
+    ReplaceRules,
+    /// Remove rules
+    RemoveRules,
+    /// Set mode
+    SetMode,
+    /// Add directories
+    AddDirectories,
+    /// Remove directories
+    RemoveDirectories,
+}
+
+/// Permission update
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PermissionUpdate {
+    /// Update type
+    #[serde(rename = "type")]
+    pub update_type: PermissionUpdateType,
+    /// Rules to update
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rules: Option<Vec<PermissionRuleValue>>,
+    /// Behavior to set
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub behavior: Option<PermissionBehavior>,
+    /// Mode to set
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mode: Option<PermissionMode>,
+    /// Directories to add/remove
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub directories: Option<Vec<String>>,
+    /// Destination for the update
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub destination: Option<PermissionUpdateDestination>,
+}
+
+/// Tool permission context
+#[derive(Debug, Clone)]
+pub struct ToolPermissionContext {
+    /// Abort signal (future support)
+    pub signal: Option<Arc<dyn std::any::Any + Send + Sync>>,
+    /// Permission suggestions from CLI
+    pub suggestions: Vec<PermissionUpdate>,
+}
+
+/// Permission result - Allow
+#[derive(Debug, Clone)]
+pub struct PermissionResultAllow {
+    /// Updated input parameters
+    pub updated_input: Option<serde_json::Value>,
+    /// Updated permissions
+    pub updated_permissions: Option<Vec<PermissionUpdate>>,
+}
+
+/// Permission result - Deny
+#[derive(Debug, Clone)]
+pub struct PermissionResultDeny {
+    /// Denial message
+    pub message: String,
+    /// Whether to interrupt the conversation
+    pub interrupt: bool,
+}
+
+/// Permission result
+#[derive(Debug, Clone)]
+pub enum PermissionResult {
+    /// Allow the tool use
+    Allow(PermissionResultAllow),
+    /// Deny the tool use
+    Deny(PermissionResultDeny),
+}
+
+/// Tool permission callback trait
+#[async_trait]
+pub trait CanUseTool: Send + Sync {
+    /// Check if a tool can be used
+    async fn can_use_tool(
+        &self,
+        tool_name: &str,
+        input: &serde_json::Value,
+        context: &ToolPermissionContext,
+    ) -> PermissionResult;
+}
+
+/// Hook context
+#[derive(Debug, Clone)]
+pub struct HookContext {
+    /// Abort signal (future support)
+    pub signal: Option<Arc<dyn std::any::Any + Send + Sync>>,
+}
+
+/// Hook callback trait
+#[async_trait]
+pub trait HookCallback: Send + Sync {
+    /// Execute the hook
+    async fn execute(
+        &self,
+        input: &serde_json::Value,
+        tool_use_id: Option<&str>,
+        context: &HookContext,
+    ) -> serde_json::Value;
+}
+
+/// Hook matcher configuration
+#[derive(Clone)]
+pub struct HookMatcher {
+    /// Matcher criteria
+    pub matcher: Option<serde_json::Value>,
+    /// Callbacks to invoke
+    pub hooks: Vec<Arc<dyn HookCallback>>,
 }
 
 /// Configuration options for Claude Code SDK
-#[derive(Debug, Clone, Default)]
+#[derive(Clone, Default)]
 pub struct ClaudeCodeOptions {
     /// System prompt to prepend to all messages
     pub system_prompt: Option<String>,
@@ -97,6 +281,45 @@ pub struct ClaudeCodeOptions {
     pub add_dirs: Vec<PathBuf>,
     /// Extra arbitrary CLI flags
     pub extra_args: HashMap<String, Option<String>>,
+    /// Environment variables to pass to the process
+    pub env: HashMap<String, String>,
+    /// Debug output stream (e.g., stderr)
+    pub debug_stderr: Option<Arc<Mutex<dyn Write + Send + Sync>>>,
+    /// Tool permission callback
+    pub can_use_tool: Option<Arc<dyn CanUseTool>>,
+    /// Hook configurations
+    pub hooks: Option<HashMap<String, Vec<HookMatcher>>>,
+    /// Control protocol format (defaults to Legacy for compatibility)
+    pub control_protocol_format: ControlProtocolFormat,
+}
+
+impl std::fmt::Debug for ClaudeCodeOptions {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ClaudeCodeOptions")
+            .field("system_prompt", &self.system_prompt)
+            .field("append_system_prompt", &self.append_system_prompt)
+            .field("allowed_tools", &self.allowed_tools)
+            .field("disallowed_tools", &self.disallowed_tools)
+            .field("permission_mode", &self.permission_mode)
+            .field("mcp_servers", &self.mcp_servers)
+            .field("mcp_tools", &self.mcp_tools)
+            .field("max_turns", &self.max_turns)
+            .field("max_thinking_tokens", &self.max_thinking_tokens)
+            .field("model", &self.model)
+            .field("cwd", &self.cwd)
+            .field("continue_conversation", &self.continue_conversation)
+            .field("resume", &self.resume)
+            .field("permission_prompt_tool_name", &self.permission_prompt_tool_name)
+            .field("settings", &self.settings)
+            .field("add_dirs", &self.add_dirs)
+            .field("extra_args", &self.extra_args)
+            .field("env", &self.env)
+            .field("debug_stderr", &self.debug_stderr.is_some())
+            .field("can_use_tool", &self.can_use_tool.is_some())
+            .field("hooks", &self.hooks.is_some())
+            .field("control_protocol_format", &self.control_protocol_format)
+            .finish()
+    }
 }
 
 impl ClaudeCodeOptions {
@@ -236,6 +459,12 @@ impl ClaudeCodeOptionsBuilder {
     /// Add a single extra CLI argument
     pub fn add_extra_arg(mut self, key: impl Into<String>, value: Option<String>) -> Self {
         self.options.extra_args.insert(key.into(), value);
+        self
+    }
+
+    /// Set control protocol format
+    pub fn control_protocol_format(mut self, format: ControlProtocolFormat) -> Self {
+        self.options.control_protocol_format = format;
         self
     }
 
@@ -393,7 +622,103 @@ pub struct AssistantContent {
     pub content: Vec<ContentBlock>,
 }
 
-/// Control request types
+/// SDK Control Protocol - Interrupt request
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SDKControlInterruptRequest {
+    /// Subtype
+    pub subtype: String,  // "interrupt"
+}
+
+/// SDK Control Protocol - Permission request
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SDKControlPermissionRequest {
+    /// Subtype
+    pub subtype: String,  // "can_use_tool"
+    /// Tool name
+    pub tool_name: String,
+    /// Tool input
+    pub input: serde_json::Value,
+    /// Permission suggestions
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub permission_suggestions: Option<Vec<PermissionUpdate>>,
+    /// Blocked path
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub blocked_path: Option<String>,
+}
+
+/// SDK Control Protocol - Initialize request
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SDKControlInitializeRequest {
+    /// Subtype
+    pub subtype: String,  // "initialize"
+    /// Hooks configuration
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hooks: Option<HashMap<String, serde_json::Value>>,
+}
+
+/// SDK Control Protocol - Set permission mode request
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SDKControlSetPermissionModeRequest {
+    /// Subtype
+    pub subtype: String,  // "set_permission_mode"
+    /// Permission mode
+    pub mode: String,
+}
+
+/// SDK Hook callback request
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SDKHookCallbackRequest {
+    /// Subtype
+    pub subtype: String,  // "hook_callback"
+    /// Callback ID
+    pub callback_id: String,
+    /// Input data
+    pub input: serde_json::Value,
+    /// Tool use ID
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_use_id: Option<String>,
+}
+
+/// SDK Control Protocol - MCP message request
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SDKControlMcpMessageRequest {
+    /// Subtype
+    pub subtype: String,  // "mcp_message"
+    /// MCP server name
+    pub mcp_server_name: String,
+    /// Message to send
+    pub message: serde_json::Value,
+}
+
+/// SDK Control Protocol request types
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum SDKControlRequest {
+    /// Interrupt request
+    #[serde(rename = "interrupt")]
+    Interrupt(SDKControlInterruptRequest),
+    /// Permission request
+    #[serde(rename = "can_use_tool")]
+    CanUseTool(SDKControlPermissionRequest),
+    /// Initialize request
+    #[serde(rename = "initialize")]
+    Initialize(SDKControlInitializeRequest),
+    /// Set permission mode
+    #[serde(rename = "set_permission_mode")]
+    SetPermissionMode(SDKControlSetPermissionModeRequest),
+    /// Hook callback
+    #[serde(rename = "hook_callback")]
+    HookCallback(SDKHookCallbackRequest),
+    /// MCP message
+    #[serde(rename = "mcp_message")]
+    McpMessage(SDKControlMcpMessageRequest),
+}
+
+/// Control request types (legacy, keeping for compatibility)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum ControlRequest {
@@ -404,7 +729,7 @@ pub enum ControlRequest {
     },
 }
 
-/// Control response types
+/// Control response types (legacy, keeping for compatibility)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum ControlResponse {

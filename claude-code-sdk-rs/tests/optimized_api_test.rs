@@ -36,6 +36,7 @@ async fn test_oneshot_query() -> Result<()> {
 
 /// Test retry functionality
 #[tokio::test]
+#[ignore = "Requires Claude CLI to be installed and configured"]
 async fn test_retry_logic() -> Result<()> {
     let options = ClaudeCodeOptions::builder()
         .permission_mode(PermissionMode::AcceptEdits)

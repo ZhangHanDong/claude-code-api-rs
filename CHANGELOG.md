@@ -216,3 +216,21 @@ All notable changes to this project will be documented in this file.
 - Session management
 - File access control
 - Comprehensive error handling with retries
+## 0.2.0 - 2025-10-07
+
+Highlights
+- Transport trait extended with default `end_input()`; `SubprocessTransport` closes stdin to signal end-of-input.
+- Control protocol parity with Python Agent SDK:
+  - `Query::set_model(Some|None)` and `Query::set_permission_mode(..)`
+  - snake_case/camelCase field compatibility for `can_use_tool` and `hook_callback`
+  - Query startup forwards non-control SDK messages from transport
+- CLI argument passthrough:
+  - `include_partial_messages` → `--include-partial-messages`
+  - `fork_session` → `--fork-session`
+  - `setting_sources` → `--setting-sources user,project,local`
+  - `agents` → `--agents <json>`
+- Diagnostics: sets `CLAUDE_AGENT_SDK_VERSION` env with crate version.
+
+Notes
+- Minor version bump due to trait extension; `end_input()` has a default no-op impl.
+- Consider switching to Auto/Control protocol formats once the CLI stabilizes.

@@ -1,6 +1,6 @@
 # Claude Code API
 
-[![Version](https://img.shields.io/badge/version-0.1.9-blue.svg)](https://github.com/ZhangHanDong/claude-code-api-rs)
+[![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](https://github.com/ZhangHanDong/claude-code-api-rs)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Rust](https://img.shields.io/badge/rust-1.75+-orange.svg)](https://www.rust-lang.org)
 
@@ -285,6 +285,15 @@ response = client.chat.completions.create(
 ```
 
 This feature enables seamless integration with modern AI tools like [url-preview](https://github.com/ZhangHanDong/url-preview) and other OpenAI-compatible tool chains. url-preview v0.6.0+ uses this exact format to extract structured data from web pages using Claude.
+
+### Agent Tools & Permissions
+
+- Tools control (SDK): set `allowed_tools` / `disallowed_tools` and `permission_mode` in `ClaudeCodeOptions` to whitelist/blacklist and choose approval behavior.
+- Runtime approvals (SDK): implement `CanUseTool` to decide `{allow, input?/reason?}` per tool call.
+- MCP (server): configure via `config/*.toml` or `mcp_config.json` and use scripts under `script/` (e.g., `start_with_mcp.sh`). The API reuses the SDK’s MCP wiring.
+- Programmatic agents (SDK): define `agents` and `setting_sources` to pass structured agent definitions to CLI.
+
+See `claude-code-sdk-rs/README.md` for a full Rust example enabling tools and MCP.
 
 ## 🔧 Configuration
 

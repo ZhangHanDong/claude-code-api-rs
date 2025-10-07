@@ -40,10 +40,13 @@ mod errors;
 mod interactive;
 mod internal_query;
 mod message_parser;
+pub mod model_recommendation;
 mod optimized_client;
 mod perf_utils;
 mod query;
-mod transport;
+mod sdk_mcp;
+pub mod token_tracker;
+pub mod transport;
 mod types;
 
 // Re-export main types and functions
@@ -53,18 +56,21 @@ pub use client::ClaudeSDKClient;
 pub use client_working::ClaudeSDKClientWorking;
 pub use errors::{Result, SdkError};
 pub use interactive::InteractiveClient;
+pub use internal_query::Query;
 pub use query::query;
 // Keep the old name as an alias for backward compatibility
 pub use interactive::InteractiveClient as SimpleInteractiveClient;
+pub use model_recommendation::ModelRecommendation;
 pub use optimized_client::{ClientMode, OptimizedClient};
 pub use perf_utils::{MessageBatcher, PerformanceMetrics, RetryConfig};
+pub use token_tracker::{BudgetLimit, BudgetManager, BudgetStatus, TokenUsageTracker};
 
 /// Default interactive client - the recommended client for interactive use
 pub type ClaudeSDKClientDefault = InteractiveClient;
 pub use types::{
     AssistantContent, AssistantMessage, ClaudeCodeOptions, ContentBlock, ContentValue,
-    ControlProtocolFormat, ControlRequest, ControlResponse, McpServerConfig, Message, 
-    PermissionMode, ResultMessage, SystemMessage, TextContent, ThinkingContent, 
+    ControlProtocolFormat, ControlRequest, ControlResponse, McpServerConfig, Message,
+    PermissionMode, ResultMessage, SystemMessage, TextContent, ThinkingContent,
     ToolResultContent, ToolUseContent, UserContent, UserMessage,
     // New permission and hook types
     PermissionBehavior, PermissionResult, PermissionResultAllow, PermissionResultDeny,
@@ -74,10 +80,25 @@ pub use types::{
     SDKControlInitializeRequest, SDKControlInterruptRequest, SDKControlMcpMessageRequest,
     SDKControlPermissionRequest, SDKControlRequest, SDKControlSetPermissionModeRequest,
     SDKHookCallbackRequest,
+    // Phase 2 enhancements
+    SettingSource, AgentDefinition, SystemPrompt,
 };
+
+// Phase 3: Type aliases for naming consistency
+/// Alias for ClaudeCodeOptions (matches Python SDK naming)
+pub type ClaudeAgentOptions = ClaudeCodeOptions;
+/// Alias for ClaudeCodeOptionsBuilder (matches Python SDK naming)
+pub type ClaudeAgentOptionsBuilder = ClaudeCodeOptionsBuilder;
 
 // Re-export builder
 pub use types::ClaudeCodeOptionsBuilder;
+
+// Re-export SDK MCP types
+pub use sdk_mcp::{
+    SdkMcpServer, SdkMcpServerBuilder, ToolDefinition, ToolHandler, ToolInputSchema,
+    ToolResult, create_simple_tool,
+    ToolResultContent as SdkToolResultContent,
+};
 
 /// Prelude module for convenient imports
 pub mod prelude {

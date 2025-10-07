@@ -3,6 +3,7 @@
 //! This module contains all the core types used throughout the SDK,
 //! including messages, configuration options, and content blocks.
 
+#![allow(missing_docs)]
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -50,18 +51,15 @@ impl Default for ControlProtocolFormat {
 }
 
 /// MCP (Model Context Protocol) server configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "lowercase")]
+#[derive(Clone)]
 pub enum McpServerConfig {
     /// Standard I/O based MCP server
     Stdio {
         /// Command to execute
         command: String,
         /// Command arguments
-        #[serde(skip_serializing_if = "Option::is_none")]
         args: Option<Vec<String>>,
         /// Environment variables
-        #[serde(skip_serializing_if = "Option::is_none")]
         env: Option<HashMap<String, String>>,
     },
     /// Server-Sent Events based MCP server
@@ -69,7 +67,6 @@ pub enum McpServerConfig {
         /// Server URL
         url: String,
         /// HTTP headers
-        #[serde(skip_serializing_if = "Option::is_none")]
         headers: Option<HashMap<String, String>>,
     },
     /// HTTP-based MCP server
@@ -77,18 +74,128 @@ pub enum McpServerConfig {
         /// Server URL
         url: String,
         /// HTTP headers
-        #[serde(skip_serializing_if = "Option::is_none")]
         headers: Option<HashMap<String, String>>,
     },
     /// SDK MCP server (in-process)
-    #[serde(rename = "sdk")]
     Sdk {
         /// Server name
         name: String,
-        /// Server instance (will be skipped in serialization)
-        #[serde(skip)]
-        instance: Option<Arc<dyn std::any::Any + Send + Sync>>,
+        /// Server instance
+        instance: Arc<dyn std::any::Any + Send + Sync>,
     },
+}
+
+impl std::fmt::Debug for McpServerConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Stdio { command, args, env } => f
+                .debug_struct("Stdio")
+                .field("command", command)
+                .field("args", args)
+                .field("env", env)
+                .finish(),
+            Self::Sse { url, headers } => f
+                .debug_struct("Sse")
+                .field("url", url)
+                .field("headers", headers)
+                .finish(),
+            Self::Http { url, headers } => f
+                .debug_struct("Http")
+                .field("url", url)
+                .field("headers", headers)
+                .finish(),
+            Self::Sdk { name, .. } => f
+                .debug_struct("Sdk")
+                .field("name", name)
+                .field("instance", &"<Arc<dyn Any>>")
+                .finish(),
+        }
+    }
+}
+
+impl Serialize for McpServerConfig {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeMap;
+        let mut map = serializer.serialize_map(None)?;
+
+        match self {
+            Self::Stdio { command, args, env } => {
+                map.serialize_entry("type", "stdio")?;
+                map.serialize_entry("command", command)?;
+                if let Some(args) = args {
+                    map.serialize_entry("args", args)?;
+                }
+                if let Some(env) = env {
+                    map.serialize_entry("env", env)?;
+                }
+            }
+            Self::Sse { url, headers } => {
+                map.serialize_entry("type", "sse")?;
+                map.serialize_entry("url", url)?;
+                if let Some(headers) = headers {
+                    map.serialize_entry("headers", headers)?;
+                }
+            }
+            Self::Http { url, headers } => {
+                map.serialize_entry("type", "http")?;
+                map.serialize_entry("url", url)?;
+                if let Some(headers) = headers {
+                    map.serialize_entry("headers", headers)?;
+                }
+            }
+            Self::Sdk { name, .. } => {
+                map.serialize_entry("type", "sdk")?;
+                map.serialize_entry("name", name)?;
+            }
+        }
+
+        map.end()
+    }
+}
+
+impl<'de> Deserialize<'de> for McpServerConfig {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(tag = "type", rename_all = "lowercase")]
+        enum McpServerConfigHelper {
+            Stdio {
+                command: String,
+                #[serde(skip_serializing_if = "Option::is_none")]
+                args: Option<Vec<String>>,
+                #[serde(skip_serializing_if = "Option::is_none")]
+                env: Option<HashMap<String, String>>,
+            },
+            Sse {
+                url: String,
+                #[serde(skip_serializing_if = "Option::is_none")]
+                headers: Option<HashMap<String, String>>,
+            },
+            Http {
+                url: String,
+                #[serde(skip_serializing_if = "Option::is_none")]
+                headers: Option<HashMap<String, String>>,
+            },
+        }
+
+        let helper = McpServerConfigHelper::deserialize(deserializer)?;
+        Ok(match helper {
+            McpServerConfigHelper::Stdio { command, args, env } => {
+                McpServerConfig::Stdio { command, args, env }
+            }
+            McpServerConfigHelper::Sse { url, headers } => {
+                McpServerConfig::Sse { url, headers }
+            }
+            McpServerConfigHelper::Http { url, headers } => {
+                McpServerConfig::Http { url, headers }
+            }
+        })
+    }
 }
 
 /// Permission update destination
@@ -244,12 +351,63 @@ pub struct HookMatcher {
     pub hooks: Vec<Arc<dyn HookCallback>>,
 }
 
+/// Setting source for configuration loading
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SettingSource {
+    /// User-level settings
+    User,
+    /// Project-level settings
+    Project,
+    /// Local settings
+    Local,
+}
+
+/// Agent definition for programmatic agents
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentDefinition {
+    /// Agent description
+    pub description: String,
+    /// Agent prompt
+    pub prompt: String,
+    /// Allowed tools for this agent
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tools: Option<Vec<String>>,
+    /// Model to use
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
+}
+
+/// System prompt configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum SystemPrompt {
+    /// Simple string prompt
+    String(String),
+    /// Preset-based prompt with optional append
+    Preset {
+        #[serde(rename = "type")]
+        preset_type: String,  // "preset"
+        preset: String,       // e.g., "claude_code"
+        #[serde(skip_serializing_if = "Option::is_none")]
+        append: Option<String>,
+    },
+}
+
 /// Configuration options for Claude Code SDK
 #[derive(Clone, Default)]
 pub struct ClaudeCodeOptions {
-    /// System prompt to prepend to all messages
+    /// System prompt configuration (simplified in v0.1.12+)
+    /// Can be either a string or a preset configuration
+    /// Replaces the old system_prompt and append_system_prompt fields
+    pub system_prompt_v2: Option<SystemPrompt>,
+    /// [DEPRECATED] System prompt to prepend to all messages
+    /// Use system_prompt_v2 instead
+    #[deprecated(since = "0.1.12", note = "Use system_prompt_v2 instead")]
     pub system_prompt: Option<String>,
-    /// Additional system prompt to append
+    /// [DEPRECATED] Additional system prompt to append
+    /// Use system_prompt_v2 instead
+    #[deprecated(since = "0.1.12", note = "Use system_prompt_v2 instead")]
     pub append_system_prompt: Option<String>,
     /// List of allowed tools
     pub allowed_tools: Vec<String>,
@@ -265,6 +423,8 @@ pub struct ClaudeCodeOptions {
     pub max_turns: Option<i32>,
     /// Maximum thinking tokens
     pub max_thinking_tokens: i32,
+    /// Maximum output tokens per response (1-32000, overrides CLAUDE_CODE_MAX_OUTPUT_TOKENS env var)
+    pub max_output_tokens: Option<u32>,
     /// Model to use
     pub model: Option<String>,
     /// Working directory
@@ -285,15 +445,29 @@ pub struct ClaudeCodeOptions {
     pub env: HashMap<String, String>,
     /// Debug output stream (e.g., stderr)
     pub debug_stderr: Option<Arc<Mutex<dyn Write + Send + Sync>>>,
+    /// Include partial assistant messages in streaming output
+    pub include_partial_messages: bool,
     /// Tool permission callback
     pub can_use_tool: Option<Arc<dyn CanUseTool>>,
     /// Hook configurations
     pub hooks: Option<HashMap<String, Vec<HookMatcher>>>,
     /// Control protocol format (defaults to Legacy for compatibility)
     pub control_protocol_format: ControlProtocolFormat,
+
+    // ========== Phase 2 Enhancements ==========
+    /// Setting sources to load (user, project, local)
+    /// When None, no filesystem settings are loaded (matches Python SDK v0.1.0 behavior)
+    pub setting_sources: Option<Vec<SettingSource>>,
+    /// Fork session when resuming instead of continuing
+    /// When true, creates a new branch from the resumed session
+    pub fork_session: bool,
+    /// Programmatic agent definitions
+    /// Define agents inline without filesystem dependencies
+    pub agents: Option<HashMap<String, AgentDefinition>>,
 }
 
 impl std::fmt::Debug for ClaudeCodeOptions {
+    #[allow(deprecated)]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ClaudeCodeOptions")
             .field("system_prompt", &self.system_prompt)
@@ -305,6 +479,7 @@ impl std::fmt::Debug for ClaudeCodeOptions {
             .field("mcp_tools", &self.mcp_tools)
             .field("max_turns", &self.max_turns)
             .field("max_thinking_tokens", &self.max_thinking_tokens)
+            .field("max_output_tokens", &self.max_output_tokens)
             .field("model", &self.model)
             .field("cwd", &self.cwd)
             .field("continue_conversation", &self.continue_conversation)
@@ -315,6 +490,7 @@ impl std::fmt::Debug for ClaudeCodeOptions {
             .field("extra_args", &self.extra_args)
             .field("env", &self.env)
             .field("debug_stderr", &self.debug_stderr.is_some())
+            .field("include_partial_messages", &self.include_partial_messages)
             .field("can_use_tool", &self.can_use_tool.is_some())
             .field("hooks", &self.hooks.is_some())
             .field("control_protocol_format", &self.control_protocol_format)
@@ -337,12 +513,14 @@ pub struct ClaudeCodeOptionsBuilder {
 
 impl ClaudeCodeOptionsBuilder {
     /// Set system prompt
+    #[allow(deprecated)]
     pub fn system_prompt(mut self, prompt: impl Into<String>) -> Self {
         self.options.system_prompt = Some(prompt.into());
         self
     }
 
     /// Set append system prompt
+    #[allow(deprecated)]
     pub fn append_system_prompt(mut self, prompt: impl Into<String>) -> Self {
         self.options.append_system_prompt = Some(prompt.into());
         self
@@ -384,6 +562,12 @@ impl ClaudeCodeOptionsBuilder {
         self
     }
 
+    /// Set all MCP servers from a map
+    pub fn mcp_servers(mut self, servers: HashMap<String, McpServerConfig>) -> Self {
+        self.options.mcp_servers = servers;
+        self
+    }
+
     /// Set MCP tools
     pub fn mcp_tools(mut self, tools: Vec<String>) -> Self {
         self.options.mcp_tools = tools;
@@ -399,6 +583,12 @@ impl ClaudeCodeOptionsBuilder {
     /// Set max thinking tokens
     pub fn max_thinking_tokens(mut self, tokens: i32) -> Self {
         self.options.max_thinking_tokens = tokens;
+        self
+    }
+
+    /// Set max output tokens (1-32000, overrides CLAUDE_CODE_MAX_OUTPUT_TOKENS env var)
+    pub fn max_output_tokens(mut self, tokens: u32) -> Self {
+        self.options.max_output_tokens = Some(tokens.min(32000).max(1));
         self
     }
 
@@ -465,6 +655,30 @@ impl ClaudeCodeOptionsBuilder {
     /// Set control protocol format
     pub fn control_protocol_format(mut self, format: ControlProtocolFormat) -> Self {
         self.options.control_protocol_format = format;
+        self
+    }
+
+    /// Include partial assistant messages in streaming output
+    pub fn include_partial_messages(mut self, include: bool) -> Self {
+        self.options.include_partial_messages = include;
+        self
+    }
+
+    /// Enable fork_session behavior
+    pub fn fork_session(mut self, fork: bool) -> Self {
+        self.options.fork_session = fork;
+        self
+    }
+
+    /// Set setting sources
+    pub fn setting_sources(mut self, sources: Vec<SettingSource>) -> Self {
+        self.options.setting_sources = Some(sources);
+        self
+    }
+
+    /// Define programmatic agents
+    pub fn agents(mut self, agents: HashMap<String, AgentDefinition>) -> Self {
+        self.options.agents = Some(agents);
         self
     }
 
@@ -667,6 +881,17 @@ pub struct SDKControlSetPermissionModeRequest {
     pub mode: String,
 }
 
+/// SDK Control Protocol - Set model request
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SDKControlSetModelRequest {
+    /// Subtype
+    pub subtype: String, // "set_model"
+    /// Model to set (None to clear)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
+}
+
 /// SDK Hook callback request
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -710,6 +935,9 @@ pub enum SDKControlRequest {
     /// Set permission mode
     #[serde(rename = "set_permission_mode")]
     SetPermissionMode(SDKControlSetPermissionModeRequest),
+    /// Set model
+    #[serde(rename = "set_model")]
+    SetModel(SDKControlSetModelRequest),
     /// Hook callback
     #[serde(rename = "hook_callback")]
     HookCallback(SDKHookCallbackRequest),

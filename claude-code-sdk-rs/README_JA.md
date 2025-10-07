@@ -1,8 +1,8 @@
 # Claude Code SDK for Rust
 
-[![Crates.io](https://img.shields.io/crates/v/claude-code-sdk.svg)](https://crates.io/crates/claude-code-sdk)
-[![Documentation](https://docs.rs/claude-code-sdk/badge.svg)](https://docs.rs/claude-code-sdk)
-[![License](https://img.shields.io/crates/l/claude-code-sdk.svg)](LICENSE)
+[![Crates.io](https://img.shields.io/crates/v/cc-sdk.svg)](https://crates.io/crates/cc-sdk)
+[![Documentation](https://docs.rs/cc-sdk/badge.svg)](https://docs.rs/cc-sdk)
+[![License](https://img.shields.io/crates/l/cc-sdk.svg)](LICENSE)
 
 Claude Code CLIと対話するためのRust SDKです。シンプルなクエリインターフェースと完全なインタラクティブクライアント機能を提供し、Python SDKとほぼ同等の機能を実現しています。
 
@@ -22,7 +22,7 @@ Claude Code CLIと対話するためのRust SDKです。シンプルなクエリ
 
 ```toml
 [dependencies]
-claude-code-sdk = "0.1.5"
+cc-sdk = "0.2.0"
 tokio = { version = "1.0", features = ["full"] }
 futures = "0.3"
 ```
@@ -133,6 +133,22 @@ let options = ClaudeCodeOptions::builder()
     .cwd("/path/to/project")
     .build();
 ```
+
+### コントロールプロトコル（v0.1.12+）
+
+Python Agent SDK と整合する新しいランタイム制御とオプション：
+
+- `Query::set_permission_mode("acceptEdits" | "default" | "plan" | "bypassPermissions")`
+- `Query::set_model(Some("sonnet"))` または `set_model(None)` で解除
+- `ClaudeCodeOptions::builder().include_partial_messages(true)` で部分チャンクを有効化
+- `Query::stream_input(stream)` は送信完了後に `end_input()` を自動呼び出し
+
+### Agent ツール & MCP
+
+- ツールの許可/禁止リスト：`ClaudeCodeOptions` の `allowed_tools` / `disallowed_tools`
+- 権限モード：`PermissionMode::{Default, AcceptEdits, Plan, BypassPermissions}`
+- 実行時承認：`CanUseTool` を実装して `PermissionResult::{Allow,Deny}` を返す
+- MCP サーバー：`options.mcp_servers` で構成（stdio/http/sse/sdk）。SDK は `--mcp-config` に打包
 
 ## API リファレンス
 

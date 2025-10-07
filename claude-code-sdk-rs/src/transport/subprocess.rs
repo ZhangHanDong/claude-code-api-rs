@@ -82,6 +82,7 @@ impl SubprocessTransport {
     }
 
     /// Receive SDK control requests
+    #[allow(dead_code)]
     pub async fn receive_sdk_control_request(&mut self) -> Option<serde_json::Value> {
         if let Some(ref mut rx) = self.sdk_control_rx {
             rx.recv().await
@@ -146,34 +147,66 @@ impl SubprocessTransport {
         // For streaming/interactive mode, also add input-format stream-json
         cmd.arg("--input-format").arg("stream-json");
         
+        // Include partial messages if requested
+        if self.options.include_partial_messages {
+            cmd.arg("--include-partial-messages");
+        }
+        
         // Add debug-to-stderr flag if debug_stderr is set
         if self.options.debug_stderr.is_some() {
             cmd.arg("--debug-to-stderr");
         }
         
-        // Handle CLAUDE_CODE_MAX_OUTPUT_TOKENS environment variable
+        // Handle max_output_tokens (priority: option > env var)
         // Maximum safe value is 32000, values above this may cause issues
-        // If the env var is set to an invalid value, we'll override it with a safe default
-        if let Ok(current_value) = std::env::var("CLAUDE_CODE_MAX_OUTPUT_TOKENS") {
-            if let Ok(tokens) = current_value.parse::<u32>() {
-                if tokens > 32000 {
-                    warn!("CLAUDE_CODE_MAX_OUTPUT_TOKENS={} exceeds maximum safe value of 32000, overriding to 32000", tokens);
-                    cmd.env("CLAUDE_CODE_MAX_OUTPUT_TOKENS", "32000");
+        if let Some(max_tokens) = self.options.max_output_tokens {
+            // Option takes priority - validate and cap at 32000
+            let capped = max_tokens.min(32000).max(1);
+            cmd.env("CLAUDE_CODE_MAX_OUTPUT_TOKENS", capped.to_string());
+            debug!("Setting max_output_tokens from option: {}", capped);
+        } else {
+            // Fall back to environment variable handling
+            if let Ok(current_value) = std::env::var("CLAUDE_CODE_MAX_OUTPUT_TOKENS") {
+                if let Ok(tokens) = current_value.parse::<u32>() {
+                    if tokens > 32000 {
+                        warn!("CLAUDE_CODE_MAX_OUTPUT_TOKENS={} exceeds maximum safe value of 32000, overriding to 32000", tokens);
+                        cmd.env("CLAUDE_CODE_MAX_OUTPUT_TOKENS", "32000");
+                    }
+                    // If it's <= 32000, leave it as is
+                } else {
+                    // Invalid value, set to safe default
+                    warn!("Invalid CLAUDE_CODE_MAX_OUTPUT_TOKENS value: {}, setting to 8192", current_value);
+                    cmd.env("CLAUDE_CODE_MAX_OUTPUT_TOKENS", "8192");
                 }
-                // If it's <= 32000, leave it as is
-            } else {
-                // Invalid value, set to safe default
-                warn!("Invalid CLAUDE_CODE_MAX_OUTPUT_TOKENS value: {}, setting to 8192", current_value);
-                cmd.env("CLAUDE_CODE_MAX_OUTPUT_TOKENS", "8192");
             }
         }
 
-        // System prompts
-        if let Some(ref prompt) = self.options.system_prompt {
-            cmd.arg("--system-prompt").arg(prompt);
-        }
-        if let Some(ref prompt) = self.options.append_system_prompt {
-            cmd.arg("--append-system-prompt").arg(prompt);
+        // System prompts - prioritize v2 API
+        if let Some(ref prompt_v2) = self.options.system_prompt_v2 {
+            match prompt_v2 {
+                crate::types::SystemPrompt::String(s) => {
+                    cmd.arg("--system-prompt").arg(s);
+                }
+                crate::types::SystemPrompt::Preset { preset, append, .. } => {
+                    // Use preset-based prompt
+                    cmd.arg("--system-prompt-preset").arg(preset);
+
+                    // Append if specified
+                    if let Some(append_text) = append {
+                        cmd.arg("--append-system-prompt").arg(append_text);
+                    }
+                }
+            }
+        } else {
+            // Fallback to deprecated fields for backward compatibility
+            #[allow(deprecated)]
+            if let Some(ref prompt) = self.options.system_prompt {
+                cmd.arg("--system-prompt").arg(prompt);
+            }
+            #[allow(deprecated)]
+            if let Some(ref prompt) = self.options.append_system_prompt {
+                cmd.arg("--append-system-prompt").arg(prompt);
+            }
         }
 
         // Tool configuration
@@ -255,6 +288,28 @@ impl SubprocessTransport {
             cmd.arg("--add-dir").arg(dir);
         }
 
+        // Fork session if requested
+        if self.options.fork_session {
+            cmd.arg("--fork-session");
+        }
+
+        // Programmatic agents
+        if let Some(ref agents) = self.options.agents {
+            if !agents.is_empty() {
+                if let Ok(json_str) = serde_json::to_string(agents) {
+                    cmd.arg("--agents").arg(json_str);
+                }
+            }
+        }
+
+        // Setting sources (comma-separated)
+        if let Some(ref sources) = self.options.setting_sources {
+            if !sources.is_empty() {
+                let value = sources.iter().map(|s| format!("{}", match s { crate::types::SettingSource::User => "user", crate::types::SettingSource::Project => "project", crate::types::SettingSource::Local => "local" })).collect::<Vec<_>>().join(",");
+                cmd.arg("--setting-sources").arg(value);
+            }
+        }
+
         // Extra arguments
         for (key, value) in &self.options.extra_args {
             let flag = if key.starts_with("--") || key.starts_with("-") {
@@ -273,8 +328,9 @@ impl SubprocessTransport {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
 
-        // Set environment variable to indicate SDK usage
+        // Set environment variables to indicate SDK usage and version
         cmd.env("CLAUDE_CODE_ENTRYPOINT", "sdk-rust");
+        cmd.env("CLAUDE_AGENT_SDK_VERSION", env!("CARGO_PKG_VERSION"));
 
         cmd
     }
@@ -359,16 +415,44 @@ impl SubprocessTransport {
                     Ok(json) => {
                         // Check message type
                         if let Some(msg_type) = json.get("type").and_then(|v| v.as_str()) {
-                            // Handle control responses (legacy)
+                            // Handle control responses - these are responses to OUR control requests
                             if msg_type == "control_response" {
-                                if let Ok(control_resp) =
-                                    serde_json::from_value::<ControlResponse>(json.clone())
-                                {
-                                    let _ = control_tx_clone.send(control_resp).await;
-                                    continue;
+                                debug!("Received control response: {:?}", json);
+
+                                // Send to sdk_control channel for control protocol mode
+                                let _ = sdk_control_tx_clone.send(json.clone()).await;
+
+                                // Also parse and send to legacy control_tx for non-control-protocol mode
+                                // (needed for interrupt functionality when query_handler is None)
+                                // CLI returns: {"type":"control_response","response":{"subtype":"success","request_id":"..."}}
+                                // or: {"type":"control_response","response":{"subtype":"error","request_id":"...","error":"..."}}
+                                if let Some(response_obj) = json.get("response") {
+                                    if let Some(request_id) = response_obj.get("request_id")
+                                        .or_else(|| response_obj.get("requestId"))
+                                        .and_then(|v| v.as_str())
+                                    {
+                                        // Determine success from subtype
+                                        let subtype = response_obj.get("subtype").and_then(|v| v.as_str());
+                                        let success = subtype == Some("success");
+
+                                        let control_resp = ControlResponse::InterruptAck {
+                                            request_id: request_id.to_string(),
+                                            success,
+                                        };
+                                        let _ = control_tx_clone.send(control_resp).await;
+                                    }
                                 }
+                                continue;
                             }
-                            
+
+                            // Handle control requests FROM CLI (standard format)
+                            if msg_type == "control_request" {
+                                debug!("Received control request from CLI: {:?}", json);
+                                // Send the FULL message including requestId and request
+                                let _ = sdk_control_tx_clone.send(json.clone()).await;
+                                continue;
+                            }
+
                             // Handle control messages (new format)
                             if msg_type == "control" {
                                 if let Some(control) = json.get("control") {
@@ -377,14 +461,13 @@ impl SubprocessTransport {
                                     continue;
                                 }
                             }
-                            
-                            // Handle SDK control requests (legacy format)
+
+                            // Handle SDK control requests FROM CLI (legacy format)
                             if msg_type == "sdk_control_request" {
-                                if let Some(request) = json.get("request") {
-                                    debug!("Received SDK control request (legacy): {:?}", request);
-                                    let _ = sdk_control_tx_clone.send(request.clone()).await;
-                                    continue;
-                                }
+                                // Send the FULL message including requestId
+                                debug!("Received SDK control request (legacy): {:?}", json);
+                                let _ = sdk_control_tx_clone.send(json.clone()).await;
+                                continue;
                             }
                             
                             // Check for system messages with SDK control subtypes
@@ -588,37 +671,10 @@ impl Transport for SubprocessTransport {
     }
     
     async fn send_sdk_control_request(&mut self, request: serde_json::Value) -> Result<()> {
-        // Check environment variable first
-        let format = if let Ok(env_format) = std::env::var("CLAUDE_CODE_CONTROL_FORMAT") {
-            match env_format.as_str() {
-                "legacy" => crate::types::ControlProtocolFormat::Legacy,
-                "control" => crate::types::ControlProtocolFormat::Control,
-                _ => self.options.control_protocol_format,
-            }
-        } else {
-            self.options.control_protocol_format
-        };
+        // The request is already properly formatted as {"type": "control_request", ...}
+        // Just send it directly without wrapping
+        let json = serde_json::to_string(&request)?;
 
-        // Format message based on protocol format setting
-        let control_msg = match format {
-            crate::types::ControlProtocolFormat::Legacy | crate::types::ControlProtocolFormat::Auto => {
-                // Use legacy format for maximum compatibility
-                serde_json::json!({
-                    "type": "sdk_control_request",
-                    "request": request
-                })
-            }
-            crate::types::ControlProtocolFormat::Control => {
-                // Use new format
-                serde_json::json!({
-                    "type": "control",
-                    "control": request
-                })
-            }
-        };
-        
-        let json = serde_json::to_string(&control_msg)?;
-        
         if let Some(ref tx) = self.stdin_tx {
             tx.send(json).await?;
             Ok(())
@@ -630,37 +686,15 @@ impl Transport for SubprocessTransport {
     }
     
     async fn send_sdk_control_response(&mut self, response: serde_json::Value) -> Result<()> {
-        // Check environment variable first
-        let format = if let Ok(env_format) = std::env::var("CLAUDE_CODE_CONTROL_FORMAT") {
-            match env_format.as_str() {
-                "legacy" => crate::types::ControlProtocolFormat::Legacy,
-                "control" => crate::types::ControlProtocolFormat::Control,
-                _ => self.options.control_protocol_format,
-            }
-        } else {
-            self.options.control_protocol_format
-        };
+        // Wrap the response in control_response format expected by CLI
+        // The response should have: {"type": "control_response", "response": {...}}
+        let control_response = serde_json::json!({
+            "type": "control_response",
+            "response": response
+        });
 
-        // Format response based on protocol format setting
-        let response_msg = match format {
-            crate::types::ControlProtocolFormat::Legacy | crate::types::ControlProtocolFormat::Auto => {
-                // Use legacy format for maximum compatibility
-                serde_json::json!({
-                    "type": "sdk_control_response",
-                    "response": response
-                })
-            }
-            crate::types::ControlProtocolFormat::Control => {
-                // Use new format
-                serde_json::json!({
-                    "type": "control",
-                    "control": response
-                })
-            }
-        };
-        
-        let json = serde_json::to_string(&response_msg)?;
-        
+        let json = serde_json::to_string(&control_response)?;
+
         if let Some(ref tx) = self.stdin_tx {
             tx.send(json).await?;
             Ok(())
@@ -694,6 +728,16 @@ impl Transport for SubprocessTransport {
         }
 
         self.state = TransportState::Disconnected;
+        Ok(())
+    }
+
+    fn take_sdk_control_receiver(&mut self) -> Option<tokio::sync::mpsc::Receiver<serde_json::Value>> {
+        self.sdk_control_rx.take()
+    }
+
+    async fn end_input(&mut self) -> Result<()> {
+        // Close stdin channel to signal end of input
+        self.stdin_tx.take();
         Ok(())
     }
 }

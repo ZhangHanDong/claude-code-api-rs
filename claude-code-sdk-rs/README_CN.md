@@ -15,6 +15,55 @@
 - 🔧 **完整配置** - Claude Code 的全面配置选项
 - 📦 **类型安全** - 使用 serde 的强类型支持
 - ⚡ **异步/等待** - 基于 Tokio 的异步操作
+- 💰 **Token优化** - 内置工具最小化成本和追踪使用量（v0.1.12+）
+
+## Token优化（v0.1.12新增）
+
+使用内置优化工具最小化token消耗和控制成本：
+
+```rust
+use cc_sdk::{ClaudeCodeOptions, ClaudeSDKClient, PermissionMode};
+use cc_sdk::token_tracker::BudgetLimit;
+use cc_sdk::model_recommendation::ModelRecommendation;
+
+// 1. 选择性价比高的模型
+let recommender = ModelRecommendation::default();
+let model = recommender.suggest("simple").unwrap(); // → Haiku（最便宜）
+
+// 2. 配置最小token使用
+let options = ClaudeCodeOptions::builder()
+    .model(model)
+    .max_turns(Some(3))              // 限制对话轮数
+    .max_output_tokens(2000)          // 限制输出大小（新功能）
+    .allowed_tools(vec!["Read".to_string()])  // 限制工具
+    .permission_mode(PermissionMode::BypassPermissions)
+    .build();
+
+let mut client = ClaudeSDKClient::new(options);
+
+// 3. 设置预算和告警
+client.set_budget_limit(
+    BudgetLimit::with_cost(5.0),      // 最多$5
+    Some(|msg| eprintln!("⚠️  {}", msg))  // 80%时告警
+).await;
+
+// 4. 监控使用情况
+let usage = client.get_usage_stats().await;
+println!("Tokens: {}, 成本: ${:.2}", usage.total_tokens(), usage.total_cost_usd);
+```
+
+**核心功能：**
+- ✅ `max_output_tokens` - 精确输出控制（1-32000，优先于环境变量）
+- ✅ `TokenUsageTracker` - 实时token和成本监控
+- ✅ `BudgetLimit` - 设置成本/token上限，80%预警
+- ✅ `ModelRecommendation` - 智能模型选择（Haiku/Sonnet/Opus）
+
+**模型成本对比：**
+- Haiku: **1x**（基准，最便宜）
+- Sonnet: **约5x**
+- Opus: **约15x**
+
+详见[Token优化指南](docs/TOKEN_OPTIMIZATION.md)获取完整策略。
 
 ## 完整功能集
 
@@ -35,7 +84,7 @@
 
 ```toml
 [dependencies]
-cc-sdk = "0.1.9"
+cc-sdk = "0.2.0"
 tokio = { version = "1.0", features = ["full"] }
 futures = "0.3"
 ```
@@ -180,6 +229,83 @@ let options = ClaudeCodeOptions::builder()
     .allowed_tools(vec!["read_file".to_string(), "write_file".to_string()])
     .cwd("/path/to/project")
     .build();
+```
+
+### 控制协议（v0.1.12+）
+
+新增与 Python Agent SDK 对齐的运行时控制与选项：
+
+- `Query::set_permission_mode("acceptEdits" | "default" | "plan" | "bypassPermissions")`
+- `Query::set_model(Some("sonnet"))` 或 `set_model(None)` 清空
+- `ClaudeCodeOptions::builder().include_partial_messages(true)` 开启部分块
+- `Query::stream_input(stream)` 结束后自动 `end_input()`
+
+示例：
+
+```rust
+use cc_sdk::{Query, ClaudeCodeOptions};
+use cc_sdk::transport::SubprocessTransport;
+use std::{collections::HashMap, sync::Arc};
+use tokio::sync::Mutex;
+
+# async fn demo() -> cc_sdk::Result<()> {
+let options = ClaudeCodeOptions::builder()
+    .model("sonnet")
+    .include_partial_messages(true)
+    .build();
+
+let transport: Box<dyn cc_sdk::transport::Transport + Send> =
+    Box::new(SubprocessTransport::new(options)?);
+let transport = Arc::new(Mutex::new(transport));
+
+let mut q = Query::new(transport, true, None, None, HashMap::new());
+q.start().await?;
+q.set_permission_mode("acceptEdits").await?;
+q.set_model(Some("opus".into())).await?;
+
+let inputs = vec![serde_json::json!("Hello"), serde_json::json!({"content":"Ping"})];
+q.stream_input(futures::stream::iter(inputs)).await?;
+# Ok(()) }
+```
+
+### Agent 工具与 MCP
+
+- 工具白名单/黑名单：在 `ClaudeCodeOptions` 设置 `allowed_tools` / `disallowed_tools`
+- 权限模式：`PermissionMode::{Default, AcceptEdits, Plan, BypassPermissions}`
+- 运行时审批：实现 `CanUseTool`，返回 `PermissionResult::{Allow,Deny}`
+- MCP 服务器：通过 `options.mcp_servers` 配置（stdio/http/sse/sdk），SDK 会打包成 `--mcp-config`
+
+```rust
+use cc_sdk::{ClaudeCodeOptions, PermissionMode, CanUseTool, ToolPermissionContext, PermissionResult,
+             PermissionResultAllow, transport::{Transport, SubprocessTransport}, Query};
+use std::{collections::HashMap, sync::Arc};
+use tokio::sync::Mutex;
+
+struct AllowRead;
+#[async_trait::async_trait]
+impl CanUseTool for AllowRead {
+  async fn can_use_tool(&self, tool:&str, _input:&serde_json::Value, _ctx:&ToolPermissionContext) -> PermissionResult {
+    if tool == "Read" { PermissionResult::Allow(PermissionResultAllow{updated_input: None, updated_permissions: None}) }
+    else { cc_sdk::PermissionResult::Deny(cc_sdk::PermissionResultDeny{ message: "Not allowed".into(), interrupt: false }) }
+  }
+}
+
+# async fn demo() -> cc_sdk::Result<()> {
+let mut opts = ClaudeCodeOptions::builder()
+  .permission_mode(PermissionMode::AcceptEdits)
+  .include_partial_messages(true)
+  .build();
+opts.allowed_tools = vec!["Read".into()];
+
+let mut mcp = HashMap::new();
+mcp.insert("filesystem".into(), cc_sdk::McpServerConfig::Stdio{ command: "npx".into(), args: Some(vec!["-y".into(), "@modelcontextprotocol/server-filesystem".into(), "/allowed".into()]), env: None });
+opts.mcp_servers = mcp;
+
+let transport: Box<dyn Transport + Send> = Box::new(SubprocessTransport::new(opts)?);
+let transport = Arc::new(Mutex::new(transport));
+let mut q = Query::new(transport, true, Some(Arc::new(AllowRead)), None, HashMap::new());
+q.start().await?;
+# Ok(()) }
 ```
 
 ## API 参考

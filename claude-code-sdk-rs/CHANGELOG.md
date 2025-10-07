@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2025-10-07
+
+### Added
+- `Query::set_model(Some|None)` control request
+- `ClaudeCodeOptions::builder().include_partial_messages(..)`, `fork_session(..)`, `setting_sources(..)`, `agents(..)`
+- `Transport::end_input()` (default no-op); `SubprocessTransport` closes stdin
+- Message forwarding from `transport.receive_messages()` into `Query` stream
+
+### Changed
+- Control protocol parsing accepts snake_case and camelCase keys for `can_use_tool` and `hook_callback`
+- Subprocess command includes `--include-partial-messages`, `--fork-session`, `--setting-sources`, `--agents` when configured
+- Sets `CLAUDE_AGENT_SDK_VERSION` env to crate version
+
+### Notes
+- Trait extension is backwards compatible due to default method; bump minor version to reflect API surface change
+
 ## [0.1.11] - 2025-01-16
 
 ### 🎯 Major Feature: Control Protocol Format Compatibility

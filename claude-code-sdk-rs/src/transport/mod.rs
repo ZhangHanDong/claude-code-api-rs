@@ -11,8 +11,10 @@ use async_trait::async_trait;
 use futures::stream::Stream;
 use serde_json::Value as JsonValue;
 use std::pin::Pin;
+use tokio::sync::mpsc::Receiver;
 
 pub mod subprocess;
+pub mod mock;
 
 pub use subprocess::SubprocessTransport;
 
@@ -95,12 +97,24 @@ pub trait Transport: Send + Sync {
     /// Send an SDK control response
     async fn send_sdk_control_response(&mut self, response: JsonValue) -> Result<()>;
 
+    /// Take the SDK control receiver, if supported by the transport
+    /// Default implementation returns None for transports that do not
+    /// support inbound control messages.
+    fn take_sdk_control_receiver(&mut self) -> Option<Receiver<JsonValue>> {
+        None
+    }
+
     /// Check if the transport is connected
     #[allow(dead_code)]
     fn is_connected(&self) -> bool;
 
     /// Disconnect from the Claude CLI
     async fn disconnect(&mut self) -> Result<()>;
+
+    /// Signal end of input stream (default: no-op)
+    async fn end_input(&mut self) -> Result<()> {
+        Ok(())
+    }
 }
 
 /// Transport state

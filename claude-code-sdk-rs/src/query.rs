@@ -140,6 +140,7 @@ pub async fn query(
 }
 
 /// Execute a simple query using --print mode
+#[allow(deprecated)]
 async fn query_print_mode(
     prompt: String,
     options: ClaudeCodeOptions,
@@ -157,10 +158,12 @@ async fn query_print_mode(
     cmd.arg("--verbose");
 
     // Add all options to match Python SDK exactly
+    #[allow(deprecated)]
     if let Some(ref system_prompt) = options.system_prompt {
         cmd.arg("--system-prompt").arg(system_prompt);
     }
 
+    #[allow(deprecated)]
     if let Some(ref append_prompt) = options.append_system_prompt {
         cmd.arg("--append-system-prompt").arg(append_prompt);
     }
@@ -237,17 +240,25 @@ async fn query_print_mode(
     cmd.stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped());
     
-    // Handle CLAUDE_CODE_MAX_OUTPUT_TOKENS environment variable
+    // Handle max_output_tokens (priority: option > env var)
     // Maximum safe value is 32000, values above this may cause issues
-    if let Ok(current_value) = std::env::var("CLAUDE_CODE_MAX_OUTPUT_TOKENS") {
-        if let Ok(tokens) = current_value.parse::<u32>() {
-            if tokens > 32000 {
-                warn!("CLAUDE_CODE_MAX_OUTPUT_TOKENS={} exceeds maximum safe value of 32000, overriding to 32000", tokens);
-                cmd.env("CLAUDE_CODE_MAX_OUTPUT_TOKENS", "32000");
+    if let Some(max_tokens) = options.max_output_tokens {
+        // Option takes priority - validate and cap at 32000
+        let capped = max_tokens.min(32000).max(1);
+        cmd.env("CLAUDE_CODE_MAX_OUTPUT_TOKENS", capped.to_string());
+        debug!("Setting max_output_tokens from option: {}", capped);
+    } else {
+        // Fall back to environment variable handling
+        if let Ok(current_value) = std::env::var("CLAUDE_CODE_MAX_OUTPUT_TOKENS") {
+            if let Ok(tokens) = current_value.parse::<u32>() {
+                if tokens > 32000 {
+                    warn!("CLAUDE_CODE_MAX_OUTPUT_TOKENS={} exceeds maximum safe value of 32000, overriding to 32000", tokens);
+                    cmd.env("CLAUDE_CODE_MAX_OUTPUT_TOKENS", "32000");
+                }
+            } else {
+                warn!("Invalid CLAUDE_CODE_MAX_OUTPUT_TOKENS value: {}, setting to 8192", current_value);
+                cmd.env("CLAUDE_CODE_MAX_OUTPUT_TOKENS", "8192");
             }
-        } else {
-            warn!("Invalid CLAUDE_CODE_MAX_OUTPUT_TOKENS value: {}, setting to 8192", current_value);
-            cmd.env("CLAUDE_CODE_MAX_OUTPUT_TOKENS", "8192");
         }
     }
 

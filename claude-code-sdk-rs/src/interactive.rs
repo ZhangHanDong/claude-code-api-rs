@@ -16,7 +16,7 @@ use tracing::{debug, info};
 /// This is the recommended client for interactive use. It provides a clean API
 /// that matches the Python SDK's functionality.
 pub struct InteractiveClient {
-    transport: Arc<Mutex<SubprocessTransport>>,
+    transport: Arc<Mutex<Box<dyn Transport + Send>>>,
     connected: bool,
 }
 
@@ -26,7 +26,7 @@ impl InteractiveClient {
         unsafe {
             std::env::set_var("CLAUDE_CODE_ENTRYPOINT", "sdk-rust");
         }
-        let transport = SubprocessTransport::new(options)?;
+        let transport: Box<dyn Transport + Send> = Box::new(SubprocessTransport::new(options)?);
         Ok(Self {
             transport: Arc::new(Mutex::new(transport)),
             connected: false,
@@ -126,8 +126,8 @@ impl InteractiveClient {
         loop {
             // Try to get a message
             let msg_result = {
-                let mut transport = self.transport.lock().await;
-                let mut stream = transport.receive_messages();
+            let mut transport = self.transport.lock().await;
+            let mut stream = transport.receive_messages();
                 stream.next().await
             }; // Lock released here
 

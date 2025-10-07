@@ -5,6 +5,7 @@ use crate::{
     transport::{InputMessage, SubprocessTransport, Transport},
     types::{ClaudeCodeOptions, ControlRequest, Message},
 };
+use crate::token_tracker::{BudgetLimit, BudgetManager, BudgetWarningCallback, TokenUsageTracker};
 use futures::stream::StreamExt;
 use std::collections::VecDeque;
 use std::sync::Arc;
@@ -29,7 +30,7 @@ pub enum ClientMode {
 /// Connection pool for reusing subprocess transports
 struct ConnectionPool {
     /// Available idle connections
-    idle_connections: Arc<RwLock<VecDeque<SubprocessTransport>>>,
+    idle_connections: Arc<RwLock<VecDeque<Box<dyn Transport + Send>>>>,
     /// Maximum number of connections
     max_connections: usize,
     /// Semaphore for limiting concurrent connections
@@ -48,7 +49,7 @@ impl ConnectionPool {
         }
     }
 
-    async fn acquire(&self) -> Result<SubprocessTransport> {
+    async fn acquire(&self) -> Result<Box<dyn Transport + Send>> {
         // Try to get an idle connection first
         {
             let mut idle = self.idle_connections.write().await;
@@ -70,16 +71,15 @@ impl ConnectionPool {
                     message: "Failed to acquire connection permit".into(),
                 })?;
 
-        let mut transport = SubprocessTransport::new(self.base_options.clone())?;
+        let mut transport: Box<dyn Transport + Send> =
+            Box::new(SubprocessTransport::new(self.base_options.clone())?);
         transport.connect().await?;
         debug!("Created new connection");
         Ok(transport)
     }
 
-    async fn release(&self, transport: SubprocessTransport) {
-        if transport.is_connected()
-            && self.idle_connections.read().await.len() < self.max_connections
-        {
+    async fn release(&self, transport: Box<dyn Transport + Send>) {
+        if transport.is_connected() && self.idle_connections.read().await.len() < self.max_connections {
             let mut idle = self.idle_connections.write().await;
             idle.push_back(transport);
             debug!("Returned connection to pool");
@@ -99,7 +99,9 @@ pub struct OptimizedClient {
     /// Message receiver for interactive mode
     message_rx: Arc<RwLock<Option<mpsc::Receiver<Message>>>>,
     /// Current transport for interactive mode
-    current_transport: Arc<RwLock<Option<SubprocessTransport>>>,
+    current_transport: Arc<RwLock<Option<Box<dyn Transport + Send>>>>,
+    /// Budget manager for token/cost tracking
+    budget_manager: BudgetManager,
 }
 
 impl OptimizedClient {
@@ -121,6 +123,7 @@ impl OptimizedClient {
             pool,
             message_rx: Arc::new(RwLock::new(None)),
             current_transport: Arc::new(RwLock::new(None)),
+            budget_manager: BudgetManager::new(),
         })
     }
 
@@ -164,7 +167,7 @@ impl OptimizedClient {
 
         // Collect response with timeout
         let timeout_duration = Duration::from_secs(120);
-        let messages = timeout(timeout_duration, self.collect_messages(&mut transport))
+        let messages = timeout(timeout_duration, self.collect_messages(&mut *transport))
             .await
             .map_err(|_| SdkError::Timeout { seconds: 120 })??;
 
@@ -175,7 +178,7 @@ impl OptimizedClient {
     }
 
     /// Collect messages until Result message
-    async fn collect_messages(&self, transport: &mut SubprocessTransport) -> Result<Vec<Message>> {
+    async fn collect_messages<T: Transport + Send + ?Sized>(&self, transport: &mut T) -> Result<Vec<Message>> {
         let mut messages = Vec::new();
         let mut stream = transport.receive_messages();
 
@@ -184,6 +187,27 @@ impl OptimizedClient {
                 Ok(msg) => {
                     debug!("Received: {:?}", msg);
                     let is_result = matches!(msg, Message::Result { .. });
+
+                    // Update budget/usage on result messages
+                    if let Message::Result { usage, total_cost_usd, .. } = &msg {
+                        let (input_tokens, output_tokens) = if let Some(usage_json) = usage {
+                            let input = usage_json
+                                .get("input_tokens")
+                                .and_then(|v| v.as_u64())
+                                .unwrap_or(0);
+                            let output = usage_json
+                                .get("output_tokens")
+                                .and_then(|v| v.as_u64())
+                                .unwrap_or(0);
+                            (input, output)
+                        } else {
+                            (0, 0)
+                        };
+                        let cost = total_cost_usd.unwrap_or(0.0);
+                        self.budget_manager
+                            .update_usage(input_tokens, output_tokens, cost)
+                            .await;
+                    }
                     messages.push(msg);
                     if is_result {
                         break;
@@ -194,6 +218,50 @@ impl OptimizedClient {
         }
 
         Ok(messages)
+    }
+
+    /// Get token/cost usage statistics
+    pub async fn get_usage_stats(&self) -> TokenUsageTracker {
+        self.budget_manager.get_usage().await
+    }
+
+    /// Set budget limit with optional warning callback
+    ///
+    /// Example:
+    /// ```rust,no_run
+    /// use cc_sdk::{OptimizedClient, ClaudeCodeOptions, ClientMode};
+    /// use cc_sdk::token_tracker::{BudgetLimit, BudgetWarningCallback};
+    /// use std::sync::Arc;
+    /// # async fn demo() -> cc_sdk::Result<()> {
+    /// let client = OptimizedClient::new(ClaudeCodeOptions::default(), ClientMode::OneShot)?;
+    /// let cb: BudgetWarningCallback = Arc::new(|msg: &str| println!("Warn: {}", msg));
+    /// client.set_budget_limit(BudgetLimit::with_cost(1.0), Some(cb)).await;
+    /// # Ok(()) }
+    /// ```
+    pub async fn set_budget_limit(
+        &self,
+        limit: BudgetLimit,
+        on_warning: Option<BudgetWarningCallback>,
+    ) {
+        self.budget_manager.set_limit(limit).await;
+        if let Some(cb) = on_warning {
+            self.budget_manager.set_warning_callback(cb).await;
+        }
+    }
+
+    /// Clear budget limit and reset warning state
+    pub async fn clear_budget_limit(&self) {
+        self.budget_manager.clear_limit().await;
+    }
+
+    /// Reset usage statistics to zero
+    pub async fn reset_usage_stats(&self) {
+        self.budget_manager.reset_usage().await;
+    }
+
+    /// Check whether budget is exceeded
+    pub async fn is_budget_exceeded(&self) -> bool {
+        self.budget_manager.is_exceeded().await
     }
 
     /// Start an interactive session
@@ -394,6 +462,7 @@ impl Clone for OptimizedClient {
             pool: self.pool.clone(),
             message_rx: Arc::new(RwLock::new(None)),
             current_transport: Arc::new(RwLock::new(None)),
+            budget_manager: self.budget_manager.clone(),
         }
     }
 }

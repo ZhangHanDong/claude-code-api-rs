@@ -16,6 +16,58 @@ A Rust SDK for interacting with Claude Code CLI, providing both simple query int
 - 📦 **Type Safety** - Strongly typed with serde support
 - ⚡ **Async/Await** - Built on Tokio for async operations
 - 🔒 **Control Protocol** - Full support for permissions, hooks, and MCP servers (v0.1.11+)
+- 💰 **Token Optimization** - Built-in tools to minimize costs and track usage (v0.1.12+)
+
+## Token Optimization (New in v0.1.12)
+
+Minimize token consumption and control costs with built-in optimization tools:
+
+```rust
+use cc_sdk::{ClaudeCodeOptions, ClaudeSDKClient, PermissionMode};
+use cc_sdk::token_tracker::BudgetLimit;
+use cc_sdk::model_recommendation::ModelRecommendation;
+
+// 1. Choose cost-effective model
+let recommender = ModelRecommendation::default();
+let model = recommender.suggest("simple").unwrap(); // → Haiku (cheapest)
+
+// 2. Configure for minimal token usage
+let options = ClaudeCodeOptions::builder()
+    .model(model)
+    .max_turns(Some(3))              // Limit conversation length
+    .max_output_tokens(2000)          // Cap response size (NEW)
+    .allowed_tools(vec!["Read".to_string()])  // Restrict tools
+    .permission_mode(PermissionMode::BypassPermissions)
+    .build();
+
+let mut client = ClaudeSDKClient::new(options);
+
+// 3. Set budget with alerts
+client.set_budget_limit(
+    BudgetLimit::with_cost(5.0),      // $5 max
+    Some(|msg| eprintln!("⚠️  {}", msg))  // Alert at 80%
+).await;
+
+// ... run your queries ...
+
+// 4. Monitor usage
+let usage = client.get_usage_stats().await;
+println!("Tokens: {}, Cost: ${:.2}", usage.total_tokens(), usage.total_cost_usd);
+```
+
+**Key Features:**
+- ✅ `max_output_tokens` - Precise output control (1-32000, overrides env var)
+- ✅ `TokenUsageTracker` - Real-time token and cost monitoring
+- ✅ `BudgetLimit` - Set cost/token caps with 80% warning threshold
+- ✅ `ModelRecommendation` - Smart model selection (Haiku/Sonnet/Opus)
+- ✅ Automatic usage tracking from `ResultMessage`
+
+**Model Cost Comparison:**
+- Haiku: **1x** (baseline, cheapest)
+- Sonnet: **~5x** more expensive
+- Opus: **~15x** more expensive
+
+See [Token Optimization Guide](docs/TOKEN_OPTIMIZATION.md) for complete strategies and examples.
 
 ## Complete Feature Set
 
@@ -38,7 +90,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-cc-sdk = "0.1.11"
+cc-sdk = "0.2.0"
 tokio = { version = "1.0", features = ["full"] }
 futures = "0.3"
 ```
@@ -232,6 +284,89 @@ let options = ClaudeCodeOptions::builder()
     // New in v0.1.11: Control protocol format configuration
     .control_protocol_format(ControlProtocolFormat::Legacy)  // Default: maximum compatibility
     .build();
+```
+
+### Control Protocol (v0.1.12+)
+
+New request helpers and options aligned with the Python SDK:
+
+- `Query::set_permission_mode("acceptEdits" | "default" | "plan" | "bypassPermissions")`
+- `Query::set_model(Some("sonnet"))` or `set_model(None)` to clear
+- `ClaudeCodeOptions::builder().include_partial_messages(true)` to include partial assistant chunks
+- `Query::stream_input(stream)` automatically calls end_input when finished
+
+Example:
+
+```rust
+use cc_sdk::{Query, ClaudeCodeOptions};
+use cc_sdk::transport::SubprocessTransport;
+use std::{collections::HashMap, sync::Arc};
+use tokio::sync::Mutex;
+
+# async fn demo() -> cc_sdk::Result<()> {
+let options = ClaudeCodeOptions::builder()
+    .model("sonnet")
+    .include_partial_messages(true)
+    .build();
+
+let transport: Box<dyn cc_sdk::transport::Transport + Send> =
+    Box::new(SubprocessTransport::new(options)?);
+let transport = Arc::new(Mutex::new(transport));
+
+let mut q = Query::new(transport, true, None, None, HashMap::new());
+q.start().await?;                  // start routing
+q.set_permission_mode("acceptEdits").await?;
+q.set_model(Some("opus".into())).await?;
+
+// Stream input; end_input is called automatically when the stream completes
+let inputs = vec![serde_json::json!("Hello"), serde_json::json!({"content":"Ping"})];
+q.stream_input(futures::stream::iter(inputs)).await?;
+# Ok(()) }
+```
+
+Advanced flags mapped to CLI:
+- `fork_session(true)` → `--fork-session`
+- `setting_sources(vec![User, Project, Local])` → `--setting-sources user,project,local`
+- `agents(map)` → `--agents '<json>'`
+
+### Agent Tools & MCP
+
+- Tools whitelist/blacklist: set `allowed_tools` / `disallowed_tools` in `ClaudeCodeOptions`.
+- Permission mode: `PermissionMode::{Default, AcceptEdits, Plan, BypassPermissions}`.
+- Runtime approvals: implement `CanUseTool` and return `PermissionResult::{Allow,Deny}`.
+- MCP servers: configure via `options.mcp_servers` (stdio/http/sse/sdk), SDK packs JSON for `--mcp-config`.
+
+```rust
+use cc_sdk::{ClaudeCodeOptions, PermissionMode, CanUseTool, ToolPermissionContext, PermissionResult,
+             PermissionResultAllow, transport::{Transport, SubprocessTransport}, Query};
+use std::{collections::HashMap, sync::Arc};
+use tokio::sync::Mutex;
+
+struct AllowRead;
+#[async_trait::async_trait]
+impl CanUseTool for AllowRead {
+  async fn can_use_tool(&self, tool:&str, _input:&serde_json::Value, _ctx:&ToolPermissionContext) -> PermissionResult {
+    if tool == "Read" { PermissionResult::Allow(PermissionResultAllow{updated_input: None, updated_permissions: None}) }
+    else { cc_sdk::PermissionResult::Deny(cc_sdk::PermissionResultDeny{ message: "Not allowed".into(), interrupt: false }) }
+  }
+}
+
+# async fn demo() -> cc_sdk::Result<()> {
+let mut opts = ClaudeCodeOptions::builder()
+  .permission_mode(PermissionMode::AcceptEdits)
+  .include_partial_messages(true)
+  .build();
+opts.allowed_tools = vec!["Read".into()];
+
+let mut mcp = HashMap::new();
+mcp.insert("filesystem".into(), cc_sdk::McpServerConfig::Stdio{ command: "npx".into(), args: Some(vec!["-y".into(), "@modelcontextprotocol/server-filesystem".into(), "/allowed".into()]), env: None });
+opts.mcp_servers = mcp;
+
+let transport: Box<dyn Transport + Send> = Box::new(SubprocessTransport::new(opts)?);
+let transport = Arc::new(Mutex::new(transport));
+let mut q = Query::new(transport, true, Some(Arc::new(AllowRead)), None, HashMap::new());
+q.start().await?;
+# Ok(()) }
 ```
 
 ### Control Protocol Compatibility (v0.1.11+)

@@ -6,6 +6,7 @@
 use crate::{
     errors::{Result, SdkError},
     internal_query::Query,
+    token_tracker::BudgetManager,
     transport::{InputMessage, SubprocessTransport, Transport},
     types::{ClaudeCodeOptions, ControlRequest, ControlResponse, Message},
 };
@@ -86,7 +87,7 @@ pub struct ClaudeSDKClient {
     #[allow(dead_code)]
     options: ClaudeCodeOptions,
     /// Transport layer
-    transport: Arc<Mutex<SubprocessTransport>>,
+    transport: Arc<Mutex<Box<dyn Transport + Send>>>,
     /// Internal query handler (when control protocol is enabled)
     query_handler: Option<Arc<Mutex<Query>>>,
     /// Client state
@@ -99,6 +100,8 @@ pub struct ClaudeSDKClient {
     message_buffer: Arc<Mutex<Vec<Message>>>,
     /// Request counter
     request_counter: Arc<Mutex<u64>>,
+    /// Budget manager for token tracking
+    budget_manager: BudgetManager,
 }
 
 /// Session data
@@ -130,21 +133,34 @@ impl ClaudeSDKClient {
         };
 
         // Wrap transport in Arc for sharing
-        let transport_arc = Arc::new(Mutex::new(transport));
+        let transport_arc: Arc<Mutex<Box<dyn Transport + Send>>> =
+            Arc::new(Mutex::new(Box::new(transport)));
         
         // Create query handler if control protocol features are enabled
-        let query_handler = if options.can_use_tool.is_some() 
-            || options.hooks.is_some() 
+        let query_handler = if options.can_use_tool.is_some()
+            || options.hooks.is_some()
             || !options.mcp_servers.is_empty() {
-            // Convert MCP servers to the expected type
-            let sdk_mcp_servers = options.mcp_servers
+            // Extract SDK MCP server instances
+            let sdk_mcp_servers: HashMap<String, Arc<dyn std::any::Any + Send + Sync>> = options.mcp_servers
                 .iter()
-                .map(|(k, v)| (k.clone(), Arc::new(v.clone()) as Arc<dyn std::any::Any + Send + Sync>))
+                .filter_map(|(k, v)| {
+                    // Only extract SDK type MCP servers
+                    if let crate::types::McpServerConfig::Sdk { name: _, instance } = v {
+                        Some((k.clone(), instance.clone()))
+                    } else {
+                        None
+                    }
+                })
                 .collect();
-            
+
+            // Enable streaming mode when control protocol is active
+            let is_streaming = options.can_use_tool.is_some()
+                || options.hooks.is_some()
+                || !sdk_mcp_servers.is_empty();
+
             let query = Query::new(
                 transport_arc.clone(), // Share the same transport
-                false, // not streaming mode by default
+                is_streaming, // Enable streaming for control protocol
                 options.can_use_tool.clone(),
                 options.hooks.clone(),
                 sdk_mcp_servers,
@@ -163,6 +179,7 @@ impl ClaudeSDKClient {
             message_tx: Arc::new(Mutex::new(None)),
             message_buffer: Arc::new(Mutex::new(Vec::new())),
             request_counter: Arc::new(Mutex::new(0)),
+            budget_manager: BudgetManager::new(),
         }
     }
 
@@ -485,19 +502,37 @@ impl ClaudeSDKClient {
         let message_tx = self.message_tx.clone();
         let message_buffer = self.message_buffer.clone();
         let state = self.state.clone();
+        let budget_manager = self.budget_manager.clone();
 
         tokio::spawn(async move {
-            // Subscribe to messages without holding lock
+            // Subscribe to messages without holding the lock
             let mut stream = {
-                let transport = transport.lock().await;
-                transport.subscribe_messages().unwrap_or_else(|| {
-                    Box::pin(futures::stream::empty())
-                })
+                let mut transport = transport.lock().await;
+                transport.receive_messages()
             }; // Lock is released here immediately
 
             while let Some(result) = stream.next().await {
                 match result {
                     Ok(message) => {
+                        // Update token usage for Result messages
+                        if let Message::Result { .. } = &message {
+                            if let Message::Result { usage, total_cost_usd, .. } = &message {
+                                let (input_tokens, output_tokens) = if let Some(usage_json) = usage {
+                                    let input = usage_json.get("input_tokens")
+                                        .and_then(|v| v.as_u64())
+                                        .unwrap_or(0);
+                                    let output = usage_json.get("output_tokens")
+                                        .and_then(|v| v.as_u64())
+                                        .unwrap_or(0);
+                                    (input, output)
+                                } else {
+                                    (0, 0)
+                                };
+                                let cost = total_cost_usd.unwrap_or(0.0);
+                                budget_manager.update_usage(input_tokens, output_tokens, cost).await;
+                            }
+                        }
+
                         // Buffer init messages for get_server_info()
                         if let Message::System { subtype, .. } = &message {
                             if subtype == "init" {
@@ -505,7 +540,7 @@ impl ClaudeSDKClient {
                                 buffer.push(message.clone());
                             }
                         }
-                        
+
                         // Try to send to current receiver
                         let sent = {
                             let mut tx_opt = message_tx.lock().await;
@@ -542,6 +577,69 @@ impl ClaudeSDKClient {
             debug!("Message receiver task ended");
         });
     }
+
+    /// Get token usage statistics
+    ///
+    /// Returns the current token usage tracker with cumulative statistics
+    /// for all queries executed by this client.
+    pub async fn get_usage_stats(&self) -> crate::token_tracker::TokenUsageTracker {
+        self.budget_manager.get_usage().await
+    }
+
+    /// Set budget limit with optional warning callback
+    ///
+    /// # Arguments
+    ///
+    /// * `limit` - Budget limit configuration (cost and/or token caps)
+    /// * `on_warning` - Optional callback function triggered when usage exceeds warning threshold
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use cc_sdk::{ClaudeSDKClient, ClaudeCodeOptions};
+    /// use cc_sdk::token_tracker::{BudgetLimit, BudgetWarningCallback};
+    /// use std::sync::Arc;
+    ///
+    /// # async fn example() {
+    /// let mut client = ClaudeSDKClient::new(ClaudeCodeOptions::default());
+    ///
+    /// // Set budget with callback
+    /// let cb: BudgetWarningCallback = Arc::new(|msg: &str| println!("Budget warning: {}", msg));
+    /// client.set_budget_limit(BudgetLimit::with_cost(5.0), Some(cb)).await;
+    /// # }
+    /// ```
+    pub async fn set_budget_limit(
+        &self,
+        limit: crate::token_tracker::BudgetLimit,
+        on_warning: Option<crate::token_tracker::BudgetWarningCallback>,
+    ) {
+        self.budget_manager.set_limit(limit).await;
+        if let Some(callback) = on_warning {
+            self.budget_manager.set_warning_callback(callback).await;
+        }
+    }
+
+    /// Clear budget limit and reset warning state
+    pub async fn clear_budget_limit(&self) {
+        self.budget_manager.clear_limit().await;
+    }
+
+    /// Reset token usage statistics to zero
+    ///
+    /// Clears all accumulated token and cost statistics.
+    /// Budget limits remain in effect.
+    pub async fn reset_usage_stats(&self) {
+        self.budget_manager.reset_usage().await;
+    }
+
+    /// Check if budget has been exceeded
+    ///
+    /// Returns true if current usage exceeds any configured limits
+    pub async fn is_budget_exceeded(&self) -> bool {
+        self.budget_manager.is_exceeded().await
+    }
+
+    // Removed unused helper; usage is updated inline in message receiver
 }
 
 impl Drop for ClaudeSDKClient {

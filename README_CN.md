@@ -1,6 +1,6 @@
 # Claude Code API
 
-[![版本](https://img.shields.io/badge/版本-0.1.5-blue.svg)](https://github.com/ZhangHanDong/claude-code-api-rs)
+[![版本](https://img.shields.io/badge/版本-0.2.0-blue.svg)](https://github.com/ZhangHanDong/claude-code-api-rs)
 [![许可证](https://img.shields.io/badge/许可证-MIT-green.svg)](LICENSE)
 [![Rust](https://img.shields.io/badge/rust-1.75+-orange.svg)](https://www.rust-lang.org)
 
@@ -199,6 +199,15 @@ export CLAUDE_CODE__MCP__ENABLED=true
 export CLAUDE_CODE__MCP__CONFIG_FILE="./mcp_config.json"
 ./target/release/claude-code-api
 ```
+
+### Agent 工具与权限
+
+- SDK 工具控制：在 `ClaudeCodeOptions` 设置 `allowed_tools` / `disallowed_tools` 以及 `permission_mode`（`Default/AcceptEdits/Plan/BypassPermissions`）。
+- 运行时审批（SDK）：实现 `CanUseTool`，对每次工具调用返回 `{allow, input?/reason?}`。
+- MCP（API）：通过 `config/*.toml` 或 `mcp_config.json` 配置，使用 `script/` 下脚本（如 `start_with_mcp.sh`）。API 内部复用 SDK 的 MCP 接入。
+- 程序化 Agent（SDK）：使用 `agents` 与 `setting_sources` 将结构化 Agent 定义传给 CLI。
+
+完整示例见 `claude-code-sdk-rs/README.md` 的 “Agent Tools & MCP”。
 
 ## 🔧 配置
 

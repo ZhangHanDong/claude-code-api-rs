@@ -36,7 +36,7 @@ impl MockClient {
                     "Please provide a number to square.".to_string()
                 }
             }
-            _ => format!("Mock response to: {}", prompt),
+            _ => format!("Mock response to: {prompt}"),
         };
 
         // Create mock assistant message
@@ -76,7 +76,7 @@ impl MockClient {
 
                 // Simulate concurrent processing
                 for (i, prompt) in prompts.into_iter().enumerate() {
-                    if i > 0 && i % max_concurrent == 0 {
+                    if i > 0 && i.is_multiple_of(max_concurrent) {
                         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
                     }
                     results.push(self.query(prompt).await);
@@ -153,7 +153,7 @@ async fn demo_batch_mode() -> Result<()> {
     let client = MockClient::new(ClientMode::Batch { max_concurrent: 3 });
 
     let queries: Vec<String> = (1..=10)
-        .map(|i| format!("What is {} squared?", i))
+        .map(|i| format!("What is {i} squared?"))
         .collect();
 
     info!(
@@ -196,7 +196,7 @@ async fn demo_batch_mode() -> Result<()> {
 async fn demo_performance_comparison() -> Result<()> {
     info!("--- Demo 3: Performance Comparison ---");
 
-    let queries: Vec<String> = (1..=5).map(|i| format!("What is {} squared?", i)).collect();
+    let queries: Vec<String> = (1..=5).map(|i| format!("What is {i} squared?")).collect();
 
     // Test with OneShot mode (sequential)
     let oneshot_client = MockClient::new(ClientMode::OneShot);

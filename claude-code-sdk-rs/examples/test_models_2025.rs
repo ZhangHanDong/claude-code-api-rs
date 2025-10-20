@@ -29,7 +29,7 @@ async fn test_opus_4_1() -> Result<()> {
                 }
             }
             Message::Result { duration_ms, .. } => {
-                println!("Response time: {}ms", duration_ms);
+                println!("Response time: {duration_ms}ms");
             }
             _ => {}
         }
@@ -67,7 +67,7 @@ async fn test_sonnet_4() -> Result<()> {
                 }
             }
             Message::Result { duration_ms, .. } => {
-                println!("Response time: {}ms", duration_ms);
+                println!("Response time: {duration_ms}ms");
             }
             _ => {}
         }
@@ -104,7 +104,7 @@ async fn test_model_aliases() -> Result<()> {
                 println!("✅ 'opus' alias works!");
             }
         }
-        Err(e) => println!("❌ 'opus' alias failed: {:?}", e),
+        Err(e) => println!("❌ 'opus' alias failed: {e:?}"),
     }
     
     // Test "sonnet" alias
@@ -126,7 +126,7 @@ async fn test_model_aliases() -> Result<()> {
                 println!("✅ 'sonnet' alias works!");
             }
         }
-        Err(e) => println!("❌ 'sonnet' alias failed: {:?}", e),
+        Err(e) => println!("❌ 'sonnet' alias failed: {e:?}"),
     }
     
     Ok(())
@@ -154,7 +154,7 @@ async fn test_full_model_names() -> Result<()> {
                 println!("✅ Full Opus 4.1 name works!");
             }
         }
-        Err(e) => println!("❌ Full Opus 4.1 name failed: {:?}", e),
+        Err(e) => println!("❌ Full Opus 4.1 name failed: {e:?}"),
     }
     
     // Test full Sonnet 4 name
@@ -176,7 +176,7 @@ async fn test_full_model_names() -> Result<()> {
                 println!("✅ Full Sonnet 4 name works!");
             }
         }
-        Err(e) => println!("❌ Full Sonnet 4 name failed: {:?}", e),
+        Err(e) => println!("❌ Full Sonnet 4 name failed: {e:?}"),
     }
     
     Ok(())
@@ -189,19 +189,19 @@ async fn main() {
     
     // Test different model formats
     if let Err(e) = test_opus_4_1().await {
-        println!("Opus 4.1 test error: {:?}", e);
+        println!("Opus 4.1 test error: {e:?}");
     }
     
     if let Err(e) = test_sonnet_4().await {
-        println!("Sonnet 4 test error: {:?}", e);
+        println!("Sonnet 4 test error: {e:?}");
     }
     
     if let Err(e) = test_model_aliases().await {
-        println!("Model aliases test error: {:?}", e);
+        println!("Model aliases test error: {e:?}");
     }
     
     if let Err(e) = test_full_model_names().await {
-        println!("Full model names test error: {:?}", e);
+        println!("Full model names test error: {e:?}");
     }
     
     println!("\n=== All model tests completed ===");

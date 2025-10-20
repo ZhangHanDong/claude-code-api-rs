@@ -33,7 +33,7 @@ async fn main() -> Result<()> {
 
         while let Some(msg) = messages.next().await {
             count += 1;
-            println!("\nMessage {}: ", count);
+            println!("\nMessage {count}: ");
 
             match msg {
                 Ok(Message::Assistant { message }) => {
@@ -44,17 +44,17 @@ async fn main() -> Result<()> {
                     }
                 }
                 Ok(Message::System { subtype, .. }) => {
-                    println!("System: {}", subtype);
+                    println!("System: {subtype}");
                 }
                 Ok(Message::Result { duration_ms, .. }) => {
-                    println!("Completed in {}ms", duration_ms);
+                    println!("Completed in {duration_ms}ms");
                     return Ok(());
                 }
                 Ok(Message::User { .. }) => {
                     println!("User message (unexpected)");
                 }
                 Err(e) => {
-                    println!("Error: {}", e);
+                    println!("Error: {e}");
                     return Err(e);
                 }
             }
@@ -67,7 +67,7 @@ async fn main() -> Result<()> {
 
     match result {
         Ok(Ok(())) => println!("\nSuccess!"),
-        Ok(Err(e)) => println!("\nError: {}", e),
+        Ok(Err(e)) => println!("\nError: {e}"),
         Err(_) => println!("\nTimeout - no response within 15 seconds"),
     }
 

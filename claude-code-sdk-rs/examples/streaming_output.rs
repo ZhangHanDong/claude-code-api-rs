@@ -46,7 +46,7 @@ async fn main() -> Result<()> {
                         break;
                     }
                 }
-                Err(e) => eprintln!("Error: {}", e),
+                Err(e) => eprintln!("Error: {e}"),
             }
         }
     }
@@ -62,7 +62,7 @@ async fn main() -> Result<()> {
         while let Some(result) = stream.next().await {
             match result {
                 Ok(message) => display_message(&message),
-                Err(e) => eprintln!("Error: {}", e),
+                Err(e) => eprintln!("Error: {e}"),
             }
         }
     }
@@ -79,7 +79,7 @@ async fn main() -> Result<()> {
         while let Some(result) = stream.next().await {
             match result {
                 Ok(message) => display_message(&message),
-                Err(e) => eprintln!("Error: {}", e),
+                Err(e) => eprintln!("Error: {e}"),
             }
         }
     }
@@ -94,7 +94,7 @@ async fn main() -> Result<()> {
         while let Some(result) = stream.next().await {
             match result {
                 Ok(message) => display_message(&message),
-                Err(e) => eprintln!("Error: {}", e),
+                Err(e) => eprintln!("Error: {e}"),
             }
         }
     }
@@ -121,7 +121,7 @@ async fn main() -> Result<()> {
                     }
                 }
                 Err(e) => {
-                    eprintln!("Error: {}", e);
+                    eprintln!("Error: {e}");
                     break;
                 }
             }
@@ -129,7 +129,7 @@ async fn main() -> Result<()> {
         count
     };
     
-    println!("\nTotal messages received: {}", message_count);
+    println!("\nTotal messages received: {message_count}");
     
     // Disconnect
     println!("\nDisconnecting...");
@@ -147,11 +147,8 @@ fn display_message(msg: &Message) {
         }
         Message::Assistant { message } => {
             for block in &message.content {
-                match block {
-                    cc_sdk::ContentBlock::Text(text_content) => {
-                        println!("Claude: {}", text_content.text);
-                    }
-                    _ => {}
+                if let cc_sdk::ContentBlock::Text(text_content) = block {
+                    println!("Claude: {}", text_content.text);
                 }
             }
         }
@@ -161,7 +158,7 @@ fn display_message(msg: &Message) {
         Message::Result { total_cost_usd, .. } => {
             println!("=== Result ===");
             if let Some(cost) = total_cost_usd {
-                println!("Total cost: ${:.4} USD", cost);
+                println!("Total cost: ${cost:.4} USD");
             }
         }
     }

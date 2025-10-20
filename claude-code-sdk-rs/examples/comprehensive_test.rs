@@ -24,7 +24,7 @@ async fn test_all_models() -> Result<()> {
     ];
     
     for (model, description) in models {
-        print!("Testing {} ({})... ", model, description);
+        print!("Testing {model} ({description})... ");
         
         let options = ClaudeCodeOptions::builder()
             .model(model)
@@ -68,20 +68,20 @@ async fn test_plan_mode_scenarios() -> Result<()> {
         "Plan the steps to create a CLI tool in Rust",
         Some(options)
     ).await?;
-    
-    let mut plan_found = false;
+
+    let mut _plan_found = false;
     while let Some(msg) = messages.next().await {
         if let Ok(Message::Assistant { message }) = msg {
             for block in message.content {
                 if let ContentBlock::Text(_) = block {
-                    plan_found = true;
+                    _plan_found = true;
                     println!("   ✅ Plan generated successfully");
                     break;
                 }
             }
         }
     }
-    if !plan_found {
+    if !_plan_found {
         println!("   ❌ No plan generated");
     }
     
@@ -98,10 +98,10 @@ async fn test_plan_mode_scenarios() -> Result<()> {
         "Plan a complex distributed system architecture",
         Some(options)
     ).await?;
-    
+
     let mut thinking_found = false;
-    let mut plan_found = false;
-    
+    let mut _plan_found = false;
+
     while let Some(msg) = messages.next().await {
         if let Ok(Message::Assistant { message }) = msg {
             for block in message.content {
@@ -112,7 +112,7 @@ async fn test_plan_mode_scenarios() -> Result<()> {
                         println!("      Signature: {}", thinking.signature);
                     }
                     ContentBlock::Text(_) => {
-                        plan_found = true;
+                        _plan_found = true;
                         println!("   ✅ Plan with thinking generated");
                     }
                     _ => {}
@@ -146,8 +146,8 @@ async fn test_extra_args() -> Result<()> {
     println!("Testing with extra args:");
     for (key, value) in &extra_args {
         match value {
-            Some(v) => println!("  --{} {}", key, v),
-            None => println!("  --{}", key),
+            Some(v) => println!("  --{key} {v}"),
+            None => println!("  --{key}"),
         }
     }
     
@@ -166,7 +166,7 @@ async fn test_extra_args() -> Result<()> {
             }
         }
         Err(e) => {
-            println!("❌ Extra args test failed: {:?}", e);
+            println!("❌ Extra args test failed: {e:?}");
         }
     }
     
@@ -269,9 +269,9 @@ async fn test_thinking_content() -> Result<()> {
             }
             Message::Result { duration_ms, total_cost_usd, .. } => {
                 println!("\nStats:");
-                println!("  Duration: {}ms", duration_ms);
+                println!("  Duration: {duration_ms}ms");
                 if let Some(cost) = total_cost_usd {
-                    println!("  Cost: ${:.6}", cost);
+                    println!("  Cost: ${cost:.6}");
                 }
             }
             _ => {}
@@ -319,11 +319,11 @@ async fn main() {
         match result {
             Ok(_) => {
                 passed += 1;
-                println!("\n✅ {} test suite completed", name);
+                println!("\n✅ {name} test suite completed");
             }
             Err(e) => {
                 failed += 1;
-                println!("\n❌ {} test suite failed: {:?}", name, e);
+                println!("\n❌ {name} test suite failed: {e:?}");
             }
         }
     }

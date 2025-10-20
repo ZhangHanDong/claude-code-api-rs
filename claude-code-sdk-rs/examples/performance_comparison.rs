@@ -17,7 +17,7 @@ async fn main() -> Result<()> {
         .build();
 
     // Test queries
-    let queries = vec!["What is 10 + 10?", "What is 20 + 20?", "What is 30 + 30?"];
+    let queries = ["What is 10 + 10?", "What is 20 + 20?", "What is 30 + 30?"];
 
     // Test 1: Traditional InteractiveClient (creates new process each time)
     info!("Test 1: Traditional InteractiveClient");

@@ -87,6 +87,7 @@ fn test_message_serialization() {
 
 /// Test options building
 #[test]
+#[allow(deprecated)]
 fn test_options_builder() {
     let options = ClaudeCodeOptions::builder()
         .permission_mode(PermissionMode::AcceptEdits)
@@ -168,7 +169,7 @@ async fn test_concurrent_processing() {
         .map(|i| {
             let mock_clone = mock.clone();
             tokio::spawn(async move {
-                mock_clone.add_response(&format!("Response {}", i)).await;
+                mock_clone.add_response(&format!("Response {i}")).await;
             })
         })
         .collect();

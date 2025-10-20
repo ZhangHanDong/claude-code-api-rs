@@ -8,7 +8,7 @@ async fn main() -> Result<()> {
 
     // Check initial Claude processes
     let initial_count = count_claude_processes();
-    println!("Initial Claude processes: {}", initial_count);
+    println!("Initial Claude processes: {initial_count}");
 
     println!("\n--- Running 5 concurrent queries ---");
     
@@ -16,23 +16,23 @@ async fn main() -> Result<()> {
     let mut handles = vec![];
     for i in 1..=5 {
         let handle = tokio::spawn(async move {
-            println!("Starting query {}", i);
+            println!("Starting query {i}");
             
             // Create a query and consume only the first message
-            let mut messages = query(format!("Say 'Concurrent test {}'", i), None).await?;
+            let mut messages = query(format!("Say 'Concurrent test {i}'"), None).await?;
             
             // Only take the first message then drop the stream
             if let Some(msg) = messages.next().await {
                 match msg {
-                    Ok(_) => println!("Query {} got response", i),
-                    Err(e) => println!("Query {} error: {}", i, e),
+                    Ok(_) => println!("Query {i} got response"),
+                    Err(e) => println!("Query {i} error: {e}"),
                 }
             }
             
             // Stream is dropped here, should trigger cleanup
             drop(messages);
             
-            println!("Query {} completed", i);
+            println!("Query {i} completed");
             Ok::<(), cc_sdk::SdkError>(())
         });
         handles.push(handle);
@@ -47,7 +47,7 @@ async fn main() -> Result<()> {
     tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
     
     let concurrent_count = count_claude_processes();
-    println!("\nClaude processes after concurrent queries: {}", concurrent_count);
+    println!("\nClaude processes after concurrent queries: {concurrent_count}");
     
     if concurrent_count > initial_count + 1 {
         println!("⚠️ WARNING: Possible process leak! Expected at most {} processes, found {}", 
@@ -59,7 +59,7 @@ async fn main() -> Result<()> {
     tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
     
     let final_count = count_claude_processes();
-    println!("Final Claude processes: {}", final_count);
+    println!("Final Claude processes: {final_count}");
     
     if final_count > initial_count {
         println!("❌ FAILED: Process leak detected! {} zombie processes remain", 

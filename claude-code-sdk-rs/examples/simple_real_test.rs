@@ -15,12 +15,12 @@ async fn main() -> Result<()> {
         Ok(mut stream) => {
             while let Some(result) = stream.next().await {
                 match result {
-                    Ok(msg) => println!("Message: {:?}", msg),
-                    Err(e) => println!("Stream error: {}", e),
+                    Ok(msg) => println!("Message: {msg:?}"),
+                    Err(e) => println!("Stream error: {e}"),
                 }
             }
         }
-        Err(e) => println!("Query error: {}", e),
+        Err(e) => println!("Query error: {e}"),
     }
 
     println!("\n---\n");
@@ -48,11 +48,11 @@ async fn main() -> Result<()> {
                             }
                         }
                     }
-                    Err(e) => println!("Stream error: {}", e),
+                    Err(e) => println!("Stream error: {e}"),
                 }
             }
         }
-        Err(e) => println!("Query error: {}", e),
+        Err(e) => println!("Query error: {e}"),
     }
 
     Ok(())

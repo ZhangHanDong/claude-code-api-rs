@@ -77,7 +77,7 @@ async fn main() -> Result<()> {
 }
 
 async fn run_query(prompt: &str, options: ClaudeCodeOptions) -> Result<()> {
-    println!("Query: {}", prompt);
+    println!("Query: {prompt}");
     println!("Permission mode: {:?}", options.permission_mode);
 
     let mut messages = query(prompt, Some(options)).await?;
@@ -106,9 +106,9 @@ async fn run_query(prompt: &str, options: ClaudeCodeOptions) -> Result<()> {
                 ..
             } => {
                 if is_error {
-                    println!("Query completed with error in {}ms", duration_ms);
+                    println!("Query completed with error in {duration_ms}ms");
                 } else {
-                    println!("Query completed successfully in {}ms", duration_ms);
+                    println!("Query completed successfully in {duration_ms}ms");
                 }
                 break;
             }

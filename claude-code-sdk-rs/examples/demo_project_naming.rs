@@ -19,7 +19,7 @@ fn demonstrate_naming() {
     ];
 
     for (qs_file, questions) in question_sets {
-        println!("\nQuestion Set: {}", qs_file);
+        println!("\nQuestion Set: {qs_file}");
 
         // Extract qs number
         let qs_number = qs_file
@@ -27,12 +27,12 @@ fn demonstrate_naming() {
             .and_then(|s| s.strip_suffix(".txt"))
             .unwrap_or("00000");
 
-        println!("  QS Number: {}", qs_number);
+        println!("  QS Number: {qs_number}");
         println!("  Projects:");
 
         for &q_num in &questions {
-            let project_name = format!("q{}{:05}", qs_number, q_num);
-            println!("    Question {} → annotations/{}", q_num, project_name);
+            let project_name = format!("q{qs_number}{q_num:05}");
+            println!("    Question {q_num} → annotations/{project_name}");
         }
     }
 
@@ -63,10 +63,10 @@ fn demonstrate_naming() {
         if let Some(captures) = question_regex.captures(line) {
             let q_num: u32 = captures[1].parse().unwrap();
             let q_text = &captures[2];
-            println!("\n  Line: {}", line);
-            println!("  → Question Number: {}", q_num);
-            println!("  → Question Text: {}", q_text);
-            println!("  → Project Name (for qs00035): q00035{:05}", q_num);
+            println!("\n  Line: {line}");
+            println!("  → Question Number: {q_num}");
+            println!("  → Question Text: {q_text}");
+            println!("  → Project Name (for qs00035): q00035{q_num:05}");
         }
     }
 }

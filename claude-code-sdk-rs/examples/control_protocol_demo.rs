@@ -34,16 +34,14 @@ impl CanUseTool for MyPermissionHandler {
         println!("   Suggestions: {:?}", context.suggestions);
         
         // Example: Deny dangerous commands
-        if tool_name == "Bash" {
-            if let Some(command) = input.get("command").and_then(|v| v.as_str()) {
-                if command.contains("rm -rf") || command.contains("sudo") {
+        if tool_name == "Bash"
+            && let Some(command) = input.get("command").and_then(|v| v.as_str())
+                && (command.contains("rm -rf") || command.contains("sudo")) {
                     return PermissionResult::Deny(PermissionResultDeny {
                         message: "Dangerous command blocked".to_string(),
                         interrupt: false,
                     });
                 }
-            }
-        }
         
         // Allow everything else
         PermissionResult::Allow(PermissionResultAllow {
@@ -62,20 +60,39 @@ struct MyHookHandler {
 impl HookCallback for MyHookHandler {
     async fn execute(
         &self,
-        input: &serde_json::Value,
+        input: &cc_sdk::HookInput,
         tool_use_id: Option<&str>,
         _context: &HookContext,
-    ) -> serde_json::Value {
+    ) -> std::result::Result<cc_sdk::HookJSONOutput, cc_sdk::SdkError> {
         println!("🪝 Hook '{}' triggered", self.name);
-        println!("   Input: {:?}", input);
+
+        // Pattern match on strongly-typed input
+        match input {
+            cc_sdk::HookInput::PreToolUse(pre_tool_use) => {
+                println!("   Tool: {}", pre_tool_use.tool_name);
+                println!("   Input: {:?}", pre_tool_use.tool_input);
+            }
+            cc_sdk::HookInput::PostToolUse(post_tool_use) => {
+                println!("   Tool: {}", post_tool_use.tool_name);
+                println!("   Response: {:?}", post_tool_use.tool_response);
+            }
+            cc_sdk::HookInput::UserPromptSubmit(prompt) => {
+                println!("   Prompt: {}", prompt.prompt);
+            }
+            _ => {
+                println!("   Other hook event");
+            }
+        }
         println!("   Tool use ID: {:?}", tool_use_id);
-        
-        // Return some modification or validation result
-        serde_json::json!({
-            "status": "processed",
-            "hook": self.name,
-            "timestamp": chrono::Utc::now().to_rfc3339()
-        })
+
+        // Return strongly-typed hook output
+        Ok(cc_sdk::HookJSONOutput::Sync(cc_sdk::SyncHookJSONOutput {
+            reason: Some(format!("Processed by hook '{}' at {}",
+                self.name,
+                chrono::Utc::now().to_rfc3339()
+            )),
+            ..Default::default()
+        }))
     }
 }
 
@@ -107,9 +124,10 @@ async fn main() -> Result<()> {
     options.can_use_tool = Some(Arc::new(MyPermissionHandler));
     
     // Add hook handlers
+    // IMPORTANT: Hook event names must be PascalCase to match CLI expectations
     let mut hooks = std::collections::HashMap::new();
     hooks.insert(
-        "pre_tool_use".to_string(),
+        "PreToolUse".to_string(),  // PascalCase - matches CLI event name
         vec![HookMatcher {
             matcher: Some(serde_json::json!({ "tool": "*" })),
             hooks: vec![Arc::new(MyHookHandler {
@@ -118,7 +136,7 @@ async fn main() -> Result<()> {
         }],
     );
     hooks.insert(
-        "post_tool_use".to_string(),
+        "PostToolUse".to_string(),  // PascalCase - matches CLI event name
         vec![HookMatcher {
             matcher: Some(serde_json::json!({ "tool": "*" })),
             hooks: vec![Arc::new(MyHookHandler {
@@ -143,13 +161,13 @@ async fn main() -> Result<()> {
             if let Some(info) = client.get_server_info().await {
                 println!("📋 Server Information:");
                 if let Some(model) = info.get("model").and_then(|v| v.as_str()) {
-                    println!("   Model: {}", model);
+                    println!("   Model: {model}");
                 }
                 if let Some(tools) = info.get("tools").and_then(|v| v.as_array()) {
                     println!("   Available tools: {} tools", tools.len());
                 }
                 if let Some(mode) = info.get("permissionMode").and_then(|v| v.as_str()) {
-                    println!("   Permission mode: {}", mode);
+                    println!("   Permission mode: {mode}");
                 }
                 println!();
             }
@@ -175,25 +193,25 @@ async fn main() -> Result<()> {
                                 cc_sdk::Message::User { .. } => println!("📤 User message"),
                                 cc_sdk::Message::Assistant { .. } => println!("🤖 Assistant message"),
                                 cc_sdk::Message::System { subtype, .. } => {
-                                    println!("⚙️ System: {}", subtype);
+                                    println!("⚙️ System: {subtype}");
                                     if subtype.starts_with("sdk_control:") {
                                         println!("   [Control protocol message detected]");
                                     }
                                 }
                                 cc_sdk::Message::Result { is_error, .. } => {
-                                    println!("✓ Result (error: {})", is_error);
+                                    println!("✓ Result (error: {is_error})");
                                     break;
                                 }
                             }
                         }
                         Err(e) => {
-                            eprintln!("❌ Error: {}", e);
+                            eprintln!("❌ Error: {e}");
                             break;
                         }
                     }
                 }
                 
-                println!("\nTotal messages: {}", message_count);
+                println!("\nTotal messages: {message_count}");
             }
             
             // Test with a potentially dangerous command
@@ -216,7 +234,7 @@ async fn main() -> Result<()> {
             println!("\n✅ Disconnected successfully");
         }
         Err(e) => {
-            eprintln!("❌ Failed to connect: {}", e);
+            eprintln!("❌ Failed to connect: {e}");
         }
     }
     

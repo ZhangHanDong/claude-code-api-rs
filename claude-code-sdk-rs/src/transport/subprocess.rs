@@ -20,6 +20,50 @@ use tracing::{debug, error, info, warn};
 /// Default buffer size for channels
 const CHANNEL_BUFFER_SIZE: usize = 100;
 
+/// Minimum required CLI version
+const MIN_CLI_VERSION: (u32, u32, u32) = (2, 0, 0);
+
+/// Simple semantic version struct
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+struct SemVer {
+    major: u32,
+    minor: u32,
+    patch: u32,
+}
+
+impl SemVer {
+    fn new(major: u32, minor: u32, patch: u32) -> Self {
+        Self {
+            major,
+            minor,
+            patch,
+        }
+    }
+
+    /// Parse semantic version from string (e.g., "2.0.0" or "v2.0.0")
+    fn parse(version: &str) -> Option<Self> {
+        let version = version.trim().trim_start_matches('v');
+
+        // Handle versions like "@anthropic-ai/claude-code/2.0.0"
+        let version = if let Some(v) = version.split('/').next_back() {
+            v
+        } else {
+            version
+        };
+
+        let parts: Vec<&str> = version.split('.').collect();
+        if parts.len() < 2 {
+            return None;
+        }
+
+        Some(Self {
+            major: parts[0].parse().ok()?,
+            minor: parts.get(1)?.parse().ok()?,
+            patch: parts.get(2).and_then(|p| p.parse().ok()).unwrap_or(0),
+        })
+    }
+}
+
 /// Subprocess-based transport for Claude CLI
 pub struct SubprocessTransport {
     /// Configuration options
@@ -161,7 +205,7 @@ impl SubprocessTransport {
         // Maximum safe value is 32000, values above this may cause issues
         if let Some(max_tokens) = self.options.max_output_tokens {
             // Option takes priority - validate and cap at 32000
-            let capped = max_tokens.min(32000).max(1);
+            let capped = max_tokens.clamp(1, 32000);
             cmd.env("CLAUDE_CODE_MAX_OUTPUT_TOKENS", capped.to_string());
             debug!("Setting max_output_tokens from option: {}", capped);
         } else {
@@ -294,21 +338,18 @@ impl SubprocessTransport {
         }
 
         // Programmatic agents
-        if let Some(ref agents) = self.options.agents {
-            if !agents.is_empty() {
-                if let Ok(json_str) = serde_json::to_string(agents) {
+        if let Some(ref agents) = self.options.agents
+            && !agents.is_empty()
+                && let Ok(json_str) = serde_json::to_string(agents) {
                     cmd.arg("--agents").arg(json_str);
                 }
-            }
-        }
 
         // Setting sources (comma-separated)
-        if let Some(ref sources) = self.options.setting_sources {
-            if !sources.is_empty() {
-                let value = sources.iter().map(|s| format!("{}", match s { crate::types::SettingSource::User => "user", crate::types::SettingSource::Project => "project", crate::types::SettingSource::Local => "local" })).collect::<Vec<_>>().join(",");
+        if let Some(ref sources) = self.options.setting_sources
+            && !sources.is_empty() {
+                let value = sources.iter().map(|s| (match s { crate::types::SettingSource::User => "user", crate::types::SettingSource::Project => "project", crate::types::SettingSource::Local => "local" }).to_string()).collect::<Vec<_>>().join(",");
                 cmd.arg("--setting-sources").arg(value);
             }
-        }
 
         // Extra arguments
         for (key, value) in &self.options.extra_args {
@@ -333,6 +374,58 @@ impl SubprocessTransport {
         cmd.env("CLAUDE_AGENT_SDK_VERSION", env!("CARGO_PKG_VERSION"));
 
         cmd
+    }
+
+    /// Check CLI version and warn if below minimum required version
+    async fn check_cli_version(&self) -> Result<()> {
+        // Run the CLI with --version flag (with a timeout to avoid hanging)
+        let output = tokio::time::timeout(
+            std::time::Duration::from_secs(5),
+            tokio::process::Command::new(&self.cli_path)
+                .arg("--version")
+                .output(),
+        )
+        .await;
+
+        let output = match output {
+            Ok(Ok(output)) => output,
+            Ok(Err(e)) => {
+                warn!("Failed to check CLI version: {}", e);
+                return Ok(()); // Don't fail connection, just warn
+            }
+            Err(_) => {
+                warn!("CLI version check timed out after 5 seconds");
+                return Ok(());
+            }
+        };
+
+        let version_str = String::from_utf8_lossy(&output.stdout);
+        let version_str = version_str.trim();
+
+        if let Some(semver) = SemVer::parse(version_str) {
+            let min_version = SemVer::new(MIN_CLI_VERSION.0, MIN_CLI_VERSION.1, MIN_CLI_VERSION.2);
+
+            if semver < min_version {
+                warn!(
+                    "⚠️  Claude CLI version {}.{}.{} is below minimum required version {}.{}.{}",
+                    semver.major,
+                    semver.minor,
+                    semver.patch,
+                    MIN_CLI_VERSION.0,
+                    MIN_CLI_VERSION.1,
+                    MIN_CLI_VERSION.2
+                );
+                warn!(
+                    "   Some features may not work correctly. Please upgrade with: npm install -g @anthropic-ai/claude-code@latest"
+                );
+            } else {
+                info!("Claude CLI version: {}.{}.{}", semver.major, semver.minor, semver.patch);
+            }
+        } else {
+            debug!("Could not parse CLI version: {}", version_str);
+        }
+
+        Ok(())
     }
 
     /// Spawn the process and set up communication channels
@@ -361,12 +454,15 @@ impl SubprocessTransport {
             .take()
             .ok_or_else(|| SdkError::ConnectionError("Failed to get stderr".into()))?;
 
+        // Determine buffer size from options or use default
+        let buffer_size = self.options.cli_channel_buffer_size.unwrap_or(CHANNEL_BUFFER_SIZE);
+
         // Create channels
-        let (stdin_tx, mut stdin_rx) = mpsc::channel::<String>(CHANNEL_BUFFER_SIZE);
+        let (stdin_tx, mut stdin_rx) = mpsc::channel::<String>(buffer_size);
         // Use broadcast channel for messages to support multiple receivers
         let (message_broadcast_tx, _) =
-            tokio::sync::broadcast::channel::<Message>(CHANNEL_BUFFER_SIZE);
-        let (control_tx, control_rx) = mpsc::channel::<ControlResponse>(CHANNEL_BUFFER_SIZE);
+            tokio::sync::broadcast::channel::<Message>(buffer_size);
+        let (control_tx, control_rx) = mpsc::channel::<ControlResponse>(buffer_size);
 
         // Spawn stdin handler
         tokio::spawn(async move {
@@ -392,7 +488,7 @@ impl SubprocessTransport {
         });
 
         // Create channel for SDK control requests
-        let (sdk_control_tx, sdk_control_rx) = mpsc::channel::<serde_json::Value>(CHANNEL_BUFFER_SIZE);
+        let (sdk_control_tx, sdk_control_rx) = mpsc::channel::<serde_json::Value>(buffer_size);
         
         // Spawn stdout handler
         let message_broadcast_tx_clone = message_broadcast_tx.clone();
@@ -426,8 +522,8 @@ impl SubprocessTransport {
                                 // (needed for interrupt functionality when query_handler is None)
                                 // CLI returns: {"type":"control_response","response":{"subtype":"success","request_id":"..."}}
                                 // or: {"type":"control_response","response":{"subtype":"error","request_id":"...","error":"..."}}
-                                if let Some(response_obj) = json.get("response") {
-                                    if let Some(request_id) = response_obj.get("request_id")
+                                if let Some(response_obj) = json.get("response")
+                                    && let Some(request_id) = response_obj.get("request_id")
                                         .or_else(|| response_obj.get("requestId"))
                                         .and_then(|v| v.as_str())
                                     {
@@ -441,7 +537,6 @@ impl SubprocessTransport {
                                         };
                                         let _ = control_tx_clone.send(control_resp).await;
                                     }
-                                }
                                 continue;
                             }
 
@@ -454,13 +549,12 @@ impl SubprocessTransport {
                             }
 
                             // Handle control messages (new format)
-                            if msg_type == "control" {
-                                if let Some(control) = json.get("control") {
+                            if msg_type == "control"
+                                && let Some(control) = json.get("control") {
                                     debug!("Received control message: {:?}", control);
                                     let _ = sdk_control_tx_clone.send(control.clone()).await;
                                     continue;
                                 }
-                            }
 
                             // Handle SDK control requests FROM CLI (legacy format)
                             if msg_type == "sdk_control_request" {
@@ -471,16 +565,14 @@ impl SubprocessTransport {
                             }
                             
                             // Check for system messages with SDK control subtypes
-                            if msg_type == "system" {
-                                if let Some(subtype) = json.get("subtype").and_then(|v| v.as_str()) {
-                                    if subtype.starts_with("sdk_control:") {
+                            if msg_type == "system"
+                                && let Some(subtype) = json.get("subtype").and_then(|v| v.as_str())
+                                    && subtype.starts_with("sdk_control:") {
                                         // This is an SDK control message
                                         debug!("Received SDK control message: {}", subtype);
                                         let _ = sdk_control_tx_clone.send(json.clone()).await;
                                         // Still parse as regular message for now
                                     }
-                                }
-                            }
                         }
 
                         // Try to parse as a regular message
@@ -518,7 +610,7 @@ impl SubprocessTransport {
                     // If debug_stderr is set, write to it
                     if let Some(ref debug_output) = debug_stderr {
                         let mut output = debug_output.lock().await;
-                        let _ = writeln!(output, "{}", line);
+                        let _ = writeln!(output, "{line}");
                         let _ = output.flush();
                     }
                     
@@ -578,6 +670,11 @@ impl Transport for SubprocessTransport {
     async fn connect(&mut self) -> Result<()> {
         if self.state == TransportState::Connected {
             return Ok(());
+        }
+
+        // Check CLI version before connecting
+        if let Err(e) = self.check_cli_version().await {
+            warn!("CLI version check failed: {}", e);
         }
 
         self.spawn_process().await?;
@@ -842,5 +939,50 @@ mod tests {
 
         assert!(!transport.is_connected());
         assert_eq!(transport.state, TransportState::Disconnected);
+    }
+
+    #[test]
+    fn test_semver_parse() {
+        // Test basic version parsing
+        let v = SemVer::parse("2.0.0").unwrap();
+        assert_eq!(v.major, 2);
+        assert_eq!(v.minor, 0);
+        assert_eq!(v.patch, 0);
+
+        // Test with 'v' prefix
+        let v = SemVer::parse("v2.1.3").unwrap();
+        assert_eq!(v.major, 2);
+        assert_eq!(v.minor, 1);
+        assert_eq!(v.patch, 3);
+
+        // Test npm-style version
+        let v = SemVer::parse("@anthropic-ai/claude-code/2.5.1").unwrap();
+        assert_eq!(v.major, 2);
+        assert_eq!(v.minor, 5);
+        assert_eq!(v.patch, 1);
+
+        // Test version without patch
+        let v = SemVer::parse("2.1").unwrap();
+        assert_eq!(v.major, 2);
+        assert_eq!(v.minor, 1);
+        assert_eq!(v.patch, 0);
+    }
+
+    #[test]
+    fn test_semver_compare() {
+        let v1 = SemVer::new(2, 0, 0);
+        let v2 = SemVer::new(2, 0, 1);
+        let v3 = SemVer::new(2, 1, 0);
+        let v4 = SemVer::new(3, 0, 0);
+
+        assert!(v1 < v2);
+        assert!(v2 < v3);
+        assert!(v3 < v4);
+        assert!(v1 < v4);
+
+        let min_version = SemVer::new(2, 0, 0);
+        assert!(SemVer::new(1, 9, 9) < min_version);
+        assert!(SemVer::new(2, 0, 0) >= min_version);
+        assert!(SemVer::new(2, 1, 0) >= min_version);
     }
 }

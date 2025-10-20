@@ -48,7 +48,7 @@ async fn test_oneshot_mode() {
 
     // Simulate response
     let response = mock_query(prompt.trim()).await;
-    println!("\nResponse: {}", response);
+    println!("\nResponse: {response}");
 }
 
 async fn test_batch_mode() {
@@ -79,7 +79,7 @@ async fn test_batch_mode() {
     for (i, prompt) in prompts.iter().enumerate() {
         let response = mock_query(prompt).await;
         println!("\nQuery {}: {}", i + 1, prompt);
-        println!("Response: {}", response);
+        println!("Response: {response}");
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
     }
 
@@ -105,13 +105,13 @@ async fn test_interactive_mode() {
             break;
         }
 
-        context.push(format!("User: {}", input));
+        context.push(format!("User: {input}"));
 
         // Simulate contextual response
         let response = mock_contextual_response(input, &context).await;
-        println!("Assistant: {}", response);
+        println!("Assistant: {response}");
 
-        context.push(format!("Assistant: {}", response));
+        context.push(format!("Assistant: {response}"));
     }
 }
 
@@ -131,7 +131,7 @@ async fn test_performance() {
         }
     };
 
-    println!("\nRunning {} queries...", count);
+    println!("\nRunning {count} queries...");
     let start = std::time::Instant::now();
 
     let mut total_time = std::time::Duration::ZERO;
@@ -140,7 +140,7 @@ async fn test_performance() {
 
     for i in 1..=count {
         let query_start = std::time::Instant::now();
-        let _ = mock_query(&format!("Query {}", i)).await;
+        let _ = mock_query(&format!("Query {i}")).await;
         let query_time = query_start.elapsed();
 
         total_time += query_time;
@@ -157,11 +157,11 @@ async fn test_performance() {
     let avg_time = total_time / count as u32;
 
     println!("\n\nPerformance Results:");
-    println!("Total queries: {}", count);
-    println!("Total time: {:?}", total_elapsed);
-    println!("Average time per query: {:?}", avg_time);
-    println!("Min query time: {:?}", min_time);
-    println!("Max query time: {:?}", max_time);
+    println!("Total queries: {count}");
+    println!("Total time: {total_elapsed:?}");
+    println!("Average time per query: {avg_time:?}");
+    println!("Min query time: {min_time:?}");
+    println!("Max query time: {max_time:?}");
     println!(
         "Queries per second: {:.2}",
         count as f64 / total_elapsed.as_secs_f64()
@@ -189,17 +189,16 @@ async fn mock_query(prompt: &str) -> String {
                 "Please provide a number to square.".to_string()
             }
         }
-        _ => format!("Mock response to: {}", prompt),
+        _ => format!("Mock response to: {prompt}"),
     }
 }
 
 async fn mock_contextual_response(prompt: &str, context: &[String]) -> String {
     // Simulate contextual understanding
-    if context.len() > 2 {
-        if prompt.contains("what") && prompt.contains("said") {
+    if context.len() > 2
+        && prompt.contains("what") && prompt.contains("said") {
             return "Based on our conversation, we discussed various topics.".to_string();
         }
-    }
 
     mock_query(prompt).await
 }

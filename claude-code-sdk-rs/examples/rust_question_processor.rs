@@ -19,7 +19,7 @@ async fn process_single_question(question: &str, target_dir: &str) -> Result<()>
         "Starting Rust development procedure at {}",
         start_time.format("%Y-%m-%d %H:%M:%S UTC")
     );
-    println!("User question: {}", question);
+    println!("User question: {question}");
     println!("================================================");
 
     let current_dir = std::env::current_dir().expect("Failed to get current directory");
@@ -154,7 +154,7 @@ async fn process_question_set(question_set_file: &Path, start_from: Option<u32>)
 
     let content =
         fs::read_to_string(question_set_file).map_err(|e| cc_sdk::SdkError::InvalidState {
-            message: format!("Failed to read question set file: {}", e),
+            message: format!("Failed to read question set file: {e}"),
         })?;
 
     // Extract question set number from filename
@@ -172,9 +172,9 @@ async fn process_question_set(question_set_file: &Path, start_from: Option<u32>)
         })?;
 
     println!("Processing question set: {}", question_set_file.display());
-    println!("Question set number: {}", qs_number);
+    println!("Question set number: {qs_number}");
     if let Some(start) = start_from {
-        println!("Starting from question: {}", start);
+        println!("Starting from question: {start}");
     }
     println!("================================================");
 
@@ -192,18 +192,17 @@ async fn process_question_set(question_set_file: &Path, start_from: Option<u32>)
         if let Some(captures) = question_regex.captures(line) {
             let question_num: u32 = captures[1].parse().unwrap_or(0);
 
-            if let Some(start) = start_from {
-                if question_num < start {
+            if let Some(start) = start_from
+                && question_num < start {
                     continue;
                 }
-            }
 
             let question_text = &captures[2];
-            let formatted_question_num = format!("{:05}", question_num);
-            let target_dir = format!("q{}{}", qs_number, formatted_question_num);
+            let formatted_question_num = format!("{question_num:05}");
+            let target_dir = format!("q{qs_number}{formatted_question_num}");
 
-            println!("Processing question {}: {}", question_num, question_text);
-            println!("Target directory: {}", target_dir);
+            println!("Processing question {question_num}: {question_text}");
+            println!("Target directory: {target_dir}");
             println!("----------------------------------------");
 
             let question_start = Instant::now();
@@ -220,8 +219,7 @@ async fn process_question_set(question_set_file: &Path, start_from: Option<u32>)
                 }
                 Err(e) => {
                     println!(
-                        "ERROR: Failed to process question {}: {:?}",
-                        question_num, e
+                        "ERROR: Failed to process question {question_num}: {e:?}"
                     );
                     // Continue with next question instead of stopping
                 }
@@ -233,7 +231,7 @@ async fn process_question_set(question_set_file: &Path, start_from: Option<u32>)
     let total_duration = set_start_time.elapsed();
     println!("================================================");
     println!("SUMMARY for {}:", question_set_file.display());
-    println!("Successfully processed: {} questions", processed_count);
+    println!("Successfully processed: {processed_count} questions");
     println!(
         "Total processing time: {} seconds ({} minutes)",
         total_duration.as_secs(),
@@ -256,7 +254,7 @@ fn print_response(messages: &[cc_sdk::Message]) {
             }
             cc_sdk::Message::System { subtype, .. } => {
                 if subtype != "thinking" {
-                    println!("[System: {}]", subtype);
+                    println!("[System: {subtype}]");
                 }
             }
             _ => {}
@@ -273,7 +271,7 @@ async fn main() -> Result<()> {
     let target_dir = "fibonacci_memo";
 
     if let Err(e) = process_single_question(question, target_dir).await {
-        eprintln!("Failed to process question: {:?}", e);
+        eprintln!("Failed to process question: {e:?}");
     }
 
     println!("\n\n");
@@ -284,7 +282,7 @@ async fn main() -> Result<()> {
     let question_set_path = PathBuf::from("qs/qs00001.txt");
     if question_set_path.exists() {
         if let Err(e) = process_question_set(&question_set_path, None).await {
-            eprintln!("Failed to process question set: {:?}", e);
+            eprintln!("Failed to process question set: {e:?}");
         }
     } else {
         println!("Question set file not found. Create qs/qs00001.txt with questions like:");

@@ -95,7 +95,7 @@ async fn test_connection_pooling(options: ClaudeCodeOptions) -> TestResult {
 
     for i in 0..5 {
         let query_start = Instant::now();
-        match client.query(format!("What is {} + {}?", i, i)).await {
+        match client.query(format!("What is {i} + {i}?")).await {
             Ok(_) => {
                 let query_duration = query_start.elapsed();
                 durations.push(query_duration);
@@ -150,8 +150,7 @@ async fn test_concurrent_throughput(options: ClaudeCodeOptions) -> TestResult {
     let client =
         Arc::new(OptimizedClient::new(options, ClientMode::Batch { max_concurrent: 5 }).unwrap());
 
-    let queries = vec![
-        "What is 1 + 1?",
+    let queries = ["What is 1 + 1?",
         "What is 2 + 2?",
         "What is 3 + 3?",
         "What is 4 + 4?",
@@ -160,8 +159,7 @@ async fn test_concurrent_throughput(options: ClaudeCodeOptions) -> TestResult {
         "What is 7 + 7?",
         "What is 8 + 8?",
         "What is 9 + 9?",
-        "What is 10 + 10?",
-    ];
+        "What is 10 + 10?"];
 
     let start = Instant::now();
     let results = client
@@ -202,12 +200,12 @@ async fn test_interactive_latency(options: ClaudeCodeOptions) -> TestResult {
             for i in 0..3 {
                 let msg_start = Instant::now();
 
-                if let Err(e) = client.send_interactive(format!("Message {}", i)).await {
+                if let Err(e) = client.send_interactive(format!("Message {i}")).await {
                     return TestResult {
                         name: "Interactive Session".to_string(),
                         duration: start.elapsed(),
                         success: false,
-                        error: Some(format!("Send failed: {}", e)),
+                        error: Some(format!("Send failed: {e}")),
                     };
                 }
 
@@ -222,7 +220,7 @@ async fn test_interactive_latency(options: ClaudeCodeOptions) -> TestResult {
                             name: "Interactive Session".to_string(),
                             duration: start.elapsed(),
                             success: false,
-                            error: Some(format!("Receive failed: {}", e)),
+                            error: Some(format!("Receive failed: {e}")),
                         };
                     }
                 }
@@ -246,7 +244,7 @@ async fn test_interactive_latency(options: ClaudeCodeOptions) -> TestResult {
             name: "Interactive Session".to_string(),
             duration: start.elapsed(),
             success: false,
-            error: Some(format!("Session start failed: {}", e)),
+            error: Some(format!("Session start failed: {e}")),
         },
     }
 }
@@ -260,7 +258,7 @@ async fn test_large_batch(options: ClaudeCodeOptions) -> TestResult {
 
     // Generate 20 queries
     let queries: Vec<String> = (1..=20)
-        .map(|i| format!("What is {} squared?", i))
+        .map(|i| format!("What is {i} squared?"))
         .collect();
 
     info!(
@@ -274,7 +272,7 @@ async fn test_large_batch(options: ClaudeCodeOptions) -> TestResult {
             let duration = start.elapsed();
 
             // Update metrics
-            for (_i, result) in results.iter().enumerate() {
+            for result in results.iter() {
                 match result {
                     Ok(_) => {
                         let latency = (duration.as_millis() / results.len() as u128) as u64;

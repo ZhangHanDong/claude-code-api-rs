@@ -43,7 +43,7 @@ async fn main() -> Result<()> {
             let a = args["a"].as_f64().ok_or_else(|| cc_sdk::SdkError::invalid_state("Invalid number"))?;
             let b = args["b"].as_f64().ok_or_else(|| cc_sdk::SdkError::invalid_state("Invalid number"))?;
             let result = a + b;
-            Ok(format!("{} + {} = {}", a, b, result))
+            Ok(format!("{a} + {b} = {result}"))
         },
     );
 
@@ -70,7 +70,7 @@ async fn main() -> Result<()> {
             let a = args["a"].as_f64().ok_or_else(|| cc_sdk::SdkError::invalid_state("Invalid number"))?;
             let b = args["b"].as_f64().ok_or_else(|| cc_sdk::SdkError::invalid_state("Invalid number"))?;
             let result = a - b;
-            Ok(format!("{} - {} = {}", a, b, result))
+            Ok(format!("{a} - {b} = {result}"))
         },
     );
 
@@ -97,7 +97,7 @@ async fn main() -> Result<()> {
             let a = args["a"].as_f64().ok_or_else(|| cc_sdk::SdkError::invalid_state("Invalid number"))?;
             let b = args["b"].as_f64().ok_or_else(|| cc_sdk::SdkError::invalid_state("Invalid number"))?;
             let result = a * b;
-            Ok(format!("{} × {} = {}", a, b, result))
+            Ok(format!("{a} × {b} = {result}"))
         },
     );
 
@@ -127,7 +127,7 @@ async fn main() -> Result<()> {
                 return Err(cc_sdk::SdkError::invalid_state("Division by zero is not allowed"));
             }
             let result = a / b;
-            Ok(format!("{} ÷ {} = {}", a, b, result))
+            Ok(format!("{a} ÷ {b} = {result}"))
         },
     );
 
@@ -170,7 +170,7 @@ async fn main() -> Result<()> {
 
     for prompt in prompts {
         println!("\n{}", "=".repeat(50));
-        println!("Prompt: {}", prompt);
+        println!("Prompt: {prompt}");
         println!("{}", "=".repeat(50));
 
         // Send message and receive response
@@ -195,7 +195,7 @@ async fn main() -> Result<()> {
                 }
                 Message::Result { total_cost_usd, .. } => {
                     if let Some(cost) = total_cost_usd {
-                        println!("Cost: ${:.6}", cost);
+                        println!("Cost: ${cost:.6}");
                     }
                 }
                 _ => {}

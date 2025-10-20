@@ -32,7 +32,7 @@ async fn main() -> Result<()> {
         match result {
             Ok(message) => {
                 message_count += 1;
-                println!("Message {}: {:?}", message_count, message);
+                println!("Message {message_count}: {message:?}");
 
                 // Check if it's a result message
                 if matches!(message, cc_sdk::Message::Result { .. }) {
@@ -41,7 +41,7 @@ async fn main() -> Result<()> {
                 }
             }
             Err(e) => {
-                eprintln!("Error receiving message: {}", e);
+                eprintln!("Error receiving message: {e}");
                 break;
             }
         }

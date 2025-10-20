@@ -217,7 +217,7 @@ async fn batch_handler(
         Ok(results) => {
             let mut responses = Vec::new();
 
-            for (prompt, result) in request.prompts.iter().zip(results.iter()) {
+            for (_prompt, result) in request.prompts.iter().zip(results.iter()) {
                 match result {
                     Ok(messages) => {
                         let response_text = extract_response_text(messages.clone());

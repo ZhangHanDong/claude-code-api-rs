@@ -86,7 +86,7 @@ async fn test_traditional_interactive(options: ClaudeCodeOptions) -> Result<()> 
                 println!();
             }
             Err(e) => {
-                println!("Error: {}", e);
+                println!("Error: {e}");
             }
         }
     }
@@ -155,12 +155,12 @@ async fn test_optimized_interactive(options: ClaudeCodeOptions) -> Result<()> {
                         println!();
                     }
                     Err(e) => {
-                        println!("Error receiving: {}", e);
+                        println!("Error receiving: {e}");
                     }
                 }
             }
             Err(e) => {
-                println!("Error sending: {}", e);
+                println!("Error sending: {e}");
             }
         }
     }
@@ -185,10 +185,10 @@ async fn handle_command(client: &OptimizedClient, command: &str) {
         "/clear" => {
             println!("Clearing conversation...");
             if let Err(e) = client.end_interactive_session().await {
-                println!("Error ending session: {}", e);
+                println!("Error ending session: {e}");
             }
             if let Err(e) = client.start_interactive_session().await {
-                println!("Error starting new session: {}", e);
+                println!("Error starting new session: {e}");
             } else {
                 println!("New session started!");
             }

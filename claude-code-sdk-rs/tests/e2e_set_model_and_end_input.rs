@@ -10,11 +10,40 @@ async fn e2e_set_model_sends_control_request() {
     let mut q = Query::new(transport.clone(), true, None, None, std::collections::HashMap::new());
     q.start().await.unwrap();
 
-    // Call set_model and assert an outbound control_request seen
-    q.set_model(Some("sonnet".to_string())).await.unwrap();
+    // Spawn a task to mock the CLI response
+    let sdk_control_tx = handle.sdk_control_tx.clone();
+    let responder = tokio::spawn(async move {
+        // Wait for the outbound control request
+        let req = handle.outbound_control_request_rx.recv().await.unwrap();
 
-    // The first outbound control request should be our set_model
-    let req = handle.outbound_control_request_rx.recv().await.unwrap();
+        // Extract request_id and send back a success response
+        let request_id = req.get("request_id")
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown")
+            .to_string();
+
+        let response = serde_json::json!({
+            "type": "control_response",
+            "response": {
+                "request_id": request_id,
+                "subtype": "success",
+                "response": {}
+            }
+        });
+
+        sdk_control_tx.send(response).await.unwrap();
+        req
+    });
+
+    // Call set_model - it will now receive the mocked response
+    let set_model = q.set_model(Some("sonnet".to_string()));
+
+    // Wait for both the responder and set_model to complete
+    let (req, result) = tokio::join!(responder, set_model);
+    let req = req.unwrap();
+    result.unwrap();
+
+    // Assert the outbound control request was correct
     assert_eq!(req.get("type").and_then(|v| v.as_str()), Some("control_request"));
     assert_eq!(
         req.get("request").and_then(|r| r.get("type")).and_then(|v| v.as_str()),

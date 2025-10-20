@@ -64,7 +64,6 @@ pub use model_recommendation::ModelRecommendation;
 pub use optimized_client::{ClientMode, OptimizedClient};
 pub use perf_utils::{MessageBatcher, PerformanceMetrics, RetryConfig};
 pub use token_tracker::{BudgetLimit, BudgetManager, BudgetStatus, TokenUsageTracker};
-
 /// Default interactive client - the recommended client for interactive use
 pub type ClaudeSDKClientDefault = InteractiveClient;
 pub use types::{
@@ -72,10 +71,19 @@ pub use types::{
     ControlProtocolFormat, ControlRequest, ControlResponse, McpServerConfig, Message,
     PermissionMode, ResultMessage, SystemMessage, TextContent, ThinkingContent,
     ToolResultContent, ToolUseContent, UserContent, UserMessage,
-    // New permission and hook types
+    // Permission types
     PermissionBehavior, PermissionResult, PermissionResultAllow, PermissionResultDeny,
     PermissionRuleValue, PermissionUpdate, PermissionUpdateDestination, PermissionUpdateType,
-    ToolPermissionContext, CanUseTool, HookCallback, HookContext, HookMatcher,
+    ToolPermissionContext, CanUseTool,
+    // Hook types (v0.3.0 - strongly-typed hooks)
+    HookCallback, HookContext, HookMatcher,
+    // Hook Input types (strongly-typed)
+    BaseHookInput, HookInput, PreToolUseHookInput, PostToolUseHookInput,
+    UserPromptSubmitHookInput, StopHookInput, SubagentStopHookInput, PreCompactHookInput,
+    // Hook Output types (strongly-typed)
+    HookJSONOutput, AsyncHookJSONOutput, SyncHookJSONOutput,
+    HookSpecificOutput, PreToolUseHookSpecificOutput, PostToolUseHookSpecificOutput,
+    UserPromptSubmitHookSpecificOutput, SessionStartHookSpecificOutput,
     // SDK Control Protocol types
     SDKControlInitializeRequest, SDKControlInterruptRequest, SDKControlMcpMessageRequest,
     SDKControlPermissionRequest, SDKControlRequest, SDKControlSetPermissionModeRequest,
@@ -92,6 +100,9 @@ pub type ClaudeAgentOptionsBuilder = ClaudeCodeOptionsBuilder;
 
 // Re-export builder
 pub use types::ClaudeCodeOptionsBuilder;
+
+// Re-export transport types for convenience
+pub use transport::SubprocessTransport;
 
 // Re-export SDK MCP types
 pub use sdk_mcp::{

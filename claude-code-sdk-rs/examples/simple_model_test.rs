@@ -33,7 +33,7 @@ async fn main() -> Result<()> {
                 println!("✅ Plan mode with 'sonnet' works!\n");
             }
         }
-        Err(e) => println!("❌ Error: {:?}\n", e),
+        Err(e) => println!("❌ Error: {e:?}\n"),
     }
     
     // Test 2: Use full model name
@@ -55,7 +55,7 @@ async fn main() -> Result<()> {
                             } else {
                                 text.text.clone()
                             };
-                            println!("Response: {}", preview);
+                            println!("Response: {preview}");
                             success = true;
                         }
                     }
@@ -65,7 +65,7 @@ async fn main() -> Result<()> {
                 println!("✅ Full Opus 4.1 name works!\n");
             }
         }
-        Err(e) => println!("❌ Error: {:?}\n", e),
+        Err(e) => println!("❌ Error: {e:?}\n"),
     }
     
     // Test 3: Working model names summary

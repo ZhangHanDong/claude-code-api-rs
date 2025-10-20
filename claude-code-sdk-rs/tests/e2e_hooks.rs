@@ -1,5 +1,6 @@
 use cc_sdk::{
-    Query, HookCallback, HookContext, Result,
+    Query, HookCallback, HookContext, HookInput, HookJSONOutput,
+    SyncHookJSONOutput, Result, SdkError,
     transport::mock::MockTransport,
 };
 use async_trait::async_trait;
@@ -12,11 +13,18 @@ struct EchoHook;
 impl HookCallback for EchoHook {
     async fn execute(
         &self,
-        input: &serde_json::Value,
+        input: &HookInput,
         _tool_use_id: Option<&str>,
         _context: &HookContext,
-    ) -> serde_json::Value {
-        serde_json::json!({"echo": input})
+    ) -> std::result::Result<HookJSONOutput, SdkError> {
+        // Echo the input back as additional context
+        let input_json = serde_json::to_value(input)
+            .unwrap_or_else(|_| serde_json::json!({}));
+
+        Ok(HookJSONOutput::Sync(SyncHookJSONOutput {
+            reason: Some(format!("Echoed input: {input_json}")),
+            ..Default::default()
+        }))
     }
 }
 
@@ -32,13 +40,21 @@ async fn e2e_hook_callback_success() -> Result<()> {
     q.register_hook_callback_for_test("cb_test_1".to_string(), Arc::new(EchoHook)).await;
 
     // Send hook_callback control message from CLI -> SDK
+    // Must use strongly-typed format with hook_event_name
     let req = serde_json::json!({
         "type": "control_request",
         "request_id": "req_hook_1",
         "request": {
             "subtype": "hook_callback",
             "callbackId": "cb_test_1",
-            "input": {"a": 1},
+            "input": {
+                "hook_event_name": "PreToolUse",
+                "session_id": "test-session",
+                "transcript_path": "/tmp/transcript",
+                "cwd": "/test/dir",
+                "tool_name": "TestTool",
+                "tool_input": {"command": "test"}
+            },
             "toolUseId": "tu1"
         }
     });
@@ -50,7 +66,12 @@ async fn e2e_hook_callback_success() -> Result<()> {
     let resp = &outer["response"];
     assert_eq!(resp["subtype"], "success");
     assert_eq!(resp["request_id"], "req_hook_1");
-    assert_eq!(resp["response"]["echo"]["a"], 1);
+
+    // Verify the hook returned a reason with the echoed input
+    let response = &resp["response"];
+    assert!(response.get("reason").is_some());
+    let reason = response["reason"].as_str().unwrap();
+    assert!(reason.contains("Echoed input"));
 
     Ok(())
 }

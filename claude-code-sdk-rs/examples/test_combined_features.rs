@@ -25,7 +25,7 @@ async fn main() -> Result<()> {
 
     // Check if settings file exists
     if !settings_path.exists() {
-        println!("Warning: Settings file not found at: {}", settings_str);
+        println!("Warning: Settings file not found at: {settings_str}");
         println!("Creating example will continue without settings file.\n");
     }
 
@@ -115,9 +115,9 @@ async fn main() -> Result<()> {
             } => {
                 println!("\n---");
                 println!("Session completed");
-                println!("Duration: {}ms", duration_ms);
+                println!("Duration: {duration_ms}ms");
                 if let Some(cost) = total_cost_usd {
-                    println!("Cost: ${:.6}", cost);
+                    println!("Cost: ${cost:.6}");
                 }
             }
             _ => {}

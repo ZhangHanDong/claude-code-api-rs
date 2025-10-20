@@ -134,7 +134,6 @@ impl Default for ModelRecommendation {
 }
 
 /// Quick helper functions for common use cases
-
 /// Get the cheapest/fastest model (Haiku)
 pub fn cheapest_model() -> &'static str {
     "claude-3-5-haiku-20241022"

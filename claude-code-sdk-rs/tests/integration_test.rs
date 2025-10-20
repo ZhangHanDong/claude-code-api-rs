@@ -3,6 +3,7 @@
 use cc_sdk::{ClaudeCodeOptions, PermissionMode};
 
 #[test]
+#[allow(deprecated)]
 fn test_options_builder() {
     let options = ClaudeCodeOptions::builder()
         .system_prompt("Test prompt")

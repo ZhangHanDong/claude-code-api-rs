@@ -29,7 +29,7 @@ fn benchmark_command_line(queries: &[&str]) -> BenchmarkResult {
         let query_start = Instant::now();
 
         let output = Command::new("claude")
-            .args(&[
+            .args([
                 "-p",
                 "--max-turns",
                 "5",
@@ -52,7 +52,7 @@ fn benchmark_command_line(queries: &[&str]) -> BenchmarkResult {
                 }
             }
             Err(e) => {
-                println!("    ✗ Error: {}", e);
+                println!("    ✗ Error: {e}");
             }
         }
 
@@ -107,7 +107,7 @@ async fn benchmark_sdk(queries: &[&str]) -> Result<BenchmarkResult> {
                 );
             }
             Err(e) => {
-                println!("    ✗ Error: {:?}", e);
+                println!("    ✗ Error: {e:?}");
             }
         }
 
@@ -160,7 +160,7 @@ fn print_comparison(cmd_result: &BenchmarkResult, sdk_result: &BenchmarkResult) 
         * 100.0;
 
     println!("\n🎯 Performance Improvement:");
-    println!("  SDK is {:.1}% faster than command line", improvement);
+    println!("  SDK is {improvement:.1}% faster than command line");
     println!(
         "  Time saved: {:.2}s",
         (cmd_result.total_duration - sdk_result.total_duration).as_secs_f64()
@@ -171,7 +171,7 @@ fn print_comparison(cmd_result: &BenchmarkResult, sdk_result: &BenchmarkResult) 
         - sdk_result.per_query_avg.as_secs_f64())
         / cmd_result.per_query_avg.as_secs_f64()
         * 100.0;
-    println!("  Per-query improvement: {:.1}%", per_query_improvement);
+    println!("  Per-query improvement: {per_query_improvement:.1}%");
 
     println!("\n📈 Extrapolated Performance:");
     println!("  For 100 queries:");

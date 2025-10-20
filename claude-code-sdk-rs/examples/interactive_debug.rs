@@ -46,7 +46,7 @@ async fn main() -> Result<()> {
     let timeout = tokio::time::timeout(std::time::Duration::from_secs(10), async {
         while let Some(msg) = messages.next().await {
             message_count += 1;
-            println!("Received message #{}", message_count);
+            println!("Received message #{message_count}");
 
             match msg {
                 Ok(message) => {
@@ -57,20 +57,17 @@ async fn main() -> Result<()> {
                             got_response = true;
                             print!("Claude: ");
                             for block in &message.content {
-                                match block {
-                                    cc_sdk::ContentBlock::Text(text) => {
-                                        print!("{}", text.text);
-                                    }
-                                    _ => {}
+                                if let cc_sdk::ContentBlock::Text(text) = block {
+                                    print!("{}", text.text);
                                 }
                             }
                             println!();
                         }
                         Message::System { subtype, .. } => {
-                            println!("[System: {}]", subtype);
+                            println!("[System: {subtype}]");
                         }
                         Message::Result { duration_ms, .. } => {
-                            println!("[Response time: {}ms]", duration_ms);
+                            println!("[Response time: {duration_ms}ms]");
                             return Ok(());
                         }
                         _ => {
@@ -79,7 +76,7 @@ async fn main() -> Result<()> {
                     }
                 }
                 Err(e) => {
-                    println!("Error receiving message: {}", e);
+                    println!("Error receiving message: {e}");
                     return Err(e);
                 }
             }
@@ -97,7 +94,7 @@ async fn main() -> Result<()> {
             }
         }
         Ok(Err(e)) => {
-            println!("\nError during initial test: {}", e);
+            println!("\nError during initial test: {e}");
             println!("Continuing anyway...\n");
         }
         Err(_) => {
@@ -130,7 +127,7 @@ async fn main() -> Result<()> {
         }
 
         // Send message
-        println!("[Debug] Sending: {}", input);
+        println!("[Debug] Sending: {input}");
         client.send_request(input.to_string(), None).await?;
         println!("[Debug] Message sent");
 
@@ -149,16 +146,13 @@ async fn main() -> Result<()> {
                     }
 
                     for block in &message.content {
-                        match block {
-                            cc_sdk::ContentBlock::Text(text) => {
-                                print!("{}", text.text);
-                            }
-                            _ => {}
+                        if let cc_sdk::ContentBlock::Text(text) = block {
+                            print!("{}", text.text);
                         }
                     }
                 }
                 Message::Result { duration_ms, .. } => {
-                    println!("\n[Response time: {}ms]\n", duration_ms);
+                    println!("\n[Response time: {duration_ms}ms]\n");
                     break;
                 }
                 _ => {}

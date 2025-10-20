@@ -2,9 +2,9 @@
 
 use axum::{
     Router,
-    extract::{Path, State},
+    extract::State,
     http::{HeaderMap, StatusCode},
-    response::{IntoResponse, Json, Response},
+    response::Json,
     routing::{get, post},
 };
 use cc_sdk::{ClaudeCodeOptions, ClientMode, OptimizedClient, PermissionMode};
@@ -19,10 +19,12 @@ use uuid::Uuid;
 #[derive(Clone)]
 struct AppState {
     client: Arc<OptimizedClient>,
+    #[allow(dead_code)]
     interactive_sessions: Arc<RwLock<std::collections::HashMap<String, Vec<ChatMessage>>>>,
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct ChatCompletionRequest {
     model: String,
     messages: Vec<ChatMessage>,
@@ -204,7 +206,7 @@ async fn chat_completions(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(ErrorResponse {
                     error: ErrorDetail {
-                        message: format!("Error processing request: {}", e),
+                        message: format!("Error processing request: {e}"),
                         error_type: "server_error".to_string(),
                         param: None,
                         code: None,

@@ -83,7 +83,7 @@ async fn main() -> Result<()> {
                 }
                 Message::System { subtype, data: _ } => {
                     if subtype != "thinking" {
-                        println!("[System: {}]", subtype);
+                        println!("[System: {subtype}]");
                     }
                 }
                 Message::Result {
@@ -91,9 +91,9 @@ async fn main() -> Result<()> {
                     total_cost_usd,
                     ..
                 } => {
-                    print!("[Response time: {}ms", duration_ms);
+                    print!("[Response time: {duration_ms}ms");
                     if let Some(cost) = total_cost_usd {
-                        print!(", cost: ${:.6}", cost);
+                        print!(", cost: ${cost:.6}");
                     }
                     println!("]");
                 }

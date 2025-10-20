@@ -42,26 +42,26 @@ async fn main() -> Result<()> {
                                     println!("  🤖 Assistant: {} content blocks", message.content.len());
                                 }
                                 Message::System { subtype, .. } => {
-                                    println!("  ⚙️ System: {}", subtype);
+                                    println!("  ⚙️ System: {subtype}");
                                 }
                                 Message::Result { is_error, .. } => {
-                                    println!("  ✓ Result (error: {})", is_error);
+                                    println!("  ✓ Result (error: {is_error})");
                                     break;
                                 }
                             }
                         }
                         Err(e) => {
-                            println!("  ❌ Error receiving message: {}", e);
+                            println!("  ❌ Error receiving message: {e}");
                             break;
                         }
                     }
                 }
                 
-                println!("  Total messages received: {}", message_count);
+                println!("  Total messages received: {message_count}");
                 client.disconnect().await?;
             }
             Err(e) => {
-                println!("❌ Failed to connect: {}", e);
+                println!("❌ Failed to connect: {e}");
             }
         }
     }
@@ -79,7 +79,7 @@ async fn main() -> Result<()> {
                 
                 // Send a query
                 if let Err(e) = client.query("What is the capital of France?".to_string(), None).await {
-                    println!("❌ Failed to send query: {}", e);
+                    println!("❌ Failed to send query: {e}");
                 } else {
                     println!("✅ Query sent");
                     
@@ -95,22 +95,22 @@ async fn main() -> Result<()> {
                                 break;
                             }
                             Ok(_) => {
-                                println!("  📦 Received message #{}", message_count);
+                                println!("  📦 Received message #{message_count}");
                             }
                             Err(e) => {
-                                println!("  ❌ Error: {}", e);
+                                println!("  ❌ Error: {e}");
                                 break;
                             }
                         }
                     }
                     
-                    println!("  Total messages in response: {}", message_count);
+                    println!("  Total messages in response: {message_count}");
                 }
                 
                 client.disconnect().await?;
             }
             Err(e) => {
-                println!("❌ Failed to connect: {}", e);
+                println!("❌ Failed to connect: {e}");
             }
         }
     }
@@ -126,17 +126,15 @@ async fn main() -> Result<()> {
             Ok(_) => {
                 println!("✅ Connected successfully");
                 
-                let queries = vec![
-                    "What is 1+1?",
+                let queries = ["What is 1+1?",
                     "What is 2+2?",
-                    "What is 3+3?",
-                ];
+                    "What is 3+3?"];
                 
                 for (i, query) in queries.iter().enumerate() {
                     println!("  Query {}: {}", i + 1, query);
                     
                     if let Err(e) = client.query(query.to_string(), None).await {
-                        println!("    ❌ Failed to send: {}", e);
+                        println!("    ❌ Failed to send: {e}");
                         continue;
                     }
                     
@@ -161,7 +159,7 @@ async fn main() -> Result<()> {
                 client.disconnect().await?;
             }
             Err(e) => {
-                println!("❌ Failed to connect: {}", e);
+                println!("❌ Failed to connect: {e}");
             }
         }
     }

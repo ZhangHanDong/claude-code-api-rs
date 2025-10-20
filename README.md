@@ -381,22 +381,27 @@ tokio = { version = "1.0", features = ["full"] }
 
 ```rust
 use cc_sdk::{query, ClaudeCodeOptions, PermissionMode};
+use futures::StreamExt;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Simple query
-    let response = query("Explain quantum computing").await?;
-    println!("{}", response);
+    // Simple query (streaming messages)
+    let mut messages = query("Explain quantum computing", None).await?;
+    while let Some(msg) = messages.next().await {
+        println!("{:?}", msg?);
+    }
 
     // With options
     let options = ClaudeCodeOptions::builder()
         .model("claude-3.5-sonnet")
-        .permission_mode(PermissionMode::AcceptAll)
+        .permission_mode(PermissionMode::AcceptEdits)
         .build();
-    
-    let response = cc_sdk::query_with_options("Write a haiku", options).await?;
-    println!("{}", response);
-    
+
+    let mut messages = query("Write a haiku", Some(options)).await?;
+    while let Some(msg) = messages.next().await {
+        println!("{:?}", msg?);
+    }
+
     Ok(())
 }
 ```

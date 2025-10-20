@@ -8,7 +8,7 @@ use tokio::sync::Mutex;
 
 #[tokio::test]
 async fn e2e_initialize_control_handshake() {
-    let (transport, mut handle) = MockTransport::pair();
+    let (transport, handle) = MockTransport::pair();
     let transport = Arc::new(Mutex::new(transport));
 
     let mut q = Query::new(transport.clone(), false, None, None, HashMap::new());

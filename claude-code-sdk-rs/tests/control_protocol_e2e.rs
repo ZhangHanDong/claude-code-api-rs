@@ -1,11 +1,10 @@
 use cc_sdk::Query;
-use cc_sdk::token_tracker::BudgetManager;
 use cc_sdk::transport::Transport;
 use cc_sdk::{
-    CanUseTool, HookCallback, HookContext, HookMatcher, PermissionResult, PermissionResultAllow,
+    CanUseTool, HookMatcher, PermissionResult, PermissionResultAllow,
     ToolPermissionContext, Message,
 };
-use cc_sdk::{Result, SdkError};
+use cc_sdk::Result;
 use async_trait::async_trait;
 use futures::stream::{self, Stream};
 use serde_json::json;
@@ -118,7 +117,7 @@ async fn e2e_can_use_tool_allow() -> Result<()> {
     tx.send(request).await.unwrap();
 
     // Build transport and query
-    let mut mock = MockTransport::new(rx);
+    let mock = MockTransport::new(rx);
     let sent_responses = mock.sent_ctrl_responses.clone();
     let transport: Arc<Mutex<Box<dyn Transport + Send>>> =
         Arc::new(Mutex::new(Box::new(mock)));

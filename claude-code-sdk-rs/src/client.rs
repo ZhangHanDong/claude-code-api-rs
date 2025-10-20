@@ -135,7 +135,49 @@ impl ClaudeSDKClient {
         // Wrap transport in Arc for sharing
         let transport_arc: Arc<Mutex<Box<dyn Transport + Send>>> =
             Arc::new(Mutex::new(Box::new(transport)));
-        
+
+        Self::with_transport_internal(options, transport_arc)
+    }
+
+    /// Create a new client with a custom transport implementation
+    ///
+    /// This allows users to provide their own Transport implementation instead of
+    /// using the default SubprocessTransport. Useful for testing, custom CLI paths,
+    /// or alternative communication mechanisms.
+    ///
+    /// # Arguments
+    ///
+    /// * `options` - Configuration options for the client
+    /// * `transport` - Custom transport implementation
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// # use cc_sdk::{ClaudeSDKClient, ClaudeCodeOptions, SubprocessTransport};
+    /// # fn example() {
+    /// let options = ClaudeCodeOptions::default();
+    /// let transport = SubprocessTransport::with_cli_path(options.clone(), "/custom/path/claude-code");
+    /// let client = ClaudeSDKClient::with_transport(options, Box::new(transport));
+    /// # }
+    /// ```
+    pub fn with_transport(options: ClaudeCodeOptions, transport: Box<dyn Transport + Send>) -> Self {
+        // Set environment variable to indicate SDK usage
+        unsafe {
+            std::env::set_var("CLAUDE_CODE_ENTRYPOINT", "sdk-rust");
+        }
+
+        // Wrap transport in Arc for sharing
+        let transport_arc: Arc<Mutex<Box<dyn Transport + Send>>> =
+            Arc::new(Mutex::new(transport));
+
+        Self::with_transport_internal(options, transport_arc)
+    }
+
+    /// Internal helper to construct client with pre-wrapped transport
+    fn with_transport_internal(
+        options: ClaudeCodeOptions,
+        transport_arc: Arc<Mutex<Box<dyn Transport + Send>>>,
+    ) -> Self {
         // Create query handler if control protocol features are enabled
         let query_handler = if options.can_use_tool.is_some()
             || options.hooks.is_some()
@@ -434,17 +476,82 @@ impl ClaudeSDKClient {
                 return Some(init_result.clone());
             }
         }
-        
+
         // Otherwise check message buffer for init message
         let buffer = self.message_buffer.lock().await;
         for msg in buffer.iter() {
-            if let Message::System { subtype, data } = msg {
-                if subtype == "init" {
+            if let Message::System { subtype, data } = msg
+                && subtype == "init" {
                     return Some(data.clone());
                 }
-            }
         }
         None
+    }
+
+    /// Set permission mode dynamically
+    ///
+    /// Changes the permission mode during an active session.
+    /// Requires control protocol to be enabled (via can_use_tool, hooks, or mcp_servers).
+    ///
+    /// # Arguments
+    ///
+    /// * `mode` - Permission mode: "default", "acceptEdits", "plan", or "bypassPermissions"
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// # use cc_sdk::{ClaudeSDKClient, ClaudeCodeOptions};
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let mut client = ClaudeSDKClient::new(ClaudeCodeOptions::default());
+    /// client.connect(None).await?;
+    ///
+    /// // Switch to accept edits mode
+    /// client.set_permission_mode("acceptEdits").await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn set_permission_mode(&mut self, mode: &str) -> Result<()> {
+        if let Some(ref query_handler) = self.query_handler {
+            let mut handler = query_handler.lock().await;
+            handler.set_permission_mode(mode).await
+        } else {
+            Err(SdkError::InvalidState {
+                message: "Query handler not initialized. Control protocol features required (enable can_use_tool, hooks, or mcp_servers).".to_string(),
+            })
+        }
+    }
+
+    /// Set model dynamically
+    ///
+    /// Changes the active model during an active session.
+    /// Requires control protocol to be enabled (via can_use_tool, hooks, or mcp_servers).
+    ///
+    /// # Arguments
+    ///
+    /// * `model` - Model identifier (e.g., "claude-3-5-sonnet-20241022") or None to use default
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// # use cc_sdk::{ClaudeSDKClient, ClaudeCodeOptions};
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let mut client = ClaudeSDKClient::new(ClaudeCodeOptions::default());
+    /// client.connect(None).await?;
+    ///
+    /// // Switch to a different model
+    /// client.set_model(Some("claude-3-5-sonnet-20241022".to_string())).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn set_model(&mut self, model: Option<String>) -> Result<()> {
+        if let Some(ref query_handler) = self.query_handler {
+            let mut handler = query_handler.lock().await;
+            handler.set_model(model).await
+        } else {
+            Err(SdkError::InvalidState {
+                message: "Query handler not initialized. Control protocol features required (enable can_use_tool, hooks, or mcp_servers).".to_string(),
+            })
+        }
     }
 
     /// Send a query with optional session ID
@@ -515,8 +622,8 @@ impl ClaudeSDKClient {
                 match result {
                     Ok(message) => {
                         // Update token usage for Result messages
-                        if let Message::Result { .. } = &message {
-                            if let Message::Result { usage, total_cost_usd, .. } = &message {
+                        if let Message::Result { .. } = &message
+                            && let Message::Result { usage, total_cost_usd, .. } = &message {
                                 let (input_tokens, output_tokens) = if let Some(usage_json) = usage {
                                     let input = usage_json.get("input_tokens")
                                         .and_then(|v| v.as_u64())
@@ -531,15 +638,13 @@ impl ClaudeSDKClient {
                                 let cost = total_cost_usd.unwrap_or(0.0);
                                 budget_manager.update_usage(input_tokens, output_tokens, cost).await;
                             }
-                        }
 
                         // Buffer init messages for get_server_info()
-                        if let Message::System { subtype, .. } = &message {
-                            if subtype == "init" {
+                        if let Message::System { subtype, .. } = &message
+                            && subtype == "init" {
                                 let mut buffer = message_buffer.lock().await;
                                 buffer.push(message.clone());
                             }
-                        }
 
                         // Try to send to current receiver
                         let sent = {

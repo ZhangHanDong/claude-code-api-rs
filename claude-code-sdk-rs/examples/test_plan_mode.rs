@@ -32,7 +32,7 @@ async fn test_plan_mode_query() -> Result<()> {
                 }
             }
             Message::Result { duration_ms, .. } => {
-                println!("\nPlan generated in: {}ms", duration_ms);
+                println!("\nPlan generated in: {duration_ms}ms");
             }
             _ => {}
         }
@@ -69,17 +69,14 @@ async fn test_plan_mode_interactive() -> Result<()> {
     
     let mut plan_received = false;
     for msg in &messages {
-        match msg {
-            Message::Assistant { message } => {
-                for block in &message.content {
-                    if let cc_sdk::ContentBlock::Text(text) = block {
-                        println!("Plan output (truncated): {}", 
-                            &text.text[..text.text.len().min(200)]);
-                        plan_received = true;
-                    }
+        if let Message::Assistant { message } = msg {
+            for block in &message.content {
+                if let cc_sdk::ContentBlock::Text(text) = block {
+                    println!("Plan output (truncated): {}", 
+                        &text.text[..text.text.len().min(200)]);
+                    plan_received = true;
                 }
             }
-            _ => {}
         }
     }
     
@@ -90,16 +87,13 @@ async fn test_plan_mode_interactive() -> Result<()> {
         ).await?;
         
         for msg in &messages {
-            match msg {
-                Message::Assistant { message } => {
-                    for block in &message.content {
-                        if let cc_sdk::ContentBlock::Text(text) = block {
-                            println!("Follow-up plan (truncated): {}", 
-                                &text.text[..text.text.len().min(200)]);
-                        }
+            if let Message::Assistant { message } = msg {
+                for block in &message.content {
+                    if let cc_sdk::ContentBlock::Text(text) = block {
+                        println!("Follow-up plan (truncated): {}", 
+                            &text.text[..text.text.len().min(200)]);
                     }
                 }
-                _ => {}
             }
         }
         
@@ -122,7 +116,7 @@ async fn compare_permission_modes() -> Result<()> {
     ];
     
     for (mode, name) in modes {
-        println!("\nTesting {} mode:", name);
+        println!("\nTesting {name} mode:");
         
         let options = ClaudeCodeOptions::builder()
             .model("sonnet")  // Use latest Sonnet
@@ -139,13 +133,13 @@ async fn compare_permission_modes() -> Result<()> {
                     }
                 }
                 if success {
-                    println!("✅ {} mode is supported", name);
+                    println!("✅ {name} mode is supported");
                 } else {
-                    println!("⚠️ {} mode - no response", name);
+                    println!("⚠️ {name} mode - no response");
                 }
             }
             Err(e) => {
-                println!("❌ {} mode error: {:?}", name, e);
+                println!("❌ {name} mode error: {e:?}");
             }
         }
     }
@@ -192,9 +186,9 @@ async fn test_plan_with_thinking_tokens() -> Result<()> {
                 }
             }
             Message::Result { duration_ms, total_cost_usd, .. } => {
-                println!("\nPlan generated in: {}ms", duration_ms);
+                println!("\nPlan generated in: {duration_ms}ms");
                 if let Some(cost) = total_cost_usd {
-                    println!("Cost: ${:.6}", cost);
+                    println!("Cost: ${cost:.6}");
                 }
             }
             _ => {}
@@ -220,19 +214,19 @@ async fn main() {
     
     // Test Plan mode in different contexts
     if let Err(e) = test_plan_mode_query().await {
-        println!("Plan mode query test error: {:?}", e);
+        println!("Plan mode query test error: {e:?}");
     }
     
     if let Err(e) = test_plan_mode_interactive().await {
-        println!("Plan mode interactive test error: {:?}", e);
+        println!("Plan mode interactive test error: {e:?}");
     }
     
     if let Err(e) = compare_permission_modes().await {
-        println!("Permission modes comparison error: {:?}", e);
+        println!("Permission modes comparison error: {e:?}");
     }
     
     if let Err(e) = test_plan_with_thinking_tokens().await {
-        println!("Plan with thinking test error: {:?}", e);
+        println!("Plan with thinking test error: {e:?}");
     }
     
     println!("\n=== All Plan mode tests completed ===");

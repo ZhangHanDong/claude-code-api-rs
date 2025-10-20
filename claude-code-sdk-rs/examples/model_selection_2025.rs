@@ -9,7 +9,7 @@ use std::env;
 
 /// Test if a model is available
 async fn test_model_availability(model: &str) -> bool {
-    println!("Testing model: {}", model);
+    println!("Testing model: {model}");
     
     let options = ClaudeCodeOptions::builder()
         .model(model)
@@ -20,15 +20,15 @@ async fn test_model_availability(model: &str) -> bool {
         Ok(mut stream) => {
             while let Some(result) = stream.next().await {
                 if let Ok(Message::Assistant { .. }) = result {
-                    println!("  ✓ {} is available", model);
+                    println!("  ✓ {model} is available");
                     return true;
                 }
             }
-            println!("  ✗ {} - no response", model);
+            println!("  ✗ {model} - no response");
             false
         }
         Err(e) => {
-            println!("  ✗ {} - error: {:?}", model, e);
+            println!("  ✗ {model} - error: {e:?}");
             false
         }
     }
@@ -59,9 +59,9 @@ async fn use_opus_4_1() -> Result<()> {
                 }
             }
             Message::Result { total_cost_usd, duration_ms, .. } => {
-                println!("Response time: {}ms", duration_ms);
+                println!("Response time: {duration_ms}ms");
                 if let Some(cost) = total_cost_usd {
-                    println!("Cost: ${:.6}", cost);
+                    println!("Cost: ${cost:.6}");
                 }
             }
             _ => {}
@@ -85,15 +85,12 @@ async fn use_sonnet_4() -> Result<()> {
     ).await?;
     
     while let Some(msg) = messages.next().await {
-        match msg? {
-            Message::Assistant { message } => {
-                for block in message.content {
-                    if let cc_sdk::ContentBlock::Text(text) = block {
-                        println!("Sonnet 4: {}", text.text);
-                    }
+        if let Message::Assistant { message } = msg? {
+            for block in message.content {
+                if let cc_sdk::ContentBlock::Text(text) = block {
+                    println!("Sonnet 4: {}", text.text);
                 }
             }
-            _ => {}
         }
     }
     
@@ -127,7 +124,7 @@ async fn interactive_with_model_choice() -> Result<()> {
         }
     };
     
-    println!("Using model: {}", model);
+    println!("Using model: {model}");
     
     let options = ClaudeCodeOptions::builder()
         .model(model)
@@ -142,15 +139,12 @@ async fn interactive_with_model_choice() -> Result<()> {
     ).await?;
     
     for msg in messages {
-        match msg {
-            Message::Assistant { message } => {
-                for block in message.content {
-                    if let cc_sdk::ContentBlock::Text(text) = block {
-                        println!("{}", text.text);
-                    }
+        if let Message::Assistant { message } = msg {
+            for block in message.content {
+                if let cc_sdk::ContentBlock::Text(text) = block {
+                    println!("{}", text.text);
                 }
             }
-            _ => {}
         }
     }
     
@@ -166,7 +160,7 @@ async fn with_fallback() -> Result<()> {
     let mut success = false;
     
     for model in models {
-        println!("Trying model: {}", model);
+        println!("Trying model: {model}");
         
         let options = ClaudeCodeOptions::builder()
             .model(model)
@@ -174,7 +168,7 @@ async fn with_fallback() -> Result<()> {
         
         match query("Say hello and tell me your model", Some(options)).await {
             Ok(mut stream) => {
-                println!("Success with model: {}", model);
+                println!("Success with model: {model}");
                 
                 while let Some(msg) = stream.next().await {
                     if let Ok(Message::Assistant { message }) = msg {
@@ -190,7 +184,7 @@ async fn with_fallback() -> Result<()> {
                 break;
             }
             Err(e) => {
-                println!("Failed with {}: {:?}", model, e);
+                println!("Failed with {model}: {e:?}");
                 continue;
             }
         }
@@ -226,7 +220,7 @@ async fn main() -> Result<()> {
         }
     }
     
-    println!("\nAvailable models: {:?}", available_models);
+    println!("\nAvailable models: {available_models:?}");
     
     // Get command line argument
     let args: Vec<String> = env::args().collect();

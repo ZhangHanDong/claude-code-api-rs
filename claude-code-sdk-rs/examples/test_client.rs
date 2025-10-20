@@ -41,7 +41,7 @@ async fn main() -> Result<()> {
 
         match msg {
             Ok(ref message) => {
-                println!("Received message #{}: {:?}", message_count, message);
+                println!("Received message #{message_count}: {message:?}");
 
                 // Break on result message
                 if let Message::Result { .. } = message {
@@ -49,7 +49,7 @@ async fn main() -> Result<()> {
                 }
             }
             Err(e) => {
-                println!("Error receiving message: {}", e);
+                println!("Error receiving message: {e}");
                 break;
             }
         }

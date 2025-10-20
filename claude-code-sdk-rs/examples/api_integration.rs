@@ -96,13 +96,11 @@ async fn main() -> Result<()> {
     info!("=== API Integration Example ===");
 
     // Simulate API requests
-    let requests = vec![
-        "What is the weather like today?",
+    let requests = ["What is the weather like today?",
         "Explain quantum computing in simple terms",
         "Write a Python function to calculate fibonacci numbers",
         "What are the benefits of Rust programming?",
-        "How does async/await work?",
-    ];
+        "How does async/await work?"];
 
     // Process requests concurrently
     let mut handles = Vec::new();

@@ -25,11 +25,11 @@ async fn main() -> Result<()> {
         match msg? {
             Message::Assistant { message } => {
                 for block in &message.content {
-                    println!("Assistant: {:?}", block);
+                    println!("Assistant: {block:?}");
                 }
             }
             Message::Result { duration_ms, .. } => {
-                println!("Query completed in {}ms", duration_ms);
+                println!("Query completed in {duration_ms}ms");
                 break;
             }
             _ => {}
@@ -54,20 +54,20 @@ async fn main() -> Result<()> {
         match msg? {
             Message::Assistant { message } => {
                 for block in &message.content {
-                    println!("Assistant: {:?}", block);
+                    println!("Assistant: {block:?}");
                 }
             }
             Message::System { subtype, .. } => {
-                println!("System: {}", subtype);
+                println!("System: {subtype}");
             }
             Message::Result {
                 duration_ms,
                 total_cost_usd,
                 ..
             } => {
-                println!("\nQuery completed in {}ms", duration_ms);
+                println!("\nQuery completed in {duration_ms}ms");
                 if let Some(cost) = total_cost_usd {
-                    println!("Cost: ${:.4}", cost);
+                    println!("Cost: ${cost:.4}");
                 }
                 break;
             }

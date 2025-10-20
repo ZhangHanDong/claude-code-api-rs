@@ -15,7 +15,7 @@ async fn main() -> Result<()> {
     // Choose cost-effective model based on task
     let recommender = ModelRecommendation::default();
     let model = recommender.suggest("simple").unwrap();
-    println!("📌 Using model: {} (cheapest option)", model);
+    println!("📌 Using model: {model} (cheapest option)");
 
     // Configure for minimal token usage
     let options = ClaudeCodeOptions::builder()
@@ -30,7 +30,7 @@ async fn main() -> Result<()> {
 
     // Set budget with warning callback
     println!("💰 Setting budget: $1.00 max\n");
-    let callback: BudgetWarningCallback = Arc::new(|msg: &str| eprintln!("⚠️  Budget Alert: {}", msg));
+    let callback: BudgetWarningCallback = Arc::new(|msg: &str| eprintln!("⚠️  Budget Alert: {msg}"));
     client
         .set_budget_limit(
             BudgetLimit::with_cost(1.0).with_warning_threshold(0.8),

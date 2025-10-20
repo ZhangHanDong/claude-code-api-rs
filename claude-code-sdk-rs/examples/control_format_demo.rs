@@ -22,17 +22,17 @@ async fn main() -> Result<()> {
     
     // Example 2: Use new format (for newer CLIs)
     println!("2. Using Control format:");
-    let options_new = ClaudeCodeOptions::builder()
+    let _options_new = ClaudeCodeOptions::builder()
         .system_prompt("You are a helpful assistant")
         .control_protocol_format(ControlProtocolFormat::Control)
         .build();
-    
+
     println!("   Format: Control (type=control)");
     println!("   Compatible with: Newer CLI versions only\n");
-    
+
     // Example 3: Auto-detect (future feature)
     println!("3. Using Auto format:");
-    let options_auto = ClaudeCodeOptions::builder()
+    let _options_auto = ClaudeCodeOptions::builder()
         .system_prompt("You are a helpful assistant")
         .control_protocol_format(ControlProtocolFormat::Auto)
         .build();
@@ -62,7 +62,7 @@ async fn main() -> Result<()> {
                     Ok(msg) => {
                         response_count += 1;
                         if response_count <= 3 {
-                            println!("   ✓ Received message: {:?}", msg);
+                            println!("   ✓ Received message: {msg:?}");
                         }
                         
                         // Stop after Result message
@@ -71,7 +71,7 @@ async fn main() -> Result<()> {
                         }
                     }
                     Err(e) => {
-                        println!("   ✗ Error receiving message: {}", e);
+                        println!("   ✗ Error receiving message: {e}");
                         break;
                     }
                 }
@@ -81,7 +81,7 @@ async fn main() -> Result<()> {
             println!("   ✓ Disconnected successfully");
         }
         Err(e) => {
-            println!("   ✗ Failed to connect: {}", e);
+            println!("   ✗ Failed to connect: {e}");
             println!("   Note: This might be expected if Claude CLI is not installed");
         }
     }

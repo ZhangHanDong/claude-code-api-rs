@@ -31,13 +31,13 @@ async fn main() -> Result<()> {
         message_count += 1;
         match msg {
             Ok(msg) => {
-                println!("Received message: {:?}", msg);
+                println!("Received message: {msg:?}");
                 if matches!(msg, cc_sdk::Message::Result { .. }) {
                     break;
                 }
             }
             Err(e) => {
-                eprintln!("Error: {}", e);
+                eprintln!("Error: {e}");
                 break;
             }
         }
@@ -53,7 +53,7 @@ async fn main() -> Result<()> {
     if !log.is_empty() {
         println!("\n✅ Permission callback was triggered {} times!", log.len());
         for entry in log.iter() {
-            println!("  - {}", entry);
+            println!("  - {entry}");
         }
     } else {
         println!("\n⚠️  Permission callback was not triggered");
@@ -76,7 +76,7 @@ impl cc_sdk::CanUseTool for TestPermissionCallback {
         _context: &cc_sdk::ToolPermissionContext,
     ) -> cc_sdk::PermissionResult {
         let mut log = self.log.lock().await;
-        log.push(format!("Permission check for tool: {}", tool_name));
+        log.push(format!("Permission check for tool: {tool_name}"));
         println!("🔐 Permission callback triggered for tool: {}", tool_name);
         
         // Always allow for testing

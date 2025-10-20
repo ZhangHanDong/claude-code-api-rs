@@ -20,6 +20,7 @@ use tracing::{Level, info};
 #[derive(Debug, Deserialize)]
 struct QueryRequest {
     prompt: String,
+    #[allow(dead_code)]
     mode: Option<String>,
 }
 
@@ -168,7 +169,7 @@ async fn query_handler(
                 Ok(Json(QueryResponse {
                     success: false,
                     message: None,
-                    error: Some(format!("Failed to create client: {}", e)),
+                    error: Some(format!("Failed to create client: {e}")),
                     duration_ms: start.elapsed().as_millis() as u64,
                 }))
             }
@@ -206,7 +207,7 @@ async fn batch_handler(
                     .await
                     .unwrap_or_default();
 
-                for (_i, result) in batch_results.into_iter().enumerate() {
+                for result in batch_results.into_iter() {
                     match result {
                         Ok(messages) => {
                             let response = extract_response_text(messages);
@@ -275,7 +276,7 @@ fn generate_mock_response(prompt: &str) -> String {
                 "Please provide a number to square.".to_string()
             }
         }
-        _ => format!("Mock response to: {}", prompt),
+        _ => format!("Mock response to: {prompt}"),
     }
 }
 

@@ -20,7 +20,7 @@ async fn main() -> Result<()> {
     let settings_path = current_dir.join("examples/claude-settings.json");
     let settings_str = settings_path.to_str().expect("Invalid path");
 
-    println!("Using settings file: {}", settings_str);
+    println!("Using settings file: {settings_str}");
 
     // Create options with a custom settings file
     let options = ClaudeCodeOptions::builder()
@@ -54,9 +54,9 @@ async fn main() -> Result<()> {
                 ..
             } => {
                 println!("\n---");
-                println!("Completed in {}ms", duration_ms);
+                println!("Completed in {duration_ms}ms");
                 if let Some(cost) = total_cost_usd {
-                    println!("Cost: ${:.6}", cost);
+                    println!("Cost: ${cost:.6}");
                 }
             }
             _ => {}

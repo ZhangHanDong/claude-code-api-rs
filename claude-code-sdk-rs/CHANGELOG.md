@@ -5,6 +5,225 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2025-10-21
+
+### 🎯 Major Release: Strongly-Typed Hooks & Production-Grade Quality
+
+This release introduces a complete strongly-typed hooks system, eliminating all compiler warnings, and achieving production-grade code quality through modern Rust patterns.
+
+### ⚠️ Breaking Changes
+
+#### Strongly-Typed Hook System
+- **`HookCallback` trait signature changed**:
+  ```rust
+  // Before (0.2.0)
+  async fn execute(
+      &self,
+      input: &serde_json::Value,
+      tool_use_id: Option<&str>,
+      context: &HookContext,
+  ) -> Result<serde_json::Value, SdkError>;
+
+  // After (0.3.0)
+  async fn execute(
+      &self,
+      input: &HookInput,
+      tool_use_id: Option<&str>,
+      context: &HookContext,
+  ) -> Result<HookJSONOutput, SdkError>;
+  ```
+
+- **Hook Event Names**: Must use PascalCase format (e.g., `"PreToolUse"` not `"pre_tool_use"`)
+  - CLI only recognizes PascalCase event names
+  - See `docs/HOOK_EVENT_NAMES.md` for complete reference
+
+### Added
+
+#### Strongly-Typed Hook Input Types
+- **`HookInput` enum** with discriminated variants:
+  - `PreToolUse(PreToolUseHookInput)` - Before tool execution
+  - `PostToolUse(PostToolUseHookInput)` - After tool execution
+  - `UserPromptSubmit(UserPromptSubmitHookInput)` - User prompt submission
+  - `Stop(StopHookInput)` - Session stop
+  - `SubagentStop(SubagentStopHookInput)` - Subagent stop
+  - `PreCompact(PreCompactHookInput)` - Before context compaction
+
+#### Strongly-Typed Hook Output Types
+- **`HookJSONOutput` enum**:
+  - `Sync(SyncHookJSONOutput)` - Synchronous response
+  - `Async(AsyncHookJSONOutput)` - Asynchronous response with callback ID
+
+- **Output fields** with proper Rust naming:
+  - `async_` → `"async"` (field name conversion)
+  - `continue_` → `"continue"` (field name conversion)
+  - Compile-time validation of all hook responses
+
+#### Type Safety Benefits
+- Compile-time verification of hook event types
+- Automatic serialization/deserialization with proper error handling
+- IDE autocomplete and type hints for all hook fields
+- Eliminates runtime JSON parsing errors
+
+### Changed
+
+#### Code Quality Improvements (100% Warning Elimination)
+- **Core Library**: 0 warnings (down from 26+)
+- **Test Code**: 0 warnings (down from 8)
+- **Example Code**: 0 warnings (down from ~25)
+- **Total**: 0 warnings across entire codebase ✨
+
+#### Modern Rust Patterns Adopted
+- **Let Chains (RFC 2497)**: Flattened nested if-let statements
+  ```rust
+  // Before
+  if let Some(tool_name) = data.get("tool_name") {
+      if let Some(input) = data.get("input") {
+          if let Some(callback) = callbacks.get(id) {
+              // ...
+          }
+      }
+  }
+
+  // After
+  if let Some(tool_name) = data.get("tool_name")
+      && let Some(input) = data.get("input")
+      && let Some(callback) = callbacks.get(id) {
+      // ...
+  }
+  ```
+
+- **Numeric Clamping**: Semantic `.clamp()` instead of `.min().max()`
+  ```rust
+  // Before: tokens.min(32000).max(1)
+  // After: tokens.clamp(1, 32000)
+  ```
+
+- **Inline Format Arguments**: Modern format string syntax
+  ```rust
+  // Before: format!("Error: {}", error)
+  // After: format!("Error: {error}")
+  ```
+
+- **Iterator Optimization**: O(1) `next_back()` instead of O(n) `last()`
+
+### Improved
+
+#### Documentation
+- **New**: `docs/HOOK_EVENT_NAMES.md` - Hook event name reference with correct PascalCase formats
+- **Enhanced**: All hook examples updated to use strongly-typed APIs
+- **Added**: Comprehensive type documentation with field descriptions
+- **Cleanup**: Removed 14 temporary process documents, organized all user-facing docs
+
+#### Error Messages
+- Hook input parsing errors now include detailed type information
+- Better error messages for hook event name mismatches
+- Clear distinction between format errors and logic errors
+
+#### Examples
+- **`examples/hooks_typed.rs`**: New comprehensive strongly-typed hooks example
+  - ToolUseLogger: Logs all tool usage
+  - ToolBlocker: Blocks specific tools with validation
+  - PromptEnhancer: Modifies user prompts
+- **`examples/control_protocol_demo.rs`**: Updated to use new hook types
+- All examples verified with zero warnings
+
+### Fixed
+
+- **Hook Event Names**: Corrected examples to use PascalCase (`"PreToolUse"` not `"pre_tool_use"`)
+- **Documentation Links**: Fixed all broken relative paths in documentation
+- **Test Data Format**: Updated tests to include required `hook_event_name` discriminator field
+- **Result Type**: Fixed confusion between `cc_sdk::Result<T>` and `std::result::Result<T, E>`
+
+### Technical Details
+
+#### Hook Type System Architecture
+- Uses `#[serde(tag = "hook_event_name")]` for discriminated union
+- Field name conversion with `#[serde(rename = "...")]`
+- Comprehensive test coverage with 15+ unit tests
+- End-to-end integration tests with mock transport
+
+#### Code Quality Metrics
+```
+Compilation:  0 errors,  0 warnings
+Clippy (lib): 0 warnings
+Clippy (tests): 0 warnings
+Test Suite:   45/45 passed
+Coverage:     All hook types tested
+```
+
+### Migration Guide
+
+#### Updating Hook Callbacks
+
+1. **Change trait signature**:
+   ```rust
+   use cc_sdk::{HookCallback, HookInput, HookJSONOutput, SyncHookJSONOutput};
+
+   #[async_trait]
+   impl HookCallback for MyHook {
+       async fn execute(
+           &self,
+           input: &HookInput,  // Changed from &serde_json::Value
+           tool_use_id: Option<&str>,
+           context: &HookContext,
+       ) -> Result<HookJSONOutput, SdkError> {  // Changed return type
+           match input {
+               HookInput::PreToolUse(pre_tool_use) => {
+                   // Access typed fields
+                   println!("Tool: {}", pre_tool_use.tool_name);
+
+                   Ok(HookJSONOutput::Sync(SyncHookJSONOutput {
+                       continue_: Some(true),
+                       ..Default::default()
+                   }))
+               }
+               _ => Ok(HookJSONOutput::Sync(SyncHookJSONOutput::default()))
+           }
+       }
+   }
+   ```
+
+2. **Update hook registration** to use PascalCase event names:
+   ```rust
+   // Before
+   hooks.insert("pre_tool_use".to_string(), ...);
+
+   // After
+   hooks.insert("PreToolUse".to_string(), ...);
+   ```
+
+3. **Add new imports**:
+   ```rust
+   use cc_sdk::{
+       HookInput, HookJSONOutput,
+       SyncHookJSONOutput, AsyncHookJSONOutput,
+       PreToolUseHookInput, PostToolUseHookInput,
+       // ... other hook types as needed
+   };
+   ```
+
+#### Benefits of Migration
+- ✅ Compile-time type safety
+- ✅ Better IDE support with autocomplete
+- ✅ Eliminate runtime JSON parsing errors
+- ✅ Clear documentation of available fields
+- ✅ Easier testing with concrete types
+
+### Documentation
+
+- **Hook Event Names**: `docs/HOOK_EVENT_NAMES.md`
+- **Typed Hooks Example**: `examples/hooks_typed.rs`
+- **Control Protocol**: `examples/control_protocol_demo.rs`
+- **API Documentation**: All public types fully documented
+
+### Notes
+
+- This is a **major version bump** due to breaking changes in `HookCallback` trait
+- All existing hook implementations must be updated to use typed interfaces
+- Python SDK parity maintained with strongly-typed implementation
+- Zero warnings achieved across entire codebase
+- Production-grade code quality standards met
+
 ## [0.2.0] - 2025-10-07
 
 ### Added

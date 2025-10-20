@@ -67,6 +67,36 @@ class Thread {
 | **Persistence** | None (ephemeral) | Full rollout with resume support |
 | **Concurrency** | 1 session per client | Unlimited concurrent threads |
 
+### Key Technical Decisions
+
+Based on the research, these design decisions were made for the unified abstraction:
+
+**1. Trait-Based Abstraction**
+- `AgentProvider` trait for provider lifecycle (create_session, capabilities)
+- `AgentSession` trait for session operations (send_input, receive_events)
+- Allows compile-time polymorphism with `Box<dyn AgentProvider>`
+
+**2. Lossy Event Conversion**
+- Codex has 25+ event types, Claude Code has ~5 main types
+- Unified `AgentEvent` enum preserves core semantics (text, tools, usage, errors)
+- Provider-specific events mapped to closest unified equivalent
+- Acceptable information loss for 80/20 use cases
+
+**3. Optional Codex Dependency**
+- `codex-core` as optional cargo feature: `codex-provider`
+- Reduces binary size for users who only need Claude Code
+- Prevents pulling in large Codex dependency tree
+
+**4. Runtime Capability Detection**
+- `ProviderCapabilities` struct declares what each provider supports
+- Router checks capabilities before task assignment
+- Graceful degradation when features unavailable
+
+**5. Zero-Overhead Abstraction Goal**
+- Thin wrapper design (< 5% performance overhead target)
+- Stream adapters use `Pin<Box<dyn Stream>>` for zero-copy forwarding
+- Cost estimation uses heuristics, not actual API calls
+
 ## Architecture Analysis
 
 ### Codex Architecture (from /Users/zhangalex/Work/Projects/ai/codex)

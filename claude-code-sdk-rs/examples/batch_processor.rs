@@ -20,7 +20,7 @@ struct ProcessingStats {
 /// Process a batch of questions from a file
 async fn process_question_batch(file_path: &Path) -> Result<ProcessingStats> {
     let content = fs::read_to_string(file_path).map_err(|e| cc_sdk::SdkError::InvalidState {
-        message: format!("Failed to read file: {}", e),
+        message: format!("Failed to read file: {e}"),
     })?;
 
     let questions: Vec<&str> = content
@@ -99,13 +99,12 @@ async fn process_single_question(
     question: &str,
     index: usize,
 ) -> Result<()> {
-    let project_name = format!("solution_{:03}", index);
+    let project_name = format!("solution_{index:03}");
 
     // Generate solution
     let prompt = format!(
-        "Create a minimal Rust project called '{}' that solves: {}. \
-        Include tests and use best practices.",
-        project_name, question
+        "Create a minimal Rust project called '{project_name}' that solves: {question}. \
+        Include tests and use best practices."
     );
 
     let messages = client.send_and_receive(prompt).await?;
@@ -155,7 +154,7 @@ fn create_claude_options() -> ClaudeCodeOptions {
 
 /// Check if error is rate limit related
 fn is_rate_limit_error(error: &cc_sdk::SdkError) -> bool {
-    let error_str = format!("{:?}", error).to_lowercase();
+    let error_str = format!("{error:?}").to_lowercase();
     error_str.contains("rate") || error_str.contains("limit") || error_str.contains("quota")
 }
 
@@ -195,7 +194,7 @@ Implement a simple rate limiter using token bucket algorithm
 Create a generic binary tree with in-order traversal"#;
 
         fs::write(questions_file, sample_questions).expect("Failed to create questions file");
-        println!("✅ Created {}\n", questions_file);
+        println!("✅ Created {questions_file}\n");
     }
 
     // Process the questions
@@ -205,7 +204,7 @@ Create a generic binary tree with in-order traversal"#;
             println!("\n✨ Batch processing completed successfully!");
         }
         Err(e) => {
-            eprintln!("\n❌ Batch processing failed: {:?}", e);
+            eprintln!("\n❌ Batch processing failed: {e:?}");
         }
     }
 

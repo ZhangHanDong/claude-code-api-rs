@@ -22,6 +22,7 @@ use uuid::Uuid;
 // OpenAI API compatible structures
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct ChatCompletionRequest {
     model: String,
     messages: Vec<ChatMessage>,
@@ -113,6 +114,7 @@ fn default_max_tokens() -> Option<i32> {
 
 struct AppState {
     client: Arc<OptimizedClient>,
+    #[allow(dead_code)]
     interactive_sessions: Arc<RwLock<std::collections::HashMap<String, Arc<OptimizedClient>>>>,
 }
 
@@ -202,7 +204,7 @@ async fn chat_completions(
         .map(|m| m.content.clone());
 
     let final_prompt = if let Some(system) = system_prompt {
-        format!("{}\n\n{}", system, prompt)
+        format!("{system}\n\n{prompt}")
     } else {
         prompt
     };
@@ -251,7 +253,7 @@ async fn chat_completions(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(ErrorResponse {
                     error: ErrorDetail {
-                        message: format!("Claude Code error: {}", e),
+                        message: format!("Claude Code error: {e}"),
                         error_type: "server_error".to_string(),
                         param: None,
                         code: None,
@@ -309,7 +311,7 @@ async fn completions(
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ErrorResponse {
                 error: ErrorDetail {
-                    message: format!("Claude Code error: {}", e),
+                    message: format!("Claude Code error: {e}"),
                     error_type: "server_error".to_string(),
                     param: None,
                     code: None,
@@ -354,12 +356,10 @@ async fn list_models() -> Json<ModelsResponse> {
 async fn get_model(
     axum::extract::Path(model): axum::extract::Path<String>,
 ) -> Result<Json<ModelObject>, (StatusCode, Json<ErrorResponse>)> {
-    let models = vec![
-        ("gpt-3.5-turbo", 1677610602),
+    let models = [("gpt-3.5-turbo", 1677610602),
         ("gpt-4", 1687882410),
         ("claude-3-sonnet", 1709856000),
-        ("claude-3.5-sonnet", 1718841600),
-    ];
+        ("claude-3.5-sonnet", 1718841600)];
 
     if let Some((_, created)) = models.iter().find(|(m, _)| *m == model) {
         Ok(Json(ModelObject {
@@ -373,7 +373,7 @@ async fn get_model(
             StatusCode::NOT_FOUND,
             Json(ErrorResponse {
                 error: ErrorDetail {
-                    message: format!("Model '{}' not found", model),
+                    message: format!("Model '{model}' not found"),
                     error_type: "invalid_request_error".to_string(),
                     param: Some("model".to_string()),
                     code: None,

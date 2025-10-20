@@ -23,7 +23,7 @@ struct QuestionSetProcessor {
 impl QuestionSetProcessor {
     async fn new(annotations_dir: PathBuf) -> Result<Self> {
         fs::create_dir_all(&annotations_dir).map_err(|e| cc_sdk::SdkError::InvalidState {
-            message: format!("Failed to create annotations directory: {}", e),
+            message: format!("Failed to create annotations directory: {e}"),
         })?;
 
         let current_dir = std::env::current_dir().expect("Failed to get current directory");
@@ -85,13 +85,13 @@ impl QuestionSetProcessor {
         println!("Processing question set: {}", question_set_file.display());
         println!("Question set number: {}", self.qs_number);
         if let Some(start) = start_from {
-            println!("Starting from question: {}", start);
+            println!("Starting from question: {start}");
         }
         println!("================================================");
 
         let content =
             fs::read_to_string(question_set_file).map_err(|e| cc_sdk::SdkError::InvalidState {
-                message: format!("Failed to read question set file: {}", e),
+                message: format!("Failed to read question set file: {e}"),
             })?;
 
         let question_regex = Regex::new(r"^(\d+)\.\s*(.+)$").expect("Failed to compile regex");
@@ -110,20 +110,19 @@ impl QuestionSetProcessor {
                 let question_num: u32 = captures[1].parse().unwrap_or(0);
 
                 // Skip questions before start_from if specified
-                if let Some(start) = start_from {
-                    if question_num < start {
+                if let Some(start) = start_from
+                    && question_num < start {
                         continue;
                     }
-                }
 
                 let question_text = &captures[2];
 
                 // Generate project name: q{qs_number}{question_num:05}
-                let formatted_question_num = format!("{:05}", question_num);
+                let formatted_question_num = format!("{question_num:05}");
                 let target_dir = format!("q{}{}", self.qs_number, formatted_question_num);
 
-                println!("\nProcessing question {}: {}", question_num, question_text);
-                println!("Target directory: annotations/{}", target_dir);
+                println!("\nProcessing question {question_num}: {question_text}");
+                println!("Target directory: annotations/{target_dir}");
                 println!("----------------------------------------");
 
                 let question_start = Instant::now();
@@ -143,7 +142,7 @@ impl QuestionSetProcessor {
                     }
                     Err(e) => {
                         let duration = question_start.elapsed();
-                        failed_questions.push((question_num, format!("{:?}", e)));
+                        failed_questions.push((question_num, format!("{e:?}")));
                         println!(
                             "✗ Failed question {} after {} seconds: {:?}",
                             question_num,
@@ -160,7 +159,7 @@ impl QuestionSetProcessor {
         // Print summary
         println!("\n================================================");
         println!("SUMMARY for {}:", question_set_file.display());
-        println!("Successfully processed: {}", processed_count);
+        println!("Successfully processed: {processed_count}");
         println!("Failed: {}", failed_questions.len());
         println!(
             "Total time: {} seconds ({} minutes {} seconds)",
@@ -172,7 +171,7 @@ impl QuestionSetProcessor {
         if !failed_questions.is_empty() {
             println!("\nFailed questions:");
             for (num, error) in &failed_questions {
-                println!("  - Question {}: {}", num, error);
+                println!("  - Question {num}: {error}");
             }
         }
 
@@ -304,7 +303,7 @@ async fn process_all_question_sets(annotations_dir: PathBuf) -> Result<()> {
 
     let mut entries: Vec<_> = fs::read_dir(qs_dir)
         .map_err(|e| cc_sdk::SdkError::InvalidState {
-            message: format!("Failed to read qs directory: {}", e),
+            message: format!("Failed to read qs directory: {e}"),
         })?
         .filter_map(|e| e.ok())
         .collect();

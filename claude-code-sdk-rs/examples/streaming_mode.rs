@@ -26,7 +26,7 @@ fn display_message(msg: &Message) {
         Message::Assistant { message } => {
             for block in &message.content {
                 if let ContentBlock::Text(TextContent { text }) = block {
-                    println!("Claude: {}", text);
+                    println!("Claude: {text}");
                 }
             }
         }
@@ -36,7 +36,7 @@ fn display_message(msg: &Message) {
         Message::Result { total_cost_usd, .. } => {
             println!("Result ended");
             if let Some(cost) = total_cost_usd {
-                println!("Cost: ${:.4}", cost);
+                println!("Cost: ${cost:.4}");
             }
         }
     }
@@ -60,7 +60,7 @@ async fn example_basic_streaming() -> Result<()> {
         while let Some(msg_result) = response.next().await {
             match msg_result {
                 Ok(msg) => display_message(&msg),
-                Err(e) => eprintln!("Error: {}", e),
+                Err(e) => eprintln!("Error: {e}"),
             }
         }
     } // response is dropped here, releasing the borrow
@@ -128,7 +128,7 @@ async fn example_concurrent_responses() -> Result<()> {
     ];
     
     for question in questions {
-        println!("\nUser: {}", question);
+        println!("\nUser: {question}");
         client.query(question.to_string(), None).await?;
         
         // Receive response for this question
@@ -179,7 +179,7 @@ async fn example_with_interrupt() -> Result<()> {
     println!("\n[Sending interrupt after 2 seconds...]");
     match client.interrupt().await {
         Ok(_) => println!("[Interrupt sent successfully]"),
-        Err(e) => eprintln!("[Failed to interrupt: {}]", e),
+        Err(e) => eprintln!("[Failed to interrupt: {e}]"),
     }
     
     // Wait for the interrupted response to complete
@@ -254,7 +254,7 @@ async fn example_with_sessions() -> Result<()> {
     
     // List active sessions
     let sessions = client.get_sessions().await;
-    println!("\nActive sessions: {:?}", sessions);
+    println!("\nActive sessions: {sessions:?}");
     
     client.disconnect().await?;
     println!();
@@ -281,7 +281,9 @@ async fn main() -> Result<()> {
     
     let example = &args[1];
     
-    let result = match example.as_str() {
+    
+    
+    match example.as_str() {
         "basic" => example_basic_streaming().await,
         "multi_turn" => example_multi_turn_conversation().await,
         "concurrent" => example_concurrent_responses().await,
@@ -295,11 +297,9 @@ async fn main() -> Result<()> {
             example_with_sessions().await
         }
         _ => {
-            eprintln!("Unknown example: {}", example);
+            eprintln!("Unknown example: {example}");
             eprintln!("Run without arguments to see available examples");
             return Ok(());
         }
-    };
-    
-    result
+    }
 }

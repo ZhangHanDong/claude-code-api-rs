@@ -244,7 +244,7 @@ async fn query_print_mode(
     // Maximum safe value is 32000, values above this may cause issues
     if let Some(max_tokens) = options.max_output_tokens {
         // Option takes priority - validate and cap at 32000
-        let capped = max_tokens.min(32000).max(1);
+        let capped = max_tokens.clamp(1, 32000);
         cmd.env("CLAUDE_CODE_MAX_OUTPUT_TOKENS", capped.to_string());
         debug!("Setting max_output_tokens from option: {}", capped);
     } else {

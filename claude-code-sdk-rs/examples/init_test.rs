@@ -34,14 +34,14 @@ async fn main() -> Result<()> {
         msg_count += 1;
         match msg_result {
             Ok(msg) => {
-                println!("   Message {}: {:?}", msg_count, msg);
+                println!("   Message {msg_count}: {msg:?}");
                 if matches!(msg, cc_sdk::Message::Result { .. }) {
                     println!("   ✅ Received result message");
                     break;
                 }
             }
             Err(e) => {
-                println!("   ❌ Error: {}", e);
+                println!("   ❌ Error: {e}");
                 break;
             }
         }

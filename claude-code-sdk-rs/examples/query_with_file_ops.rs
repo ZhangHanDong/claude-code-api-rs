@@ -45,7 +45,7 @@ async fn main() -> Result<()> {
                         cc_sdk::ContentBlock::ToolUse(tool_use) => {
                             println!("Claude is using tool: {} ({})", tool_use.name, tool_use.id);
                             if let Some(file_path) = tool_use.input.get("file_path") {
-                                println!("  File path: {}", file_path);
+                                println!("  File path: {file_path}");
                             }
                         }
                         _ => {}
@@ -58,9 +58,9 @@ async fn main() -> Result<()> {
                 ..
             } => {
                 if is_error {
-                    println!("\nQuery completed with error in {}ms", duration_ms);
+                    println!("\nQuery completed with error in {duration_ms}ms");
                 } else {
-                    println!("\nQuery completed successfully in {}ms", duration_ms);
+                    println!("\nQuery completed successfully in {duration_ms}ms");
                 }
                 break;
             }

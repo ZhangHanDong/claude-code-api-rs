@@ -86,6 +86,7 @@ fn test_performance_metrics() {
 
 /// Test ClaudeCodeOptions builder
 #[test]
+#[allow(deprecated)]
 fn test_options_builder() {
     // Test minimal options
     let minimal = ClaudeCodeOptions::builder().build();

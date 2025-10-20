@@ -162,7 +162,7 @@ impl SdkMcpServer {
                     .iter()
                     .find(|t| t.name == tool_name)
                     .ok_or_else(|| SdkError::InvalidState {
-                        message: format!("Tool not found: {}", tool_name),
+                        message: format!("Tool not found: {tool_name}"),
                     })?;
 
                 let result = tool.handler.execute(arguments.clone()).await?;
@@ -323,7 +323,7 @@ mod tests {
             },
             |args| async move {
                 let name = args["name"].as_str().unwrap_or("stranger");
-                Ok(format!("Hello, {}!", name))
+                Ok(format!("Hello, {name}!"))
             },
         );
 

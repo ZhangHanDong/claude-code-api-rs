@@ -67,9 +67,9 @@ async fn main() -> Result<()> {
                 ..
             } => {
                 println!("\n---");
-                println!("Completed in {}ms", duration_ms);
+                println!("Completed in {duration_ms}ms");
                 if let Some(cost) = total_cost_usd {
-                    println!("Cost: ${:.6}", cost);
+                    println!("Cost: ${cost:.6}");
                 }
             }
             _ => {}

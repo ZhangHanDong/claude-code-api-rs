@@ -295,22 +295,27 @@ tokio = { version = "1.0", features = ["full"] }
 
 ```rust
 use cc_sdk::{query, ClaudeCodeOptions, PermissionMode};
+use futures::StreamExt;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // 简单查询
-    let response = query("解释量子计算").await?;
-    println!("{}", response);
+    // 简单查询（流式返回消息）
+    let mut messages = query("解释量子计算", None).await?;
+    while let Some(msg) = messages.next().await {
+        println!("{:?}", msg?);
+    }
 
     // 使用选项
     let options = ClaudeCodeOptions::builder()
         .model("claude-3.5-sonnet")
-        .permission_mode(PermissionMode::AcceptAll)
+        .permission_mode(PermissionMode::AcceptEdits)
         .build();
-    
-    let response = cc_sdk::query_with_options("写一首俳句", options).await?;
-    println!("{}", response);
-    
+
+    let mut messages = query("写一首俳句", Some(options)).await?;
+    while let Some(msg) = messages.next().await {
+        println!("{:?}", msg?);
+    }
+
     Ok(())
 }
 ```

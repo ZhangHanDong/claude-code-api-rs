@@ -25,7 +25,7 @@ async fn main() -> Result<()> {
     // Set budget with callback
     println!("Setting budget: $0.50 max (warning at 80%)");
     let cb: BudgetWarningCallback = Arc::new(move |msg: &str| {
-        println!("⚠️  {}", msg);
+        println!("⚠️  {msg}");
         warnings_clone.lock().unwrap().push(msg.to_string());
     });
     client
@@ -36,25 +36,22 @@ async fn main() -> Result<()> {
         .await;
 
     // Run multiple queries to demonstrate tracking
-    let queries = vec![
-        "What is 2+2?",
+    let queries = ["What is 2+2?",
         "What is the capital of France?",
-        "Explain quantum computing in one sentence.",
-    ];
+        "Explain quantum computing in one sentence."];
 
     for (i, query) in queries.iter().enumerate() {
         println!("\n--- Query {} ---", i + 1);
-        println!("Question: {}", query);
+        println!("Question: {query}");
 
         client.connect(Some(query.to_string())).await?;
 
         let mut messages = client.receive_messages().await;
         while let Some(msg) = messages.next().await {
-            if let Ok(message) = msg {
-                if let cc_sdk::Message::Result { .. } = message {
+            if let Ok(message) = msg
+                && let cc_sdk::Message::Result { .. } = message {
                     break;
                 }
-            }
         }
 
         client.disconnect().await?;
@@ -85,7 +82,7 @@ async fn main() -> Result<()> {
     if !warnings.is_empty() {
         println!("\n⚠️  Warnings triggered: {}", warnings.len());
         for warning in warnings.iter() {
-            println!("  - {}", warning);
+            println!("  - {warning}");
         }
     }
 

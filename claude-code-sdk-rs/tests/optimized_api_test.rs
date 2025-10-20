@@ -224,7 +224,7 @@ async fn test_connection_pooling() -> Result<()> {
 
     for i in 0..3 {
         let start = Instant::now();
-        let _messages = client.query(format!("What is {} + {}?", i, i)).await?;
+        let _messages = client.query(format!("What is {i} + {i}?")).await?;
         let elapsed = start.elapsed();
 
         if i == 0 {
@@ -237,8 +237,8 @@ async fn test_connection_pooling() -> Result<()> {
 
     // Later queries should generally be faster due to connection pooling
     let avg_time = total_time / 3;
-    println!("Average query time: {:?}", avg_time);
-    println!("First query time: {:?}", first_query_time);
+    println!("Average query time: {avg_time:?}");
+    println!("First query time: {first_query_time:?}");
 
     Ok(())
 }

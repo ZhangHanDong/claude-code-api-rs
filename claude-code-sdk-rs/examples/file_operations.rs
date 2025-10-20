@@ -88,7 +88,7 @@ async fn main() -> Result<()> {
                 }
             }
             Message::Result { duration_ms, .. } => {
-                println!("\nOperation completed in {}ms", duration_ms);
+                println!("\nOperation completed in {duration_ms}ms");
                 break;
             }
             _ => {}
@@ -124,9 +124,9 @@ async fn main() -> Result<()> {
                 total_cost_usd,
                 ..
             } => {
-                println!("\nOperation completed in {}ms", duration_ms);
+                println!("\nOperation completed in {duration_ms}ms");
                 if let Some(cost) = total_cost_usd {
-                    println!("Total cost: ${:.4}", cost);
+                    println!("Total cost: ${cost:.4}");
                 }
                 break;
             }

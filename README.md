@@ -4,9 +4,51 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Rust](https://img.shields.io/badge/rust-1.75+-orange.svg)](https://www.rust-lang.org)
 
-[中文文档](README_CN.md) | English
+[中文文档](README_CN.md) | [日本語](README_JA.md) | English
 
-A high-performance Rust implementation of an OpenAI-compatible API gateway for Claude Code CLI. Built on top of the robust [claude-code-sdk-rs](https://github.com/ZhangHanDong/claude-code-api-rs/tree/main/claude-code-sdk-rs), this project provides a RESTful API interface that allows you to interact with Claude Code using the familiar OpenAI API format.
+---
+
+## 🦀 cc-sdk v0.4.0 - Rust SDK for Claude Code
+
+> **🎉 100% Feature Parity with Python claude-agent-sdk v0.1.14!**
+
+[![Crates.io](https://img.shields.io/crates/v/cc-sdk.svg)](https://crates.io/crates/cc-sdk)
+[![Documentation](https://docs.rs/cc-sdk/badge.svg)](https://docs.rs/cc-sdk)
+
+**[cc-sdk](./claude-code-sdk-rs)** is the official Rust SDK for Claude Code CLI, providing:
+
+- 📥 **Auto CLI Download** - Automatically downloads Claude Code CLI if not found
+- 📁 **File Checkpointing** - Rewind file changes to any conversation point
+- 📊 **Structured Output** - JSON schema validation for responses
+- 🔧 **Full Control Protocol** - Permissions, hooks, MCP servers
+- 💰 **Budget Control** - `max_budget_usd` and `fallback_model` support
+- 🏖️ **Sandbox** - Bash isolation for filesystem/network
+
+```rust
+use cc_sdk::{query, ClaudeCodeOptions};
+use futures::StreamExt;
+
+#[tokio::main]
+async fn main() -> cc_sdk::Result<()> {
+    let options = ClaudeCodeOptions::builder()
+        .model("claude-opus-4-5-20251101")  // Latest Opus 4.5
+        .auto_download_cli(true)             // Auto-download CLI
+        .max_budget_usd(10.0)                // Budget limit
+        .build();
+
+    let mut stream = query("Hello, Claude!", Some(options)).await?;
+    while let Some(msg) = stream.next().await {
+        println!("{:?}", msg?);
+    }
+    Ok(())
+}
+```
+
+👉 **[Full SDK Documentation](./claude-code-sdk-rs/README.md)** | **[API Docs](https://docs.rs/cc-sdk)**
+
+---
+
+A high-performance Rust implementation of an OpenAI-compatible API gateway for Claude Code CLI. Built on top of the robust [cc-sdk](https://github.com/ZhangHanDong/claude-code-api-rs/tree/main/claude-code-sdk-rs), this project provides a RESTful API interface that allows you to interact with Claude Code using the familiar OpenAI API format.
 
 ## 🎉 Who's Using Claude Code API
 
@@ -79,26 +121,27 @@ The API server will start on `http://localhost:8080` by default.
 curl -X POST http://localhost:8080/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "opus-4.1",
+    "model": "claude-opus-4-5-20251101",
     "messages": [
       {"role": "user", "content": "Hello, Claude!"}
     ]
   }'
 ```
 
-## 🤖 Supported Models (2025)
+## 🤖 Supported Models (December 2025)
 
-The API supports the latest Claude models available in 2025:
+The API supports the latest Claude models:
 
 ### Latest Models
-- **Opus 4.1** - Most capable model
+- **Opus 4.5** ⭐ NEW (November 2025) - Most capable model
   - Recommended: `"opus"` (alias for latest)
-  - Full name: `"claude-opus-4-1-20250805"`
-- **Sonnet 4** - Balanced performance
+  - Full name: `"claude-opus-4-5-20251101"`
+  - SWE-bench: 80.9% (industry-leading)
+- **Sonnet 4.5** - Balanced performance
   - Recommended: `"sonnet"` (alias for latest)
+  - Full name: `"claude-sonnet-4-5-20250929"`
+- **Sonnet 4** - Cost-effective
   - Full name: `"claude-sonnet-4-20250514"`
-
-**Important:** The short aliases `"opus-4.1"` and `"sonnet-4"` are NOT supported and will return 404 errors. Use `"opus"` or `"sonnet"` instead.
 
 ### Previous Generation
 - **Claude 3.5 Sonnet** (`claude-3-5-sonnet-20241022`)

@@ -26,6 +26,156 @@ pub enum PermissionMode {
     BypassPermissions,
 }
 
+// ============================================================================
+// SDK Beta Features (matching Python SDK v0.1.12+)
+// ============================================================================
+
+/// SDK Beta features - see https://docs.anthropic.com/en/api/beta-headers
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum SdkBeta {
+    /// Extended context window (1M tokens)
+    #[serde(rename = "context-1m-2025-08-07")]
+    Context1M,
+}
+
+impl std::fmt::Display for SdkBeta {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SdkBeta::Context1M => write!(f, "context-1m-2025-08-07"),
+        }
+    }
+}
+
+// ============================================================================
+// Tools Configuration (matching Python SDK v0.1.12+)
+// ============================================================================
+
+/// Tools configuration for controlling available tools
+///
+/// This controls the base set of tools available to Claude, distinct from
+/// `allowed_tools` which only controls auto-approval permissions.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum ToolsConfig {
+    /// List of specific tool names to enable
+    /// Example: `["Read", "Edit", "Bash"]`
+    List(Vec<String>),
+    /// Preset-based tools configuration
+    Preset(ToolsPreset),
+}
+
+/// Tools preset configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ToolsPreset {
+    /// Type identifier (always "preset")
+    #[serde(rename = "type")]
+    pub preset_type: String,
+    /// Preset name (e.g., "claude_code")
+    pub preset: String,
+}
+
+impl ToolsConfig {
+    /// Create a new tools list
+    pub fn list(tools: Vec<String>) -> Self {
+        ToolsConfig::List(tools)
+    }
+
+    /// Create an empty tools list (disables all built-in tools)
+    pub fn none() -> Self {
+        ToolsConfig::List(vec![])
+    }
+
+    /// Create the claude_code preset
+    pub fn claude_code_preset() -> Self {
+        ToolsConfig::Preset(ToolsPreset {
+            preset_type: "preset".to_string(),
+            preset: "claude_code".to_string(),
+        })
+    }
+}
+
+// ============================================================================
+// Sandbox Configuration (matching Python SDK)
+// ============================================================================
+
+/// Network configuration for sandbox
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SandboxNetworkConfig {
+    /// Unix socket paths accessible in sandbox (e.g., SSH agents)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub allow_unix_sockets: Option<Vec<String>>,
+    /// Allow all Unix sockets (less secure)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub allow_all_unix_sockets: Option<bool>,
+    /// Allow binding to localhost ports (macOS only)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub allow_local_binding: Option<bool>,
+    /// HTTP proxy port if bringing your own proxy
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub http_proxy_port: Option<u16>,
+    /// SOCKS5 proxy port if bringing your own proxy
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub socks_proxy_port: Option<u16>,
+}
+
+/// Violations to ignore in sandbox
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SandboxIgnoreViolations {
+    /// File paths for which violations should be ignored
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file: Option<Vec<String>>,
+    /// Network hosts for which violations should be ignored
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub network: Option<Vec<String>>,
+}
+
+/// Sandbox settings configuration
+///
+/// Controls how Claude Code sandboxes bash commands for filesystem
+/// and network isolation.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SandboxSettings {
+    /// Enable bash sandboxing (macOS/Linux only)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub enabled: Option<bool>,
+    /// Auto-approve bash commands when sandboxed (default: true)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub auto_allow_bash_if_sandboxed: Option<bool>,
+    /// Commands that should run outside the sandbox (e.g., ["git", "docker"])
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub excluded_commands: Option<Vec<String>>,
+    /// Allow commands to bypass sandbox via dangerouslyDisableSandbox
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub allow_unsandboxed_commands: Option<bool>,
+    /// Network configuration for sandbox
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub network: Option<SandboxNetworkConfig>,
+    /// Violations to ignore
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ignore_violations: Option<SandboxIgnoreViolations>,
+    /// Enable weaker sandbox for unprivileged Docker environments (Linux only)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub enable_weaker_nested_sandbox: Option<bool>,
+}
+
+// ============================================================================
+// Plugin Configuration (matching Python SDK v0.1.5+)
+// ============================================================================
+
+/// SDK plugin configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "lowercase")]
+pub enum SdkPluginConfig {
+    /// Local plugin loaded from filesystem path
+    Local {
+        /// Path to the plugin directory
+        path: String,
+    },
+}
+
 impl Default for PermissionMode {
     fn default() -> Self {
         Self::Default
@@ -712,9 +862,23 @@ pub struct ClaudeCodeOptions {
     /// Use system_prompt_v2 instead
     #[deprecated(since = "0.1.12", note = "Use system_prompt_v2 instead")]
     pub append_system_prompt: Option<String>,
-    /// List of allowed tools
+    /// List of allowed tools (auto-approval permissions only)
+    ///
+    /// **IMPORTANT**: This only controls which tool invocations are auto-approved
+    /// (bypass permission prompts). It does NOT disable or restrict which tools
+    /// the AI can use. Use `disallowed_tools` to completely disable tools.
+    ///
+    /// Example: `allowed_tools: vec!["Bash(git:*)".to_string()]` allows auto-approval
+    /// for git commands in Bash, but doesn't prevent AI from using other tools.
     pub allowed_tools: Vec<String>,
-    /// List of disallowed tools
+    /// List of disallowed tools (completely disabled)
+    ///
+    /// **IMPORTANT**: This completely disables the specified tools. The AI will
+    /// not be able to use these tools at all. Use this to restrict which tools
+    /// the AI has access to.
+    ///
+    /// Example: `disallowed_tools: vec!["Bash".to_string(), "WebSearch".to_string()]`
+    /// prevents the AI from using Bash or WebSearch tools entirely.
     pub disallowed_tools: Vec<String>,
     /// Permission mode for tool execution
     pub permission_mode: PermissionMode,
@@ -771,6 +935,83 @@ pub struct ClaudeCodeOptions {
     /// Controls the size of message, control, and stdin buffers (default: 100)
     /// Increase for high-throughput scenarios to prevent message lag
     pub cli_channel_buffer_size: Option<usize>,
+
+    // ========== Phase 3 Enhancements (Python SDK v0.1.12+ sync) ==========
+    /// Tools configuration for controlling available tools
+    ///
+    /// This controls the base set of tools available to Claude, distinct from
+    /// `allowed_tools` which only controls auto-approval permissions.
+    ///
+    /// # Examples
+    /// ```rust
+    /// use cc_sdk::{ClaudeCodeOptions, ToolsConfig};
+    ///
+    /// // Enable specific tools only
+    /// let options = ClaudeCodeOptions::builder()
+    ///     .tools(ToolsConfig::list(vec!["Read".into(), "Edit".into()]))
+    ///     .build();
+    ///
+    /// // Disable all built-in tools
+    /// let options = ClaudeCodeOptions::builder()
+    ///     .tools(ToolsConfig::none())
+    ///     .build();
+    ///
+    /// // Use claude_code preset
+    /// let options = ClaudeCodeOptions::builder()
+    ///     .tools(ToolsConfig::claude_code_preset())
+    ///     .build();
+    /// ```
+    pub tools: Option<ToolsConfig>,
+    /// SDK beta features to enable
+    /// See https://docs.anthropic.com/en/api/beta-headers
+    pub betas: Vec<SdkBeta>,
+    /// Maximum spending limit in USD for the session
+    /// When exceeded, the session will automatically terminate
+    pub max_budget_usd: Option<f64>,
+    /// Fallback model to use when primary model is unavailable
+    pub fallback_model: Option<String>,
+    /// Output format for structured outputs
+    /// Example: `{"type": "json_schema", "schema": {"type": "object", "properties": {...}}}`
+    pub output_format: Option<serde_json::Value>,
+    /// Enable file checkpointing to track file changes during the session
+    /// When enabled, files can be rewound to their state at any user message
+    /// using `ClaudeSDKClient::rewind_files()`
+    pub enable_file_checkpointing: bool,
+    /// Sandbox configuration for bash command isolation
+    /// Filesystem and network restrictions are derived from permission rules
+    pub sandbox: Option<SandboxSettings>,
+    /// Plugin configurations for custom plugins
+    pub plugins: Vec<SdkPluginConfig>,
+    /// Run the CLI subprocess as a specific OS user (Unix-only).
+    ///
+    /// This matches Python SDK behavior (`anyio.open_process(user=...)`).
+    ///
+    /// - Supported on Unix platforms only (non-Unix returns `SdkError::NotSupported`)
+    /// - Typically requires elevated privileges to switch users
+    /// - Accepts a username (e.g. `"nobody"`) or a numeric uid string (e.g. `"1000"`)
+    pub user: Option<String>,
+    /// Stderr callback (alternative to debug_stderr)
+    /// Called with each line of stderr output from the CLI
+    pub stderr_callback: Option<Arc<dyn Fn(&str) + Send + Sync>>,
+    /// Automatically download Claude Code CLI if not found
+    ///
+    /// When enabled, the SDK will automatically download and cache the Claude Code
+    /// CLI binary if it's not found in the system PATH or common installation locations.
+    ///
+    /// The CLI is cached in:
+    /// - macOS: `~/Library/Caches/cc-sdk/cli/`
+    /// - Linux: `~/.cache/cc-sdk/cli/`
+    /// - Windows: `%LOCALAPPDATA%\cc-sdk\cli\`
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use cc_sdk::ClaudeCodeOptions;
+    /// let options = ClaudeCodeOptions::builder()
+    ///     .auto_download_cli(true)
+    ///     .build();
+    /// ```
+    pub auto_download_cli: bool,
 }
 
 impl std::fmt::Debug for ClaudeCodeOptions {
@@ -833,25 +1074,42 @@ impl ClaudeCodeOptionsBuilder {
         self
     }
 
-    /// Add allowed tools
+    /// Set allowed tools (auto-approval permissions only)
+    ///
+    /// **IMPORTANT**: This only controls which tool invocations bypass permission
+    /// prompts. It does NOT disable or restrict which tools the AI can use.
+    /// To completely disable tools, use `disallowed_tools()` instead.
+    ///
+    /// Example: `vec!["Bash(git:*)".to_string()]` auto-approves git commands.
     pub fn allowed_tools(mut self, tools: Vec<String>) -> Self {
         self.options.allowed_tools = tools;
         self
     }
 
-    /// Add a single allowed tool
+    /// Add a single allowed tool (auto-approval permission)
+    ///
+    /// See `allowed_tools()` for important usage notes.
     pub fn allow_tool(mut self, tool: impl Into<String>) -> Self {
         self.options.allowed_tools.push(tool.into());
         self
     }
 
-    /// Add disallowed tools
+    /// Set disallowed tools (completely disabled)
+    ///
+    /// **IMPORTANT**: This completely disables the specified tools. The AI will
+    /// not be able to use these tools at all. This is the correct way to restrict
+    /// which tools the AI has access to.
+    ///
+    /// Example: `vec!["Bash".to_string(), "WebSearch".to_string()]` prevents
+    /// the AI from using Bash or WebSearch entirely.
     pub fn disallowed_tools(mut self, tools: Vec<String>) -> Self {
         self.options.disallowed_tools = tools;
         self
     }
 
-    /// Add a single disallowed tool
+    /// Add a single disallowed tool (completely disabled)
+    ///
+    /// See `disallowed_tools()` for important usage notes.
     pub fn disallow_tool(mut self, tool: impl Into<String>) -> Self {
         self.options.disallowed_tools.push(tool.into());
         self
@@ -1011,6 +1269,143 @@ impl ClaudeCodeOptionsBuilder {
         self
     }
 
+    // ========== Phase 3 Builder Methods (Python SDK v0.1.12+ sync) ==========
+
+    /// Set tools configuration
+    ///
+    /// Controls the base set of tools available to Claude. This is distinct from
+    /// `allowed_tools` which only controls auto-approval permissions.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use cc_sdk::{ClaudeCodeOptions, ToolsConfig};
+    /// // Enable specific tools only
+    /// let options = ClaudeCodeOptions::builder()
+    ///     .tools(ToolsConfig::list(vec!["Read".into(), "Edit".into()]))
+    ///     .build();
+    /// ```
+    pub fn tools(mut self, config: ToolsConfig) -> Self {
+        self.options.tools = Some(config);
+        self
+    }
+
+    /// Add SDK beta features
+    ///
+    /// Enable Anthropic API beta features like extended context window.
+    pub fn betas(mut self, betas: Vec<SdkBeta>) -> Self {
+        self.options.betas = betas;
+        self
+    }
+
+    /// Add a single SDK beta feature
+    pub fn add_beta(mut self, beta: SdkBeta) -> Self {
+        self.options.betas.push(beta);
+        self
+    }
+
+    /// Set maximum spending limit in USD
+    ///
+    /// When the budget is exceeded, the session will automatically terminate.
+    pub fn max_budget_usd(mut self, budget: f64) -> Self {
+        self.options.max_budget_usd = Some(budget);
+        self
+    }
+
+    /// Set fallback model
+    ///
+    /// Used when the primary model is unavailable.
+    pub fn fallback_model(mut self, model: impl Into<String>) -> Self {
+        self.options.fallback_model = Some(model.into());
+        self
+    }
+
+    /// Set output format for structured outputs
+    ///
+    /// Enables JSON schema validation for Claude's responses.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use cc_sdk::ClaudeCodeOptions;
+    /// let options = ClaudeCodeOptions::builder()
+    ///     .output_format(serde_json::json!({
+    ///         "type": "json_schema",
+    ///         "schema": {
+    ///             "type": "object",
+    ///             "properties": {
+    ///                 "answer": {"type": "string"}
+    ///             }
+    ///         }
+    ///     }))
+    ///     .build();
+    /// ```
+    pub fn output_format(mut self, format: serde_json::Value) -> Self {
+        self.options.output_format = Some(format);
+        self
+    }
+
+    /// Enable file checkpointing
+    ///
+    /// When enabled, file changes are tracked and can be rewound to any
+    /// user message using `ClaudeSDKClient::rewind_files()`.
+    pub fn enable_file_checkpointing(mut self, enable: bool) -> Self {
+        self.options.enable_file_checkpointing = enable;
+        self
+    }
+
+    /// Set sandbox configuration
+    ///
+    /// Controls bash command sandboxing for filesystem and network isolation.
+    pub fn sandbox(mut self, settings: SandboxSettings) -> Self {
+        self.options.sandbox = Some(settings);
+        self
+    }
+
+    /// Set plugin configurations
+    pub fn plugins(mut self, plugins: Vec<SdkPluginConfig>) -> Self {
+        self.options.plugins = plugins;
+        self
+    }
+
+    /// Add a single plugin
+    pub fn add_plugin(mut self, plugin: SdkPluginConfig) -> Self {
+        self.options.plugins.push(plugin);
+        self
+    }
+
+    /// Set user identifier
+    pub fn user(mut self, user: impl Into<String>) -> Self {
+        self.options.user = Some(user.into());
+        self
+    }
+
+    /// Set stderr callback
+    ///
+    /// Called with each line of stderr output from the CLI.
+    pub fn stderr_callback(mut self, callback: Arc<dyn Fn(&str) + Send + Sync>) -> Self {
+        self.options.stderr_callback = Some(callback);
+        self
+    }
+
+    /// Enable automatic CLI download
+    ///
+    /// When enabled, the SDK will automatically download and cache the Claude Code
+    /// CLI binary if it's not found in the system PATH or common installation locations.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use cc_sdk::ClaudeCodeOptions;
+    /// let options = ClaudeCodeOptions::builder()
+    ///     .auto_download_cli(true)
+    ///     .build();
+    /// ```
+    pub fn auto_download_cli(mut self, enable: bool) -> Self {
+        self.options.auto_download_cli = enable;
+        self
+    }
+
     /// Build the options
     pub fn build(self) -> ClaudeCodeOptions {
         self.options
@@ -1061,6 +1456,10 @@ pub enum Message {
         /// Result message
         #[serde(skip_serializing_if = "Option::is_none")]
         result: Option<String>,
+        /// Structured output (when output_format is set)
+        /// Contains the validated JSON response matching the schema
+        #[serde(skip_serializing_if = "Option::is_none", alias = "structuredOutput")]
+        structured_output: Option<serde_json::Value>,
     },
 }
 
@@ -1174,19 +1573,19 @@ pub struct SDKControlInterruptRequest {
 
 /// SDK Control Protocol - Permission request
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct SDKControlPermissionRequest {
     /// Subtype
     pub subtype: String,  // "can_use_tool"
     /// Tool name
+    #[serde(alias = "toolName")]
     pub tool_name: String,
     /// Tool input
     pub input: serde_json::Value,
     /// Permission suggestions
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", alias = "permissionSuggestions")]
     pub permission_suggestions: Option<Vec<PermissionUpdate>>,
     /// Blocked path
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", alias = "blockedPath")]
     pub blocked_path: Option<String>,
 }
 
@@ -1223,29 +1622,52 @@ pub struct SDKControlSetModelRequest {
 
 /// SDK Hook callback request
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct SDKHookCallbackRequest {
     /// Subtype
     pub subtype: String,  // "hook_callback"
     /// Callback ID
+    #[serde(alias = "callbackId")]
     pub callback_id: String,
     /// Input data
     pub input: serde_json::Value,
     /// Tool use ID
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", alias = "toolUseId")]
     pub tool_use_id: Option<String>,
 }
 
 /// SDK Control Protocol - MCP message request
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct SDKControlMcpMessageRequest {
     /// Subtype
     pub subtype: String,  // "mcp_message"
     /// MCP server name
+    #[serde(rename = "server_name", alias = "mcpServerName", alias = "mcp_server_name")]
     pub mcp_server_name: String,
     /// Message to send
     pub message: serde_json::Value,
+}
+
+/// SDK Control Protocol - Rewind files request (Python SDK v0.1.14+)
+///
+/// Rewinds tracked files to their state at a specific user message.
+/// Requires `enable_file_checkpointing` to be enabled.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SDKControlRewindFilesRequest {
+    /// Subtype (always "rewind_files")
+    pub subtype: String,
+    /// UUID of the user message to rewind to
+    #[serde(alias = "userMessageId")]
+    pub user_message_id: String,
+}
+
+impl SDKControlRewindFilesRequest {
+    /// Create a new rewind files request
+    pub fn new(user_message_id: impl Into<String>) -> Self {
+        Self {
+            subtype: "rewind_files".to_string(),
+            user_message_id: user_message_id.into(),
+        }
+    }
 }
 
 /// SDK Control Protocol request types
@@ -1273,6 +1695,9 @@ pub enum SDKControlRequest {
     /// MCP message
     #[serde(rename = "mcp_message")]
     McpMessage(SDKControlMcpMessageRequest),
+    /// Rewind files (Python SDK v0.1.14+)
+    #[serde(rename = "rewind_files")]
+    RewindFiles(SDKControlRewindFilesRequest),
 }
 
 /// Control request types (legacy, keeping for compatibility)
@@ -1387,5 +1812,393 @@ mod tests {
         let deserialized: ThinkingContent = serde_json::from_str(&json).unwrap();
         assert_eq!(deserialized.thinking, thinking.thinking);
         assert_eq!(deserialized.signature, thinking.signature);
+    }
+
+    // ============== v0.4.0 New Feature Tests ==============
+
+    #[test]
+    fn test_tools_config_list_serialization() {
+        let tools = ToolsConfig::List(vec!["Read".to_string(), "Write".to_string(), "Bash".to_string()]);
+        let json = serde_json::to_string(&tools).unwrap();
+
+        // List variant serializes as JSON array
+        assert!(json.contains("Read"));
+        assert!(json.contains("Write"));
+        assert!(json.contains("Bash"));
+
+        let deserialized: ToolsConfig = serde_json::from_str(&json).unwrap();
+        match deserialized {
+            ToolsConfig::List(list) => {
+                assert_eq!(list.len(), 3);
+                assert!(list.contains(&"Read".to_string()));
+            }
+            _ => panic!("Expected List variant"),
+        }
+    }
+
+    #[test]
+    fn test_tools_config_preset_serialization() {
+        // Test claude_code preset using the helper method
+        let preset = ToolsConfig::claude_code_preset();
+        let json = serde_json::to_string(&preset).unwrap();
+        assert!(json.contains("preset"));
+        assert!(json.contains("claude_code"));
+
+        // Test Preset variant with custom values
+        let custom_preset = ToolsConfig::Preset(ToolsPreset {
+            preset_type: "preset".to_string(),
+            preset: "custom".to_string(),
+        });
+        let json = serde_json::to_string(&custom_preset).unwrap();
+        assert!(json.contains("custom"));
+
+        // Test deserialization
+        let deserialized: ToolsConfig = serde_json::from_str(&json).unwrap();
+        match deserialized {
+            ToolsConfig::Preset(p) => assert_eq!(p.preset, "custom"),
+            _ => panic!("Expected Preset variant"),
+        }
+    }
+
+    #[test]
+    fn test_tools_config_helper_methods() {
+        // Test list() helper
+        let tools = ToolsConfig::list(vec!["Read".to_string(), "Write".to_string()]);
+        match tools {
+            ToolsConfig::List(list) => assert_eq!(list.len(), 2),
+            _ => panic!("Expected List variant"),
+        }
+
+        // Test none() helper (empty list)
+        let empty = ToolsConfig::none();
+        match empty {
+            ToolsConfig::List(list) => assert!(list.is_empty()),
+            _ => panic!("Expected empty List variant"),
+        }
+
+        // Test claude_code_preset() helper
+        let preset = ToolsConfig::claude_code_preset();
+        match preset {
+            ToolsConfig::Preset(p) => {
+                assert_eq!(p.preset_type, "preset");
+                assert_eq!(p.preset, "claude_code");
+            }
+            _ => panic!("Expected Preset variant"),
+        }
+    }
+
+    #[test]
+    fn test_sdk_beta_serialization() {
+        let beta = SdkBeta::Context1M;
+        let json = serde_json::to_string(&beta).unwrap();
+        // The enum uses rename = "context-1m-2025-08-07"
+        assert_eq!(json, r#""context-1m-2025-08-07""#);
+
+        // Test Display trait
+        let display = format!("{}", beta);
+        assert_eq!(display, "context-1m-2025-08-07");
+
+        // Test deserialization
+        let deserialized: SdkBeta = serde_json::from_str(r#""context-1m-2025-08-07""#).unwrap();
+        assert!(matches!(deserialized, SdkBeta::Context1M));
+    }
+
+    #[test]
+    fn test_sandbox_settings_serialization() {
+        let sandbox = SandboxSettings {
+            enabled: Some(true),
+            auto_allow_bash_if_sandboxed: Some(true),
+            excluded_commands: Some(vec!["git".to_string(), "docker".to_string()]),
+            allow_unsandboxed_commands: Some(false),
+            network: Some(SandboxNetworkConfig {
+                allow_unix_sockets: Some(vec!["/tmp/ssh-agent.sock".to_string()]),
+                allow_all_unix_sockets: Some(false),
+                allow_local_binding: Some(true),
+                http_proxy_port: Some(8080),
+                socks_proxy_port: Some(1080),
+            }),
+            ignore_violations: Some(SandboxIgnoreViolations {
+                file: Some(vec!["/tmp".to_string(), "/var/log".to_string()]),
+                network: Some(vec!["localhost".to_string()]),
+            }),
+            enable_weaker_nested_sandbox: Some(false),
+        };
+
+        let json = serde_json::to_string(&sandbox).unwrap();
+        assert!(json.contains("enabled"));
+        assert!(json.contains("autoAllowBashIfSandboxed")); // camelCase
+        assert!(json.contains("excludedCommands"));
+        assert!(json.contains("httpProxyPort"));
+        assert!(json.contains("8080"));
+
+        let deserialized: SandboxSettings = serde_json::from_str(&json).unwrap();
+        assert!(deserialized.enabled.unwrap());
+        assert!(deserialized.network.is_some());
+        assert_eq!(deserialized.network.as_ref().unwrap().http_proxy_port, Some(8080));
+    }
+
+    #[test]
+    fn test_sandbox_network_config() {
+        let config = SandboxNetworkConfig {
+            allow_unix_sockets: Some(vec!["/run/user/1000/keyring/ssh".to_string()]),
+            allow_all_unix_sockets: Some(false),
+            allow_local_binding: Some(true),
+            http_proxy_port: Some(3128),
+            socks_proxy_port: Some(1080),
+        };
+
+        let json = serde_json::to_string(&config).unwrap();
+        let deserialized: SandboxNetworkConfig = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(deserialized.http_proxy_port, Some(3128));
+        assert_eq!(deserialized.socks_proxy_port, Some(1080));
+        assert_eq!(deserialized.allow_local_binding, Some(true));
+    }
+
+    #[test]
+    fn test_sandbox_ignore_violations() {
+        let violations = SandboxIgnoreViolations {
+            file: Some(vec!["/tmp".to_string(), "/var/cache".to_string()]),
+            network: Some(vec!["127.0.0.1".to_string(), "localhost".to_string()]),
+        };
+
+        let json = serde_json::to_string(&violations).unwrap();
+        assert!(json.contains("file"));
+        assert!(json.contains("/tmp"));
+
+        let deserialized: SandboxIgnoreViolations = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.file.as_ref().unwrap().len(), 2);
+        assert_eq!(deserialized.network.as_ref().unwrap().len(), 2);
+    }
+
+    #[test]
+    fn test_sandbox_settings_default() {
+        let sandbox = SandboxSettings::default();
+        assert!(sandbox.enabled.is_none());
+        assert!(sandbox.network.is_none());
+        assert!(sandbox.ignore_violations.is_none());
+    }
+
+    #[test]
+    fn test_sdk_plugin_config_serialization() {
+        let plugin = SdkPluginConfig::Local {
+            path: "/path/to/plugin".to_string()
+        };
+
+        let json = serde_json::to_string(&plugin).unwrap();
+        assert!(json.contains("local")); // lowercase due to rename_all
+        assert!(json.contains("/path/to/plugin"));
+
+        let deserialized: SdkPluginConfig = serde_json::from_str(&json).unwrap();
+        match deserialized {
+            SdkPluginConfig::Local { path } => {
+                assert_eq!(path, "/path/to/plugin");
+            }
+        }
+    }
+
+    #[test]
+    fn test_sdk_control_rewind_files_request() {
+        let request = SDKControlRewindFilesRequest {
+            subtype: "rewind_files".to_string(),
+            user_message_id: "msg_12345".to_string(),
+        };
+
+        let json = serde_json::to_string(&request).unwrap();
+        assert!(json.contains("user_message_id"));
+        assert!(json.contains("msg_12345"));
+        assert!(json.contains("subtype"));
+        assert!(json.contains("rewind_files"));
+
+        let deserialized: SDKControlRewindFilesRequest = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.user_message_id, "msg_12345");
+        assert_eq!(deserialized.subtype, "rewind_files");
+    }
+
+    #[test]
+    fn test_options_builder_with_new_fields() {
+        let options = ClaudeCodeOptions::builder()
+            .tools(ToolsConfig::claude_code_preset())
+            .add_beta(SdkBeta::Context1M)
+            .max_budget_usd(10.0)
+            .fallback_model("claude-3-haiku")
+            .output_format(serde_json::json!({"type": "object"}))
+            .enable_file_checkpointing(true)
+            .sandbox(SandboxSettings::default())
+            .add_plugin(SdkPluginConfig::Local { path: "/plugin".to_string() })
+            .auto_download_cli(true)
+            .build();
+
+        // Verify tools
+        assert!(options.tools.is_some());
+        match options.tools.as_ref().unwrap() {
+            ToolsConfig::Preset(preset) => assert_eq!(preset.preset, "claude_code"),
+            _ => panic!("Expected Preset variant"),
+        }
+
+        // Verify betas
+        assert_eq!(options.betas.len(), 1);
+        assert!(matches!(options.betas[0], SdkBeta::Context1M));
+
+        // Verify max_budget_usd
+        assert_eq!(options.max_budget_usd, Some(10.0));
+
+        // Verify fallback_model
+        assert_eq!(options.fallback_model, Some("claude-3-haiku".to_string()));
+
+        // Verify output_format
+        assert!(options.output_format.is_some());
+
+        // Verify enable_file_checkpointing
+        assert!(options.enable_file_checkpointing);
+
+        // Verify sandbox
+        assert!(options.sandbox.is_some());
+
+        // Verify plugins
+        assert_eq!(options.plugins.len(), 1);
+
+        // Verify auto_download_cli
+        assert!(options.auto_download_cli);
+    }
+
+    #[test]
+    fn test_options_builder_with_tools_list() {
+        let options = ClaudeCodeOptions::builder()
+            .tools(ToolsConfig::List(vec!["Read".to_string(), "Bash".to_string()]))
+            .build();
+
+        match options.tools.as_ref().unwrap() {
+            ToolsConfig::List(list) => {
+                assert_eq!(list.len(), 2);
+                assert!(list.contains(&"Read".to_string()));
+                assert!(list.contains(&"Bash".to_string()));
+            }
+            _ => panic!("Expected List variant"),
+        }
+    }
+
+    #[test]
+    fn test_options_builder_multiple_betas() {
+        let options = ClaudeCodeOptions::builder()
+            .add_beta(SdkBeta::Context1M)
+            .betas(vec![SdkBeta::Context1M])
+            .build();
+
+        // betas() replaces, add_beta() appends - so only 1 from betas()
+        assert_eq!(options.betas.len(), 1);
+    }
+
+    #[test]
+    fn test_options_builder_add_beta_accumulates() {
+        let options = ClaudeCodeOptions::builder()
+            .add_beta(SdkBeta::Context1M)
+            .add_beta(SdkBeta::Context1M)
+            .build();
+
+        // add_beta() accumulates
+        assert_eq!(options.betas.len(), 2);
+    }
+
+    #[test]
+    fn test_options_builder_multiple_plugins() {
+        let options = ClaudeCodeOptions::builder()
+            .add_plugin(SdkPluginConfig::Local { path: "/plugin1".to_string() })
+            .add_plugin(SdkPluginConfig::Local { path: "/plugin2".to_string() })
+            .plugins(vec![SdkPluginConfig::Local { path: "/plugin3".to_string() }])
+            .build();
+
+        // plugins() replaces previous, so only 1
+        assert_eq!(options.plugins.len(), 1);
+    }
+
+    #[test]
+    fn test_options_builder_add_plugin_accumulates() {
+        let options = ClaudeCodeOptions::builder()
+            .add_plugin(SdkPluginConfig::Local { path: "/plugin1".to_string() })
+            .add_plugin(SdkPluginConfig::Local { path: "/plugin2".to_string() })
+            .add_plugin(SdkPluginConfig::Local { path: "/plugin3".to_string() })
+            .build();
+
+        // add_plugin() accumulates
+        assert_eq!(options.plugins.len(), 3);
+    }
+
+    #[test]
+    fn test_message_result_with_structured_output() {
+        // Test parsing result message with structured_output (snake_case)
+        let json = r#"{
+            "type": "result",
+            "subtype": "success",
+            "cost_usd": 0.05,
+            "duration_ms": 1500,
+            "duration_api_ms": 1200,
+            "is_error": false,
+            "num_turns": 3,
+            "session_id": "session_123",
+            "structured_output": {"answer": 42}
+        }"#;
+
+        let msg: Message = serde_json::from_str(json).unwrap();
+        match msg {
+            Message::Result {
+                structured_output,
+                ..
+            } => {
+                assert!(structured_output.is_some());
+                let output = structured_output.unwrap();
+                assert_eq!(output["answer"], 42);
+            }
+            _ => panic!("Expected Result message"),
+        }
+    }
+
+    #[test]
+    fn test_message_result_with_structured_output_camel_case() {
+        // Test parsing result message with structuredOutput (camelCase alias)
+        let json = r#"{
+            "type": "result",
+            "subtype": "success",
+            "cost_usd": 0.05,
+            "duration_ms": 1500,
+            "duration_api_ms": 1200,
+            "is_error": false,
+            "num_turns": 3,
+            "session_id": "session_123",
+            "structuredOutput": {"name": "test", "value": true}
+        }"#;
+
+        let msg: Message = serde_json::from_str(json).unwrap();
+        match msg {
+            Message::Result {
+                structured_output,
+                ..
+            } => {
+                assert!(structured_output.is_some());
+                let output = structured_output.unwrap();
+                assert_eq!(output["name"], "test");
+                assert_eq!(output["value"], true);
+            }
+            _ => panic!("Expected Result message"),
+        }
+    }
+
+    #[test]
+    fn test_default_options_new_fields() {
+        let options = ClaudeCodeOptions::default();
+
+        // Verify defaults for new fields
+        assert!(options.tools.is_none());
+        assert!(options.betas.is_empty());
+        assert!(options.max_budget_usd.is_none());
+        assert!(options.fallback_model.is_none());
+        assert!(options.output_format.is_none());
+        assert!(!options.enable_file_checkpointing);
+        assert!(options.sandbox.is_none());
+        assert!(options.plugins.is_empty());
+        assert!(options.user.is_none());
+        // Note: auto_download_cli defaults to false (Rust bool default)
+        // Users should explicitly enable it with .auto_download_cli(true)
+        assert!(!options.auto_download_cli);
     }
 }

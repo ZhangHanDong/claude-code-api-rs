@@ -9,7 +9,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use futures::stream::{Stream, StreamExt};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::process::Stdio;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
@@ -105,6 +105,124 @@ impl SubprocessTransport {
             request_counter: 0,
             close_stdin_after_prompt: false,
         })
+    }
+
+    /// Create a new subprocess transport with async initialization
+    ///
+    /// This version supports auto-downloading the CLI if `auto_download_cli` is enabled
+    /// in the options and the CLI is not found.
+    pub async fn new_async(options: ClaudeCodeOptions) -> Result<Self> {
+        let cli_path = match find_claude_cli() {
+            Ok(path) => path,
+            Err(_) if options.auto_download_cli => {
+                info!("Claude CLI not found, attempting automatic download...");
+                crate::cli_download::download_cli(None, None).await?
+            }
+            Err(e) => return Err(e),
+        };
+
+        Ok(Self {
+            options,
+            cli_path,
+            child: None,
+            stdin_tx: None,
+            message_broadcast_tx: None,
+            control_rx: None,
+            sdk_control_rx: None,
+            state: TransportState::Disconnected,
+            request_counter: 0,
+            close_stdin_after_prompt: false,
+        })
+    }
+
+    fn build_settings_value(&self) -> Option<String> {
+        let has_settings = self.options.settings.is_some();
+        let has_sandbox = self.options.sandbox.is_some();
+
+        if !has_settings && !has_sandbox {
+            return None;
+        }
+
+        // If only settings path and no sandbox, pass through as-is
+        if has_settings && !has_sandbox {
+            return self.options.settings.clone();
+        }
+
+        // If we have sandbox settings, merge into a JSON object (Python parity)
+        let mut settings_obj = serde_json::Map::new();
+
+        if let Some(ref settings) = self.options.settings {
+            let settings_str = settings.trim();
+
+            let load_as_json_string =
+                |s: &str| -> Option<serde_json::Map<String, serde_json::Value>> {
+                match serde_json::from_str::<serde_json::Value>(s) {
+                    Ok(serde_json::Value::Object(map)) => Some(map),
+                    Ok(_) => {
+                        warn!("Settings JSON must be an object; ignoring provided JSON settings");
+                        None
+                    }
+                    Err(_) => None,
+                }
+            };
+
+            let load_from_file =
+                |path: &Path| -> Option<serde_json::Map<String, serde_json::Value>> {
+                let content = std::fs::read_to_string(path).ok()?;
+                match serde_json::from_str::<serde_json::Value>(&content) {
+                    Ok(serde_json::Value::Object(map)) => Some(map),
+                    Ok(_) => {
+                        warn!("Settings file JSON must be an object: {}", path.display());
+                        None
+                    }
+                    Err(e) => {
+                        warn!("Failed to parse settings file {}: {}", path.display(), e);
+                        None
+                    }
+                }
+            };
+
+            if settings_str.starts_with('{') && settings_str.ends_with('}') {
+                if let Some(map) = load_as_json_string(settings_str) {
+                    settings_obj = map;
+                } else {
+                    warn!(
+                        "Failed to parse settings as JSON, treating as file path: {}",
+                        settings_str
+                    );
+                    let settings_path = Path::new(settings_str);
+                    if settings_path.exists() {
+                        if let Some(map) = load_from_file(settings_path) {
+                            settings_obj = map;
+                        }
+                    } else {
+                        warn!("Settings file not found: {}", settings_path.display());
+                    }
+                }
+            } else {
+                let settings_path = Path::new(settings_str);
+                if settings_path.exists() {
+                    if let Some(map) = load_from_file(settings_path) {
+                        settings_obj = map;
+                    }
+                } else {
+                    warn!("Settings file not found: {}", settings_path.display());
+                }
+            }
+        }
+
+        if let Some(ref sandbox) = self.options.sandbox {
+            match serde_json::to_value(sandbox) {
+                Ok(value) => {
+                    settings_obj.insert("sandbox".to_string(), value);
+                }
+                Err(e) => {
+                    warn!("Failed to serialize sandbox settings: {}", e);
+                }
+            }
+        }
+
+        Some(serde_json::Value::Object(settings_obj).to_string())
     }
     
     /// Subscribe to messages without borrowing self (for lock-free consumption)
@@ -225,17 +343,17 @@ impl SubprocessTransport {
             }
         }
 
-        // System prompts - prioritize v2 API
+        // System prompts (match Python SDK behavior)
+        //
+        // Python always passes `--system-prompt ""` when `system_prompt` is None.
         if let Some(ref prompt_v2) = self.options.system_prompt_v2 {
             match prompt_v2 {
                 crate::types::SystemPrompt::String(s) => {
                     cmd.arg("--system-prompt").arg(s);
                 }
-                crate::types::SystemPrompt::Preset { preset, append, .. } => {
-                    // Use preset-based prompt
-                    cmd.arg("--system-prompt-preset").arg(preset);
-
-                    // Append if specified
+                crate::types::SystemPrompt::Preset { append, .. } => {
+                    // Python only uses preset prompts to optionally append to the default preset.
+                    // It does not pass a preset selector flag to the CLI.
                     if let Some(append_text) = append {
                         cmd.arg("--append-system-prompt").arg(append_text);
                     }
@@ -244,8 +362,13 @@ impl SubprocessTransport {
         } else {
             // Fallback to deprecated fields for backward compatibility
             #[allow(deprecated)]
-            if let Some(ref prompt) = self.options.system_prompt {
-                cmd.arg("--system-prompt").arg(prompt);
+            match self.options.system_prompt.as_deref() {
+                Some(prompt) => {
+                    cmd.arg("--system-prompt").arg(prompt);
+                }
+                None => {
+                    cmd.arg("--system-prompt").arg("");
+                }
             }
             #[allow(deprecated)]
             if let Some(ref prompt) = self.options.append_system_prompt {
@@ -294,7 +417,12 @@ impl SubprocessTransport {
             cmd.arg("--max-turns").arg(max_turns.to_string());
         }
 
-        // Note: max_thinking_tokens is not currently supported by Claude CLI
+        // Max thinking tokens (extended thinking budget)
+        // Only pass if non-zero to match Python SDK behavior
+        if self.options.max_thinking_tokens > 0 {
+            cmd.arg("--max-thinking-tokens")
+                .arg(self.options.max_thinking_tokens.to_string());
+        }
 
         // Working directory
         if let Some(ref cwd) = self.options.cwd {
@@ -322,9 +450,9 @@ impl SubprocessTransport {
             cmd.arg("--resume").arg(resume_id);
         }
 
-        // Settings file
-        if let Some(ref settings) = self.options.settings {
-            cmd.arg("--settings").arg(settings);
+        // Settings value (merge sandbox into settings if provided)
+        if let Some(settings_value) = self.build_settings_value() {
+            cmd.arg("--settings").arg(settings_value);
         }
 
         // Additional directories
@@ -337,6 +465,64 @@ impl SubprocessTransport {
             cmd.arg("--fork-session");
         }
 
+        // ========== Phase 3 CLI args (Python SDK v0.1.12+ sync) ==========
+
+        // Tools configuration (base set of tools)
+        if let Some(ref tools) = self.options.tools {
+            match tools {
+                crate::types::ToolsConfig::List(list) => {
+                    if list.is_empty() {
+                        cmd.arg("--tools").arg("");
+                    } else {
+                        cmd.arg("--tools").arg(list.join(","));
+                    }
+                }
+                crate::types::ToolsConfig::Preset(_preset) => {
+                    // Preset object - 'claude_code' preset maps to 'default'
+                    cmd.arg("--tools").arg("default");
+                }
+            }
+        }
+
+        // SDK betas
+        if !self.options.betas.is_empty() {
+            let betas: Vec<String> = self.options.betas.iter().map(|b| b.to_string()).collect();
+            cmd.arg("--betas").arg(betas.join(","));
+        }
+
+        // Max budget USD
+        if let Some(budget) = self.options.max_budget_usd {
+            cmd.arg("--max-budget-usd").arg(budget.to_string());
+        }
+
+        // Fallback model
+        if let Some(ref fallback) = self.options.fallback_model {
+            cmd.arg("--fallback-model").arg(fallback);
+        }
+
+        // File checkpointing
+        if self.options.enable_file_checkpointing {
+            cmd.env("CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING", "true");
+        }
+
+        // Output format for structured outputs (json_schema only)
+        if let Some(ref format) = self.options.output_format
+            && format.get("type").and_then(|v| v.as_str()) == Some("json_schema")
+            && let Some(schema) = format.get("schema")
+            && let Ok(schema_json) = serde_json::to_string(schema)
+        {
+            cmd.arg("--json-schema").arg(schema_json);
+        }
+
+        // Plugin directories
+        for plugin in &self.options.plugins {
+            match plugin {
+                crate::types::SdkPluginConfig::Local { path } => {
+                    cmd.arg("--plugin-dir").arg(path);
+                }
+            }
+        }
+
         // Programmatic agents
         if let Some(ref agents) = self.options.agents
             && !agents.is_empty()
@@ -344,12 +530,24 @@ impl SubprocessTransport {
                     cmd.arg("--agents").arg(json_str);
                 }
 
-        // Setting sources (comma-separated)
-        if let Some(ref sources) = self.options.setting_sources
-            && !sources.is_empty() {
-                let value = sources.iter().map(|s| (match s { crate::types::SettingSource::User => "user", crate::types::SettingSource::Project => "project", crate::types::SettingSource::Local => "local" }).to_string()).collect::<Vec<_>>().join(",");
-                cmd.arg("--setting-sources").arg(value);
-            }
+        // Setting sources (comma-separated). Always pass a value for SDK parity with Python.
+        let sources_value = self
+            .options
+            .setting_sources
+            .as_ref()
+            .map(|sources| {
+                sources
+                    .iter()
+                    .map(|s| match s {
+                        crate::types::SettingSource::User => "user",
+                        crate::types::SettingSource::Project => "project",
+                        crate::types::SettingSource::Local => "local",
+                    })
+                    .collect::<Vec<_>>()
+                    .join(",")
+            })
+            .unwrap_or_default();
+        cmd.arg("--setting-sources").arg(sources_value);
 
         // Extra arguments
         for (key, value) in &self.options.extra_args {
@@ -372,6 +570,13 @@ impl SubprocessTransport {
         // Set environment variables to indicate SDK usage and version
         cmd.env("CLAUDE_CODE_ENTRYPOINT", "sdk-rust");
         cmd.env("CLAUDE_AGENT_SDK_VERSION", env!("CARGO_PKG_VERSION"));
+
+        // Debug log the full command being executed
+        debug!(
+            "Executing Claude CLI command: {} {:?}",
+            self.cli_path.display(),
+            cmd.as_std().get_args().collect::<Vec<_>>()
+        );
 
         cmd
     }
@@ -434,6 +639,10 @@ impl SubprocessTransport {
 
         let mut cmd = self.build_command();
         info!("Starting Claude CLI with command: {:?}", cmd);
+
+        if let Some(user) = self.options.user.as_deref() {
+            apply_process_user(&mut cmd, user)?;
+        }
 
         let mut child = cmd.spawn().map_err(|e| {
             error!("Failed to spawn Claude CLI: {}", e);
@@ -600,6 +809,7 @@ impl SubprocessTransport {
         // Spawn stderr handler - capture error messages for better diagnostics
         let message_broadcast_tx_for_error = message_broadcast_tx.clone();
         let debug_stderr = self.options.debug_stderr.clone();
+        let stderr_callback = self.options.stderr_callback.clone();
         tokio::spawn(async move {
             let reader = BufReader::new(stderr);
             let mut lines = reader.lines();
@@ -612,6 +822,10 @@ impl SubprocessTransport {
                         let mut output = debug_output.lock().await;
                         let _ = writeln!(output, "{line}");
                         let _ = output.flush();
+                    }
+
+                    if let Some(ref callback) = stderr_callback {
+                        callback.as_ref()(line.as_str());
                     }
                     
                     error!("Claude CLI stderr: {}", line);
@@ -849,12 +1063,25 @@ impl Drop for SubprocessTransport {
 }
 
 /// Find the Claude CLI binary
-pub(crate) fn find_claude_cli() -> Result<PathBuf> {
+///
+/// Search order:
+/// 1. System PATH (`claude`, `claude-code`)
+/// 2. SDK cache directory (auto-downloaded CLI)
+/// 3. Common installation locations
+pub fn find_claude_cli() -> Result<PathBuf> {
     // First check if it's in PATH - try both 'claude' and 'claude-code'
     for cmd_name in &["claude", "claude-code"] {
         if let Ok(path) = which::which(cmd_name) {
-            debug!("Found Claude CLI at: {}", path.display());
+            debug!("Found Claude CLI in PATH at: {}", path.display());
             return Ok(path);
+        }
+    }
+
+    // Check SDK cache directory (for auto-downloaded CLI)
+    if let Some(cached_path) = crate::cli_download::get_cached_cli_path() {
+        if cached_path.exists() && cached_path.is_file() {
+            debug!("Found cached Claude CLI at: {}", cached_path.display());
+            return Ok(cached_path);
         }
     }
 
@@ -880,6 +1107,8 @@ pub(crate) fn find_claude_cli() -> Result<PathBuf> {
         // macOS specific npm location
         PathBuf::from("/opt/homebrew/bin/claude"),
         PathBuf::from("/opt/homebrew/bin/claude-code"),
+        // Claude local directory
+        home.join(".claude/local/claude"),
     ];
 
     let mut searched = Vec::new();
@@ -900,7 +1129,14 @@ pub(crate) fn find_claude_cli() -> Result<PathBuf> {
         error!("Node.js/npm not found - Claude CLI requires Node.js");
         return Err(SdkError::CliNotFound {
             searched_paths: format!(
-                "Node.js is not installed. Install from https://nodejs.org/\n\nSearched in:\n{}",
+                "Node.js is not installed. Install from https://nodejs.org/\n\n\
+                Alternatively, enable auto_download_cli to automatically download the CLI:\n\
+                ```rust\n\
+                let options = ClaudeCodeOptions::builder()\n\
+                    .auto_download_cli(true)\n\
+                    .build();\n\
+                ```\n\n\
+                Searched in:\n{}",
                 searched.join("\n")
             ),
         });
@@ -908,9 +1144,125 @@ pub(crate) fn find_claude_cli() -> Result<PathBuf> {
 
     Err(SdkError::CliNotFound {
         searched_paths: format!(
-            "Claude CLI not found. Install with:\n  npm install -g @anthropic-ai/claude-code\n\nSearched in:\n{}",
+            "Claude CLI not found.\n\n\
+            Option 1 - Auto-download (recommended):\n\
+            ```rust\n\
+            let options = ClaudeCodeOptions::builder()\n\
+                .auto_download_cli(true)\n\
+                .build();\n\
+            ```\n\n\
+            Option 2 - Manual installation:\n\
+            npm install -g @anthropic-ai/claude-code\n\n\
+            Searched in:\n{}",
             searched.join("\n")
         ),
+    })
+}
+
+pub(crate) fn apply_process_user(cmd: &mut Command, user: &str) -> Result<()> {
+    let user = user.trim();
+    if user.is_empty() {
+        return Err(SdkError::ConfigError(
+            "options.user must be a non-empty username or uid".into(),
+        ));
+    }
+
+    apply_process_user_inner(cmd, user)
+}
+
+#[cfg(unix)]
+fn apply_process_user_inner(cmd: &mut Command, user: &str) -> Result<()> {
+    use std::ffi::CString;
+    use std::mem::MaybeUninit;
+    use std::os::unix::process::CommandExt;
+    use std::ptr;
+
+    fn passwd_buf_len() -> usize {
+        let buf_len = unsafe { libc::sysconf(libc::_SC_GETPW_R_SIZE_MAX) };
+        if buf_len <= 0 {
+            16 * 1024
+        } else {
+            buf_len as usize
+        }
+    }
+
+    fn lookup_by_name(name: &str) -> Result<(u32, u32)> {
+        let name = CString::new(name).map_err(|_| {
+            SdkError::ConfigError("options.user must not contain NUL bytes".into())
+        })?;
+
+        let mut pwd = MaybeUninit::<libc::passwd>::zeroed();
+        let mut result: *mut libc::passwd = ptr::null_mut();
+        let mut buf = vec![0u8; passwd_buf_len()];
+
+        let rc = unsafe {
+            libc::getpwnam_r(
+                name.as_ptr(),
+                pwd.as_mut_ptr(),
+                buf.as_mut_ptr() as *mut libc::c_char,
+                buf.len(),
+                &mut result,
+            )
+        };
+        if rc != 0 {
+            return Err(SdkError::ConfigError(format!(
+                "Failed to resolve options.user={}: getpwnam_r returned {}",
+                name.to_string_lossy(),
+                rc
+            )));
+        }
+        if result.is_null() {
+            return Err(SdkError::ConfigError(format!(
+                "User not found: {}",
+                name.to_string_lossy()
+            )));
+        }
+
+        let pwd = unsafe { pwd.assume_init() };
+        Ok((pwd.pw_uid as u32, pwd.pw_gid as u32))
+    }
+
+    fn lookup_by_uid(uid: u32) -> Result<(u32, u32)> {
+        let mut pwd = MaybeUninit::<libc::passwd>::zeroed();
+        let mut result: *mut libc::passwd = ptr::null_mut();
+        let mut buf = vec![0u8; passwd_buf_len()];
+
+        let rc = unsafe {
+            libc::getpwuid_r(
+                uid as libc::uid_t,
+                pwd.as_mut_ptr(),
+                buf.as_mut_ptr() as *mut libc::c_char,
+                buf.len(),
+                &mut result,
+            )
+        };
+        if rc != 0 {
+            return Err(SdkError::ConfigError(format!(
+                "Failed to resolve options.user={}: getpwuid_r returned {}",
+                uid, rc
+            )));
+        }
+        if result.is_null() {
+            return Err(SdkError::ConfigError(format!("User not found for uid: {}", uid)));
+        }
+
+        let pwd = unsafe { pwd.assume_init() };
+        Ok((pwd.pw_uid as u32, pwd.pw_gid as u32))
+    }
+
+    let (uid, gid) = match user.parse::<u32>() {
+        Ok(uid) => lookup_by_uid(uid)?,
+        Err(_) => lookup_by_name(user)?,
+    };
+
+    cmd.as_std_mut().uid(uid).gid(gid);
+    Ok(())
+}
+
+#[cfg(not(unix))]
+fn apply_process_user_inner(_cmd: &mut Command, _user: &str) -> Result<()> {
+    Err(SdkError::NotSupported {
+        feature: "options.user is only supported on Unix platforms".into(),
     })
 }
 

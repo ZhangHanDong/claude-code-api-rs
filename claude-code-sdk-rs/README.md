@@ -6,6 +6,8 @@
 
 A Rust SDK for interacting with Claude Code CLI, providing both simple query interfaces and full interactive client capabilities.
 
+> **v0.4.0**: 🎉 **100% Feature Parity with Python SDK v0.1.14** - Including automatic CLI download!
+
 ## Features
 
 - 🚀 **Simple Query Interface** - One-shot queries with the `query()` function
@@ -15,8 +17,37 @@ A Rust SDK for interacting with Claude Code CLI, providing both simple query int
 - 🔧 **Full Configuration** - Comprehensive options for Claude Code
 - 📦 **Type Safety** - Strongly typed with serde support
 - ⚡ **Async/Await** - Built on Tokio for async operations
-- 🔒 **Control Protocol** - Full support for permissions, hooks, and MCP servers (v0.1.11+)
-- 💰 **Token Optimization** - Built-in tools to minimize costs and track usage (v0.1.12+)
+- 🔒 **Control Protocol** - Full support for permissions, hooks, and MCP servers
+- 💰 **Token Optimization** - Built-in tools to minimize costs and track usage
+- 📥 **Auto CLI Download** - Automatically downloads Claude Code CLI if not found (v0.4.0+)
+- 📁 **File Checkpointing** - Rewind file changes to any point in conversation (v0.4.0+)
+- 📊 **Structured Output** - JSON schema validation for responses (v0.4.0+)
+
+## Python SDK Parity (v0.4.0)
+
+This Rust SDK achieves **100% feature parity** with the official Python `claude-agent-sdk` v0.1.14:
+
+| Feature | Python SDK | Rust SDK | Status |
+|---------|-----------|----------|--------|
+| Simple query API | ✅ | ✅ | ✅ Parity |
+| Interactive client | ✅ | ✅ | ✅ Parity |
+| Streaming messages | ✅ | ✅ | ✅ Parity |
+| `tools` (base tool set) | ✅ | ✅ | ✅ Parity |
+| `permission_mode` | ✅ | ✅ | ✅ Parity |
+| `max_budget_usd` | ✅ | ✅ | ✅ Parity |
+| `fallback_model` | ✅ | ✅ | ✅ Parity |
+| `output_format` (structured) | ✅ | ✅ | ✅ Parity |
+| `enable_file_checkpointing` | ✅ | ✅ | ✅ Parity |
+| `rewind_files()` | ✅ | ✅ | ✅ Parity |
+| `sandbox` | ✅ | ✅ | ✅ Parity |
+| `plugins` | ✅ | ✅ | ✅ Parity |
+| `betas` (SDK beta features) | ✅ | ✅ | ✅ Parity |
+| Permission callbacks | ✅ | ✅ | ✅ Parity |
+| Hook callbacks | ✅ | ✅ | ✅ Parity |
+| MCP servers (all types) | ✅ | ✅ | ✅ Parity |
+| Bundled/Auto CLI | ✅ (bundled) | ✅ (auto-download) | ✅ Equivalent |
+
+> **Note**: Only `user` (OS setuid) is not implemented due to platform/privilege requirements.
 
 ## Token Optimization (New in v0.1.12)
 
@@ -30,6 +61,8 @@ use cc_sdk::model_recommendation::ModelRecommendation;
 // 1. Choose cost-effective model
 let recommender = ModelRecommendation::default();
 let model = recommender.suggest("simple").unwrap(); // → Haiku (cheapest)
+// Or use latest Sonnet 4.5 for balanced tasks
+let latest = recommender.suggest("latest").unwrap(); // → Sonnet 4.5
 
 // 2. Configure for minimal token usage
 let options = ClaudeCodeOptions::builder()
@@ -63,9 +96,9 @@ println!("Tokens: {}, Cost: ${:.2}", usage.total_tokens(), usage.total_cost_usd)
 - ✅ Automatic usage tracking from `ResultMessage`
 
 **Model Cost Comparison:**
-- Haiku: **1x** (baseline, cheapest)
-- Sonnet: **~5x** more expensive
-- Opus: **~15x** more expensive
+- Haiku 3.5: **1x** (baseline, cheapest)
+- Sonnet 4.5 (Latest): **~5x** more expensive, best balance ⭐
+- Opus 4.1: **~15x** more expensive, most capable
 
 See [Token Optimization Guide](docs/TOKEN_OPTIMIZATION.md) for complete strategies and examples.
 
@@ -83,6 +116,7 @@ This Rust SDK provides comprehensive functionality for Claude Code interactions:
 - ✅ **Type safety**: Leveraging Rust's type system for reliable code
 - ✅ **Control Protocol**: Permission callbacks, hook system, MCP servers (SDK type)
 - ✅ **CLI Compatibility**: Configurable protocol format for maximum compatibility
+- ✅ **Account Information**: Retrieve current account details programmatically
 
 ## Installation
 
@@ -90,18 +124,60 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-cc-sdk = "0.2.0"
+cc-sdk = "0.4.0"
 tokio = { version = "1.0", features = ["full"] }
 futures = "0.3"
 ```
 
+### Automatic CLI Download (Default)
+
+The SDK will automatically download Claude Code CLI if it's not found on your system:
+
+```rust
+let options = ClaudeCodeOptions::builder()
+    .auto_download_cli(true)  // Enabled by default
+    .build();
+```
+
+CLI is cached in platform-specific locations:
+- **macOS**: `~/Library/Caches/cc-sdk/cli/`
+- **Linux**: `~/.cache/cc-sdk/cli/`
+- **Windows**: `%LOCALAPPDATA%\cc-sdk\cli\`
+
+To disable auto-download, use:
+
+```toml
+[dependencies]
+cc-sdk = { version = "0.4.0", default-features = false }
+```
+
 ## Prerequisites
 
-Install Claude Code CLI:
+Claude Code CLI is **automatically downloaded** by the SDK if not found (v0.4.0+).
+
+For manual installation:
 
 ```bash
 npm install -g @anthropic-ai/claude-code
 ```
+
+## Environment Setup
+
+For reliable SDK operation, set the `ANTHROPIC_USER_EMAIL` environment variable:
+
+```bash
+export ANTHROPIC_USER_EMAIL="your-email@example.com"
+```
+
+Or create a `.env` file in your project:
+
+```bash
+# .env
+ANTHROPIC_USER_EMAIL=your-email@example.com
+CLAUDE_MODEL=claude-sonnet-4-5-20250929
+```
+
+See [Environment Variables Guide](docs/ENVIRONMENT_VARIABLES.md) for complete details.
 
 ## Supported Models (2025)
 
@@ -167,12 +243,12 @@ use cc_sdk::{InteractiveClient, ClaudeCodeOptions, Result};
 async fn main() -> Result<()> {
     let mut client = InteractiveClient::new(ClaudeCodeOptions::default())?;
     client.connect().await?;
-    
+
     // Send a message and receive response
     let messages = client.send_and_receive(
         "Help me write a Python web server".to_string()
     ).await?;
-    
+
     // Process responses
     for msg in &messages {
         match msg {
@@ -182,12 +258,31 @@ async fn main() -> Result<()> {
             _ => {}
         }
     }
-    
+
     // Send follow-up
     let messages = client.send_and_receive(
         "Make it use async/await".to_string()
     ).await?;
-    
+
+    client.disconnect().await?;
+    Ok(())
+}
+```
+
+### Account Information (New)
+
+```rust
+use cc_sdk::{ClaudeSDKClient, ClaudeCodeOptions, Result};
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let mut client = ClaudeSDKClient::new(ClaudeCodeOptions::default());
+    client.connect(None).await?;
+
+    // Get current account information
+    let account_info = client.get_account_info().await?;
+    println!("Current account: {}", account_info);
+
     client.disconnect().await?;
     Ok(())
 }

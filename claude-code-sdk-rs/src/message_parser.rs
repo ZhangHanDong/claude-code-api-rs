@@ -240,6 +240,10 @@ fn parse_result_message(json: Value) -> Result<Option<Message>> {
                     .get("result")
                     .and_then(|v| v.as_str())
                     .map(String::from),
+                structured_output: json
+                    .get("structured_output")
+                    .or_else(|| json.get("structuredOutput"))
+                    .and_then(|v| (!v.is_null()).then(|| v.clone())),
             }))
         }
     }
@@ -391,6 +395,29 @@ mod tests {
             assert_eq!(duration_ms, 1234);
             assert_eq!(session_id, "test_session");
             assert_eq!(total_cost_usd, Some(0.001));
+        } else {
+            panic!("Expected Result message");
+        }
+    }
+
+    #[test]
+    fn test_parse_result_message_structured_output_alias() {
+        let json = json!({
+            "type": "result",
+            "subtype": "conversation_turn",
+            "duration_ms": 1,
+            "duration_api_ms": 1,
+            "is_error": false,
+            "num_turns": 1,
+            "session_id": "test_session",
+            "structuredOutput": {"answer": 42}
+        });
+
+        let result = parse_message(json).unwrap();
+        assert!(result.is_some());
+
+        if let Some(Message::Result { structured_output, .. }) = result {
+            assert_eq!(structured_output, Some(json!({"answer": 42})));
         } else {
             panic!("Expected Result message");
         }

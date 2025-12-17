@@ -26,7 +26,7 @@ async fn e2e_initialize_control_handshake() {
                 "response": {
                     "request_id": req_id,
                     "subtype": "success",
-                    "data": {"ok": true}
+                    "response": {"ok": true}
                 }
             });
             let _ = sdk_tx.send(resp).await;
@@ -38,7 +38,7 @@ async fn e2e_initialize_control_handshake() {
     responder.await.unwrap();
 
     let init = q.get_initialization_result().cloned().unwrap();
-    assert_eq!(init.get("subtype").and_then(|v| v.as_str()), Some("success"));
+    assert_eq!(init.get("ok").and_then(|v| v.as_bool()), Some(true));
 }
 
 struct AllowAll;

@@ -32,6 +32,8 @@
 #![warn(missing_docs)]
 #![warn(rustdoc::missing_crate_level_docs)]
 
+/// CLI download and management utilities
+pub mod cli_download;
 mod client;
 // mod client_v2;  // Has compilation errors
 // mod client_final;  // Has compilation errors
@@ -87,9 +89,13 @@ pub use types::{
     // SDK Control Protocol types
     SDKControlInitializeRequest, SDKControlInterruptRequest, SDKControlMcpMessageRequest,
     SDKControlPermissionRequest, SDKControlRequest, SDKControlSetPermissionModeRequest,
-    SDKHookCallbackRequest,
+    SDKHookCallbackRequest, SDKControlRewindFilesRequest,
     // Phase 2 enhancements
     SettingSource, AgentDefinition, SystemPrompt,
+    // Phase 3 enhancements (Python SDK v0.1.12+ sync)
+    ToolsConfig, ToolsPreset, SdkBeta,
+    SandboxSettings, SandboxNetworkConfig, SandboxIgnoreViolations,
+    SdkPluginConfig,
 };
 
 // Phase 3: Type aliases for naming consistency

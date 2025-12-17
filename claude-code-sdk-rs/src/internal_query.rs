@@ -221,7 +221,22 @@ impl Query {
         match timeout(Duration::from_secs(60), rx).await {
             Ok(Ok(response)) => {
                 debug!("Received control response for {}", request_id);
-                Ok(response)
+
+                // Python parity: treat subtype=error as an error, and return only
+                // the payload from `response` (or legacy `data`) on success.
+                if response.get("subtype").and_then(|v| v.as_str()) == Some("error") {
+                    let msg = response
+                        .get("error")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("Unknown control request error");
+                    return Err(SdkError::ControlRequestError(msg.to_string()));
+                }
+
+                Ok(response
+                    .get("response")
+                    .or_else(|| response.get("data"))
+                    .cloned()
+                    .unwrap_or_else(|| serde_json::json!({})))
             }
             Ok(Err(_)) => Err(SdkError::ControlRequestError(
                 "Response channel closed".to_string(),
@@ -324,7 +339,8 @@ impl Query {
                                 if let Some(request_id) = request_id {
                                     let mut pending = pending_responses_clone.write().await;
                                     if let Some(tx) = pending.remove(request_id) {
-                                        // Deliver only the nested "response" object (matches Python SDK semantics)
+                                        // Deliver the nested control response object; send_control_request will
+                                        // extract the `response` (or legacy `data`) payload for callers.
                                         let _ = tx.send(resp_obj.clone());
                                         debug!("Control response delivered for request_id: {}", request_id);
                                     } else {
@@ -720,6 +736,36 @@ impl Query {
             subtype: "set_model".to_string(),
             model,
         });
+        let _ = self.send_control_request(req).await?;
+        Ok(())
+    }
+
+    /// Rewind tracked files to their state at a specific user message
+    ///
+    /// Requires `enable_file_checkpointing` to be enabled in `ClaudeCodeOptions`.
+    ///
+    /// # Arguments
+    ///
+    /// * `user_message_id` - UUID of the user message to rewind to
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// # use cc_sdk::{ClaudeSDKClient, ClaudeCodeOptions};
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let options = ClaudeCodeOptions::builder()
+    ///     .enable_file_checkpointing(true)
+    ///     .build();
+    /// let mut client = ClaudeSDKClient::new(options);
+    /// client.connect(None).await?;
+    ///
+    /// // Later, rewind to a checkpoint
+    /// // client.rewind_files("user-message-uuid-here").await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn rewind_files(&mut self, user_message_id: &str) -> Result<()> {
+        let req = SDKControlRequest::RewindFiles(crate::types::SDKControlRewindFilesRequest::new(user_message_id));
         let _ = self.send_control_request(req).await?;
         Ok(())
     }

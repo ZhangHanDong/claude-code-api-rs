@@ -57,6 +57,7 @@ impl MockClient {
             total_cost_usd: Some(0.0001),
             usage: None,
             result: Some("Success".to_string()),
+                    structured_output: None,
         };
 
         Ok(vec![assistant_msg, result_msg])

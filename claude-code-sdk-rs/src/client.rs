@@ -8,7 +8,7 @@ use crate::{
     internal_query::Query,
     token_tracker::BudgetManager,
     transport::{InputMessage, SubprocessTransport, Transport},
-    types::{ClaudeCodeOptions, ControlRequest, ControlResponse, Message},
+    types::{ClaudeCodeOptions, ContentBlock, ControlRequest, ControlResponse, Message},
 };
 use futures::stream::{Stream, StreamExt};
 use std::collections::HashMap;
@@ -181,7 +181,8 @@ impl ClaudeSDKClient {
         // Create query handler if control protocol features are enabled
         let query_handler = if options.can_use_tool.is_some()
             || options.hooks.is_some()
-            || !options.mcp_servers.is_empty() {
+            || !options.mcp_servers.is_empty()
+            || options.enable_file_checkpointing {
             // Extract SDK MCP server instances
             let sdk_mcp_servers: HashMap<String, Arc<dyn std::any::Any + Send + Sync>> = options.mcp_servers
                 .iter()
@@ -488,10 +489,125 @@ impl ClaudeSDKClient {
         None
     }
 
+    /// Get account information
+    ///
+    /// This method attempts to retrieve Claude account information through multiple methods:
+    /// 1. From environment variable `ANTHROPIC_USER_EMAIL`
+    /// 2. From Claude CLI config file (if accessible)
+    /// 3. By querying the CLI with `/status` command (interactive mode)
+    ///
+    /// # Returns
+    ///
+    /// A string containing the account information, or an error if unavailable.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// # use cc_sdk::{ClaudeSDKClient, ClaudeCodeOptions};
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let mut client = ClaudeSDKClient::new(ClaudeCodeOptions::default());
+    /// client.connect(None).await?;
+    ///
+    /// match client.get_account_info().await {
+    ///     Ok(info) => println!("Account: {}", info),
+    ///     Err(_) => println!("Account info not available"),
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// # Note
+    ///
+    /// Account information may not always be available in SDK mode.
+    /// Consider setting the `ANTHROPIC_USER_EMAIL` environment variable
+    /// for reliable account identification.
+    pub async fn get_account_info(&mut self) -> Result<String> {
+        // Check connection
+        {
+            let state = self.state.read().await;
+            if *state != ClientState::Connected {
+                return Err(SdkError::InvalidState {
+                    message: "Not connected. Call connect() first.".into(),
+                });
+            }
+        }
+
+        // Method 1: Check environment variable
+        if let Ok(email) = std::env::var("ANTHROPIC_USER_EMAIL") {
+            return Ok(format!("Email: {}", email));
+        }
+
+        // Method 2: Try reading from Claude config
+        if let Some(config_info) = Self::read_claude_config().await {
+            return Ok(config_info);
+        }
+
+        // Method 3: Try /status command (may not work in SDK mode)
+        self.send_user_message("/status".to_string()).await?;
+
+        let mut messages = self.receive_messages().await;
+        let mut account_info = String::new();
+
+        while let Some(msg_result) = messages.next().await {
+            match msg_result? {
+                Message::Assistant { message } => {
+                    for block in message.content {
+                        if let ContentBlock::Text(text) = block {
+                            account_info.push_str(&text.text);
+                            account_info.push('\n');
+                        }
+                    }
+                }
+                Message::Result { .. } => break,
+                _ => {}
+            }
+        }
+
+        let trimmed = account_info.trim();
+
+        // Check if we got actual status info or just a chat response
+        if !trimmed.is_empty() && (
+            trimmed.contains("account") ||
+            trimmed.contains("email") ||
+            trimmed.contains("subscription") ||
+            trimmed.contains("authenticated")
+        ) {
+            return Ok(trimmed.to_string());
+        }
+
+        Err(SdkError::InvalidState {
+            message: "Account information not available. Try setting ANTHROPIC_USER_EMAIL environment variable.".into(),
+        })
+    }
+
+    /// Read Claude config file
+    async fn read_claude_config() -> Option<String> {
+        // Try common config locations
+        let config_paths = vec![
+            dirs::home_dir()?.join(".config").join("claude").join("config.json"),
+            dirs::home_dir()?.join(".claude").join("config.json"),
+        ];
+
+        for path in config_paths {
+            if let Ok(content) = tokio::fs::read_to_string(&path).await {
+                if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
+                    if let Some(email) = json.get("email").and_then(|v| v.as_str()) {
+                        return Some(format!("Email: {}", email));
+                    }
+                    if let Some(user) = json.get("user").and_then(|v| v.as_str()) {
+                        return Some(format!("User: {}", user));
+                    }
+                }
+            }
+        }
+
+        None
+    }
+
     /// Set permission mode dynamically
     ///
     /// Changes the permission mode during an active session.
-    /// Requires control protocol to be enabled (via can_use_tool, hooks, or mcp_servers).
+    /// Requires control protocol to be enabled (via can_use_tool, hooks, mcp_servers, or file checkpointing).
     ///
     /// # Arguments
     ///
@@ -516,7 +632,7 @@ impl ClaudeSDKClient {
             handler.set_permission_mode(mode).await
         } else {
             Err(SdkError::InvalidState {
-                message: "Query handler not initialized. Control protocol features required (enable can_use_tool, hooks, or mcp_servers).".to_string(),
+                message: "Query handler not initialized. Enable control protocol features (can_use_tool, hooks, mcp_servers, or enable_file_checkpointing).".to_string(),
             })
         }
     }
@@ -524,7 +640,7 @@ impl ClaudeSDKClient {
     /// Set model dynamically
     ///
     /// Changes the active model during an active session.
-    /// Requires control protocol to be enabled (via can_use_tool, hooks, or mcp_servers).
+    /// Requires control protocol to be enabled (via can_use_tool, hooks, mcp_servers, or file checkpointing).
     ///
     /// # Arguments
     ///
@@ -549,7 +665,7 @@ impl ClaudeSDKClient {
             handler.set_model(model).await
         } else {
             Err(SdkError::InvalidState {
-                message: "Query handler not initialized. Control protocol features required (enable can_use_tool, hooks, or mcp_servers).".to_string(),
+                message: "Query handler not initialized. Enable control protocol features (can_use_tool, hooks, mcp_servers, or enable_file_checkpointing).".to_string(),
             })
         }
     }
@@ -559,16 +675,82 @@ impl ClaudeSDKClient {
     /// This method is similar to Python SDK's query method in ClaudeSDKClient
     pub async fn query(&mut self, prompt: String, session_id: Option<String>) -> Result<()> {
         let session_id = session_id.unwrap_or_else(|| "default".to_string());
-        
+
         // Send the message
         let message = InputMessage::user(prompt, session_id);
-        
+
         {
             let mut transport = self.transport.lock().await;
             transport.send_message(message).await?;
         }
-        
+
         Ok(())
+    }
+
+    /// Rewind tracked files to their state at a specific user message
+    ///
+    /// Requires `enable_file_checkpointing` to be enabled in `ClaudeCodeOptions`.
+    /// This method allows you to undo file changes made during the session by
+    /// reverting them to their state at any previous user message checkpoint.
+    ///
+    /// # Arguments
+    ///
+    /// * `user_message_id` - UUID of the user message to rewind to. This should be
+    ///   the `uuid` field from a message received during the conversation.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// # use cc_sdk::{ClaudeSDKClient, ClaudeCodeOptions};
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let options = ClaudeCodeOptions::builder()
+    ///     .enable_file_checkpointing(true)
+    ///     .build();
+    /// let mut client = ClaudeSDKClient::new(options);
+    /// client.connect(None).await?;
+    ///
+    /// // Ask Claude to make some changes
+    /// client.send_request("Make some changes to my files".to_string(), None).await?;
+    ///
+    /// // ... later, rewind to a checkpoint
+    /// // client.rewind_files("user-message-uuid-here").await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The client is not connected
+    /// - The query handler is not initialized (control protocol required)
+    /// - File checkpointing is not enabled
+    /// - The specified user_message_id is invalid
+    pub async fn rewind_files(&mut self, user_message_id: &str) -> Result<()> {
+        // Check connection
+        {
+            let state = self.state.read().await;
+            if *state != ClientState::Connected {
+                return Err(SdkError::InvalidState {
+                    message: "Not connected. Call connect() first.".into(),
+                });
+            }
+        }
+
+        if !self.options.enable_file_checkpointing {
+            return Err(SdkError::InvalidState {
+                message: "File checkpointing is not enabled. Set ClaudeCodeOptions::builder().enable_file_checkpointing(true).".to_string(),
+            });
+        }
+
+        // Require query handler for control protocol
+        if let Some(ref query_handler) = self.query_handler {
+            let mut handler = query_handler.lock().await;
+            handler.rewind_files(user_message_id).await
+        } else {
+            Err(SdkError::InvalidState {
+                message: "Query handler not initialized. Enable control protocol features (can_use_tool, hooks, mcp_servers, or enable_file_checkpointing).".to_string(),
+            })
+        }
     }
 
     /// Disconnect from Claude CLI
@@ -753,15 +935,17 @@ impl Drop for ClaudeSDKClient {
         let transport = self.transport.clone();
         let state = self.state.clone();
 
-        tokio::spawn(async move {
-            let state = state.read().await;
-            if *state == ClientState::Connected {
-                let mut transport = transport.lock().await;
-                if let Err(e) = transport.disconnect().await {
-                    debug!("Error disconnecting in drop: {}", e);
+        if let Ok(handle) = tokio::runtime::Handle::try_current() {
+            handle.spawn(async move {
+                let state = state.read().await;
+                if *state == ClientState::Connected {
+                    let mut transport = transport.lock().await;
+                    if let Err(e) = transport.disconnect().await {
+                        debug!("Error disconnecting in drop: {}", e);
+                    }
                 }
-            }
-        });
+            });
+        }
     }
 }
 
@@ -785,5 +969,18 @@ mod tests {
 
         let state = client.state.read().await;
         assert_eq!(*state, ClientState::Disconnected);
+    }
+
+    #[test]
+    fn test_file_checkpointing_enables_query_handler() {
+        let options = ClaudeCodeOptions::builder()
+            .enable_file_checkpointing(true)
+            .build();
+        let client = ClaudeSDKClient::new(options);
+
+        assert!(
+            client.query_handler.is_some(),
+            "enable_file_checkpointing should initialize the query handler for control protocol requests"
+        );
     }
 }

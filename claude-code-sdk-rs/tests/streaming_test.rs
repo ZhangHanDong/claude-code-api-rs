@@ -69,6 +69,7 @@ async fn test_streaming_flow() {
             total_cost_usd: Some(0.01),
             usage: None,
             result: Some("Success".to_string()),
+            structured_output: None,
         })).await;
     });
     
@@ -119,8 +120,9 @@ async fn test_receive_response_stops_after_result() {
             total_cost_usd: None,
             usage: None,
             result: None,
+            structured_output: None,
         });
-        
+
         // This should NOT be received
         yield Ok::<Message, cc_sdk::SdkError>(Message::User {
             message: cc_sdk::UserMessage {

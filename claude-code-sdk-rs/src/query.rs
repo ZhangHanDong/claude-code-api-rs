@@ -157,15 +157,35 @@ async fn query_print_mode(
     cmd.arg("--output-format").arg("stream-json");
     cmd.arg("--verbose");
 
-    // Add all options to match Python SDK exactly
-    #[allow(deprecated)]
-    if let Some(ref system_prompt) = options.system_prompt {
-        cmd.arg("--system-prompt").arg(system_prompt);
-    }
+    // System prompts (match Python SDK behavior)
+    //
+    // Python always passes `--system-prompt ""` when `system_prompt` is None.
+    if let Some(ref prompt_v2) = options.system_prompt_v2 {
+        match prompt_v2 {
+            crate::types::SystemPrompt::String(s) => {
+                cmd.arg("--system-prompt").arg(s);
+            }
+            crate::types::SystemPrompt::Preset { append, .. } => {
+                if let Some(append_text) = append {
+                    cmd.arg("--append-system-prompt").arg(append_text);
+                }
+            }
+        }
+    } else {
+        #[allow(deprecated)]
+        match options.system_prompt.as_deref() {
+            Some(prompt) => {
+                cmd.arg("--system-prompt").arg(prompt);
+            }
+            None => {
+                cmd.arg("--system-prompt").arg("");
+            }
+        }
 
-    #[allow(deprecated)]
-    if let Some(ref append_prompt) = options.append_system_prompt {
-        cmd.arg("--append-system-prompt").arg(append_prompt);
+        #[allow(deprecated)]
+        if let Some(ref append_prompt) = options.append_system_prompt {
+            cmd.arg("--append-system-prompt").arg(append_prompt);
+        }
     }
 
     if !options.allowed_tools.is_empty() {
@@ -175,6 +195,13 @@ async fn query_print_mode(
 
     if let Some(max_turns) = options.max_turns {
         cmd.arg("--max-turns").arg(max_turns.to_string());
+    }
+
+    // Max thinking tokens (extended thinking budget)
+    // Only pass if non-zero to match Python SDK behavior
+    if options.max_thinking_tokens > 0 {
+        cmd.arg("--max-thinking-tokens")
+            .arg(options.max_thinking_tokens.to_string());
     }
 
     if !options.disallowed_tools.is_empty() {
@@ -234,7 +261,7 @@ async fn query_print_mode(
     }
 
     // Add the prompt with --print
-    cmd.arg("--print").arg(&prompt);
+    cmd.arg("--print").arg("--").arg(&prompt);
 
     // Set up process pipes
     cmd.stdout(std::process::Stdio::piped())
@@ -264,6 +291,10 @@ async fn query_print_mode(
 
     info!("Starting Claude CLI with --print mode");
     debug!("Command: {:?}", cmd);
+
+    if let Some(user) = options.user.as_deref() {
+        crate::transport::subprocess::apply_process_user(&mut cmd, user)?;
+    }
 
     let mut child = cmd.spawn().map_err(crate::SdkError::ProcessError)?;
 

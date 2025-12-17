@@ -5,6 +5,244 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2025-12-17
+
+### 🎯 Major Release: Python SDK v0.1.14 Full Parity & Auto-Download
+
+This release achieves **full feature parity** with the official Python `claude-agent-sdk` v0.1.14, including automatic CLI download capability.
+
+### ✨ Highlights
+
+- **100% Python SDK v0.1.14 Feature Parity** - All configuration options synchronized
+- **Automatic CLI Download** - No manual installation required
+- **Claude Sonnet 4.5 Support** - Latest model with enhanced capabilities
+- **File Checkpointing** - Rewind file changes to any point in conversation
+- **Structured Output** - JSON schema validation for responses
+
+### 📊 Python SDK vs Rust SDK Feature Comparison
+
+| Feature | Python SDK | Rust SDK | Status |
+|---------|-----------|----------|--------|
+| **Core Features** ||||
+| Simple query API | `query()` | `query()` | ✅ Parity |
+| Interactive client | `ClaudeSDKClient` | `ClaudeSDKClient` | ✅ Parity |
+| Streaming messages | ✅ | ✅ | ✅ Parity |
+| **Configuration** ||||
+| `tools` (base tool set) | ✅ | ✅ | ✅ Parity |
+| `allowed_tools` | ✅ | ✅ | ✅ Parity |
+| `disallowed_tools` | ✅ | ✅ | ✅ Parity |
+| `permission_mode` | ✅ | ✅ | ✅ Parity |
+| `system_prompt` | ✅ | ✅ | ✅ Parity |
+| `max_turns` | ✅ | ✅ | ✅ Parity |
+| `max_thinking_tokens` | ✅ | ✅ | ✅ Parity |
+| `max_output_tokens` | ✅ | ✅ | ✅ Parity |
+| `max_budget_usd` | ✅ | ✅ | ✅ Parity |
+| `model` | ✅ | ✅ | ✅ Parity |
+| `fallback_model` | ✅ | ✅ | ✅ Parity |
+| `betas` (SDK beta features) | ✅ | ✅ | ✅ Parity |
+| `output_format` (structured) | ✅ | ✅ | ✅ Parity |
+| `sandbox` | ✅ | ✅ | ✅ Parity |
+| `plugins` | ✅ | ✅ | ✅ Parity |
+| `setting_sources` | ✅ | ✅ | ✅ Parity |
+| `agents` | ✅ | ✅ | ✅ Parity |
+| **File Operations** ||||
+| `enable_file_checkpointing` | ✅ | ✅ | ✅ Parity |
+| `rewind_files()` | ✅ | ✅ | ✅ Parity |
+| **MCP Support** ||||
+| Stdio servers | ✅ | ✅ | ✅ Parity |
+| SSE servers | ✅ | ✅ | ✅ Parity |
+| HTTP servers | ✅ | ✅ | ✅ Parity |
+| SDK (in-process) servers | ✅ | ✅ | ✅ Parity |
+| **Control Protocol** ||||
+| Permission callbacks | ✅ | ✅ | ✅ Parity |
+| Hook callbacks | ✅ | ✅ | ✅ Parity |
+| Interrupt | ✅ | ✅ | ✅ Parity |
+| Set model | ✅ | ✅ | ✅ Parity |
+| Set permission mode | ✅ | ✅ | ✅ Parity |
+| **CLI Management** ||||
+| Bundled CLI | ✅ (in wheel) | ✅ (auto-download) | ✅ Equivalent |
+| `user` (OS setuid) | ✅ | ❌ Reserved | ⚠️ Not implemented |
+
+### Added
+
+#### New Configuration Options (Python SDK v0.1.14 Sync)
+
+- **Tools Configuration** (`tools` option) - Control the base set of available tools
+  - `ToolsConfig::list(vec!["Read", "Edit"])` - Enable specific tools only
+  - `ToolsConfig::none()` - Disable all built-in tools
+  - `ToolsConfig::claude_code_preset()` - Use claude_code preset
+  - **Note**: Distinct from `allowed_tools` which only controls auto-approval permissions
+
+- **File Checkpointing & Rewind** - Track and rewind file changes during sessions
+  - `enable_file_checkpointing(true)` - Enable file state tracking
+  - `ClaudeSDKClient::rewind_files(user_message_id)` - Rewind to any checkpoint
+  - `SDKControlRewindFilesRequest` type for control protocol
+
+- **SDK Beta Features** (`betas` option) - Enable Anthropic API beta features
+  - `SdkBeta::Context1M` - Extended context window (1M tokens)
+  - Builder: `.add_beta(SdkBeta::Context1M)`
+
+- **Budget Control** (`max_budget_usd`) - Set spending limits for sessions
+  - Session automatically terminates when budget exceeded
+  - Example: `.max_budget_usd(5.0)` for $5 limit
+
+- **Fallback Model** (`fallback_model`) - Automatic model failover
+  - Used when primary model is unavailable
+  - Example: `.fallback_model("claude-3-5-sonnet-20241022")`
+
+- **Structured Output** (`output_format`) - JSON schema validation for responses
+  - Returns validated `structured_output` in `Message::Result`
+  - Supports `structuredOutput` alias for CLI compatibility
+  - Example: `.output_format(json!({"type": "json_schema", "schema": {...}}))`
+
+- **Sandbox Configuration** (`sandbox`) - Bash command isolation
+  - `SandboxSettings` with full network/filesystem control
+  - `SandboxNetworkConfig` for proxy and socket configuration
+  - `SandboxIgnoreViolations` for exception handling
+  - Automatically merged into `--settings` CLI argument
+
+- **Plugin Support** (`plugins`) - Custom plugin configuration
+  - `SdkPluginConfig::Local { path }` for local plugins
+  - Passed to CLI as `--plugin-dir` arguments
+  - Builder: `.add_plugin(SdkPluginConfig::Local { path: "...".into() })`
+
+- **User Identifier** (`user`) - Reserved field for user tracking
+  - **Note**: In Python SDK this maps to OS-level `subprocess.Popen(user=...)` which is not implemented in Rust SDK due to platform/privilege requirements
+  - Field is reserved for future use
+
+- **Max Thinking Tokens** - Now properly passed to CLI as `--max-thinking-tokens`
+  - Only passed when value is non-zero to avoid breaking older CLI versions
+  - Enables extended thinking budget for complex reasoning tasks
+
+#### Automatic CLI Download
+
+- **Auto-download Claude Code CLI** when not found
+  - New `auto_download_cli` option in `ClaudeCodeOptions`
+  - Downloads via npm or official install script as fallback
+  - Caches in platform-specific location:
+    - macOS: `~/Library/Caches/cc-sdk/cli/`
+    - Linux: `~/.cache/cc-sdk/cli/`
+    - Windows: `%LOCALAPPDATA%\cc-sdk\cli\`
+  - Enabled by default via `auto-download` feature flag
+  - Can be disabled with `default-features = false`
+  - New `SubprocessTransport::new_async()` method for async CLI resolution
+
+- **CLI Discovery Priority**:
+  1. System PATH (`claude`, `claude-code`)
+  2. SDK cache directory (auto-downloaded)
+  3. Common installation locations (npm, yarn, homebrew, etc.)
+  4. Auto-download if `auto_download_cli` is enabled
+
+#### Claude Sonnet 4.5 Support
+
+- Added support for the latest Claude Sonnet 4.5 model (`claude-sonnet-4-5-20250929`)
+- Updated `ModelRecommendation::balanced_model()` to return Sonnet 4.5
+- Added `ModelRecommendation::latest_sonnet()` helper function
+- Updated default recommendations to use Sonnet 4.5 for balanced/general/normal/standard tasks
+- New example: `examples/sonnet_4_5_example.rs`
+
+#### Account Information Retrieval
+
+- New `get_account_info()` method for ClaudeSDKClient
+- Multiple fallback methods: env var → config file → /status command
+- New documentation: `docs/ACCOUNT_INFO.md`
+
+### Changed
+
+#### CLI Parameter Alignment (Python SDK Parity)
+
+- `--tools` now uses comma-separated format or empty string (not JSON array)
+- `--json-schema` used for structured output (extracted from `output_format.schema`)
+- `--sandbox` settings merged into `--settings` JSON object
+- `--plugin-dir` used for plugins (not `--plugins` JSON)
+- `--setting-sources` always passed (even when empty)
+- `--max-thinking-tokens` passed when > 0
+
+#### Control Protocol Improvements
+
+- `send_control_request` now returns `Err` when response has `subtype=error`
+- Returns only `response` (or legacy `data`) payload, not full wrapper
+- Added snake_case ↔ camelCase field aliases for all control types:
+  - `tool_name` / `toolName`
+  - `callback_id` / `callbackId`
+  - `tool_use_id` / `toolUseId`
+  - `user_message_id` / `userMessageId`
+  - `server_name` / `mcpServerName` / `mcp_server_name`
+  - `permission_suggestions` / `permissionSuggestions`
+  - `blocked_path` / `blockedPath`
+
+#### Message Parsing
+
+- `structured_output` in `Message::Result` now supports `structuredOutput` alias
+- Null values properly handled (ignored, not set to `Some(null)`)
+
+### New Types
+
+```rust
+// Tools configuration
+pub enum ToolsConfig { List(Vec<String>), Preset(ToolsPreset) }
+pub struct ToolsPreset { pub preset_type: String, pub preset: String }
+
+// SDK Beta features
+pub enum SdkBeta { Context1M }
+
+// Sandbox configuration
+pub struct SandboxSettings { /* full network/filesystem controls */ }
+pub struct SandboxNetworkConfig { /* proxy, socket settings */ }
+pub struct SandboxIgnoreViolations { /* exception paths */ }
+
+// Plugin configuration
+pub enum SdkPluginConfig { Local { path: String } }
+
+// Control protocol
+pub struct SDKControlRewindFilesRequest { pub user_message_id: String }
+```
+
+### New Builder Methods
+
+```rust
+ClaudeCodeOptions::builder()
+    .tools(ToolsConfig::list(vec!["Read", "Edit"]))
+    .betas(vec![SdkBeta::Context1M])
+    .max_budget_usd(5.0)
+    .fallback_model("claude-3-5-sonnet-20241022")
+    .output_format(json!({"type": "json_schema", "schema": {...}}))
+    .enable_file_checkpointing(true)
+    .sandbox(SandboxSettings { ... })
+    .plugins(vec![SdkPluginConfig::Local { path: "...".into() }])
+    .user("user-id")
+    .auto_download_cli(true)
+    .build()
+```
+
+### Examples
+
+- `examples/test_auto_download.rs` - CLI auto-download testing
+- `examples/sonnet_4_5_example.rs` - Sonnet 4.5 features
+- `examples/account_info.rs` - Account information retrieval
+- `examples/session_with_account_info.rs` - Session with account verification
+- `examples/with_dotenv.rs` - Environment variable configuration
+
+### Documentation
+
+- `docs/ACCOUNT_INFO.md` - Account information guide
+- `docs/ENVIRONMENT_VARIABLES.md` - Environment variables reference
+- `docs/models-guide.md` - Updated with Sonnet 4.5
+- `docs/SONNET_4_5_GUIDE.md` - Sonnet 4.5 specific guide
+
+### Migration from 0.3.0
+
+1. **No breaking changes** - All existing code continues to work
+2. **New features are opt-in** - Enable via builder methods
+3. **CLI auto-download** - Enabled by default, disable with `default-features = false`
+
+### Notes
+
+- Achieves **100% feature parity** with Python claude-agent-sdk v0.1.14
+- Only `user` (OS setuid) is not implemented due to platform/privilege requirements
+- All tests pass: `cargo test -p cc-sdk`
+- Zero compiler warnings
+
 ## [0.3.0] - 2025-10-21
 
 ### 🎯 Major Release: Strongly-Typed Hooks & Production-Grade Quality
@@ -251,14 +489,14 @@ This release introduces configurable control protocol format support, ensuring c
   - `Legacy` (default) - Uses `sdk_control_request/response` format for maximum compatibility
   - `Control` - Uses new unified `type=control` format for future CLI versions
   - `Auto` - Currently defaults to Legacy, will auto-negotiate in future releases
-  
+
 - **Flexible Configuration Methods**:
   - Programmatic: `ClaudeCodeOptions::builder().control_protocol_format(ControlProtocolFormat::Legacy)`
   - Environment variable: `CLAUDE_CODE_CONTROL_FORMAT=legacy|control` (overrides programmatic setting)
-  
+
 - **Full Control Protocol Implementation**:
   - Permission callbacks (`CanUseTool` trait)
-  - Hook callbacks (`HookCallback` trait) 
+  - Hook callbacks (`HookCallback` trait)
   - MCP server support (SDK type)
   - Debug stderr output redirection
   - Initialization protocol with server info retrieval
@@ -273,7 +511,7 @@ This release introduces configurable control protocol format support, ensuring c
   - Control handler uses `take_sdk_control_receiver()` to avoid holding locks across await points
   - Client message reception uses `subscribe_messages()` for lock-free streaming
   - Broadcast channel for multi-subscriber message distribution
-  
+
 - **Dual-Stack Message Reception**:
   - Automatically handles new format: `{"type":"control","control":{...}}`
   - Maintains compatibility with legacy: `{"type":"sdk_control_request","request":{...}}`

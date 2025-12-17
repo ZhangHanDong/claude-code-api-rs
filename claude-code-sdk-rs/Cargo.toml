@@ -1,6 +1,6 @@
 [package]
 name = "cc-sdk"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2024"
 authors = ["ZhangHanDong"]
 license = "MIT"
@@ -32,6 +32,14 @@ uuid = { version = "1", features = ["v4", "serde"] }
 async-stream = "0.3"
 rand = "0.8"
 crossbeam-channel = "0.5"
+libc = "0.2"
+# For auto-downloading CLI
+reqwest = { version = "0.11", features = ["rustls-tls"], default-features = false, optional = true }
+
+[features]
+default = ["auto-download"]
+# Enable automatic CLI download when not found
+auto-download = ["reqwest"]
 
 [dev-dependencies]
 tokio-test = "0.4"

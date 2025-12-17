@@ -4,9 +4,51 @@
 [![许可证](https://img.shields.io/badge/许可证-MIT-green.svg)](LICENSE)
 [![Rust](https://img.shields.io/badge/rust-1.75+-orange.svg)](https://www.rust-lang.org)
 
-中文文档 | [English](README.md)
+中文文档 | [日本語](README_JA.md) | [English](README.md)
 
-一个高性能的 Rust 实现的 OpenAI 兼容 API 网关，用于 Claude Code CLI。基于强大的 [claude-code-sdk-rs](https://github.com/ZhangHanDong/claude-code-api-rs/tree/main/claude-code-sdk-rs) 构建，该项目提供了一个 RESTful API 接口，让您可以使用熟悉的 OpenAI API 格式与 Claude Code 进行交互。
+---
+
+## 🦀 cc-sdk v0.4.0 - Claude Code Rust SDK
+
+> **🎉 与 Python claude-agent-sdk v0.1.14 实现 100% 功能同等！**
+
+[![Crates.io](https://img.shields.io/crates/v/cc-sdk.svg)](https://crates.io/crates/cc-sdk)
+[![Documentation](https://docs.rs/cc-sdk/badge.svg)](https://docs.rs/cc-sdk)
+
+**[cc-sdk](./claude-code-sdk-rs)** 是 Claude Code CLI 的官方 Rust SDK，提供：
+
+- 📥 **CLI 自动下载** - 找不到 Claude Code CLI 时自动下载
+- 📁 **文件检查点** - 将文件更改回滚到任意会话节点
+- 📊 **结构化输出** - 响应的 JSON Schema 验证
+- 🔧 **完整控制协议** - 权限、钩子、MCP 服务器
+- 💰 **预算控制** - 支持 `max_budget_usd` 和 `fallback_model`
+- 🏖️ **沙箱隔离** - Bash 命令的文件系统/网络隔离
+
+```rust
+use cc_sdk::{query, ClaudeCodeOptions};
+use futures::StreamExt;
+
+#[tokio::main]
+async fn main() -> cc_sdk::Result<()> {
+    let options = ClaudeCodeOptions::builder()
+        .model("claude-opus-4-5-20251101")  // 最新 Opus 4.5
+        .auto_download_cli(true)             // 自动下载 CLI
+        .max_budget_usd(10.0)                // 预算限制
+        .build();
+
+    let mut stream = query("你好，Claude！", Some(options)).await?;
+    while let Some(msg) = stream.next().await {
+        println!("{:?}", msg?);
+    }
+    Ok(())
+}
+```
+
+👉 **[完整 SDK 文档](./claude-code-sdk-rs/README_CN.md)** | **[API 文档](https://docs.rs/cc-sdk)**
+
+---
+
+一个高性能的 Rust 实现的 OpenAI 兼容 API 网关，用于 Claude Code CLI。基于强大的 [cc-sdk](https://github.com/ZhangHanDong/claude-code-api-rs/tree/main/claude-code-sdk-rs) 构建，该项目提供了一个 RESTful API 接口，让您可以使用熟悉的 OpenAI API 格式与 Claude Code 进行交互。
 
 ## 🎉 谁在使用 Claude Code API
 

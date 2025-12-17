@@ -80,7 +80,8 @@ fn test_model_recommendations() {
 
     assert_eq!(recommender.suggest("simple"), Some("claude-3-5-haiku-20241022"));
     assert_eq!(recommender.suggest("fast"), Some("claude-3-5-haiku-20241022"));
-    assert_eq!(recommender.suggest("balanced"), Some("sonnet"));
+    // balanced now returns full Sonnet 4.5 model ID
+    assert_eq!(recommender.suggest("balanced"), Some("claude-sonnet-4-5-20250929"));
     assert_eq!(recommender.suggest("complex"), Some("opus"));
     assert_eq!(recommender.suggest("unknown"), None);
 }

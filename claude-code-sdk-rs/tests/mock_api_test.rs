@@ -43,6 +43,7 @@ impl MockResponseGenerator {
             total_cost_usd: None,
             usage: None,
             result: Some("Success".to_string()),
+            structured_output: None,
         });
     }
 

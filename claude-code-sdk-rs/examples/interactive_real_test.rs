@@ -1,6 +1,6 @@
 //! Interactive real API test
 
-use cc_sdk::{ClaudeCodeOptions, ContentBlock, InteractiveClient, Message, PermissionMode, Result};
+use nexus_claude::{ClaudeCodeOptions, ContentBlock, InteractiveClient, Message, PermissionMode, Result};
 use std::io::{self, Write};
 
 #[tokio::main]

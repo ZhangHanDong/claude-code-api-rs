@@ -33,7 +33,7 @@ Rust SDK 提供了三种方式定义 subagents，各有优劣：
 ### 实践 1: 程序化定义 - 推荐用于 SDK
 
 ```rust
-use cc_sdk::{ClaudeCodeOptions, AgentDefinition, PermissionMode, query};
+use nexus_claude::{ClaudeCodeOptions, AgentDefinition, PermissionMode, query};
 use std::collections::HashMap;
 
 #[tokio::main]
@@ -210,7 +210,7 @@ You are a senior code reviewer...
 #### 步骤 2: SDK 中加载文件系统 agents
 
 ```rust
-use cc_sdk::{ClaudeCodeOptions, SettingSource};
+use nexus_claude::{ClaudeCodeOptions, SettingSource};
 
 let options = ClaudeCodeOptions::builder()
     .setting_sources(vec![
@@ -287,7 +287,7 @@ agents.insert(
 ### 技巧 2: Agent 工厂函数
 
 ```rust
-use cc_sdk::AgentDefinition;
+use nexus_claude::AgentDefinition;
 
 struct AgentBuilder {
     name: String,
@@ -412,7 +412,7 @@ let options = ClaudeCodeOptions::builder()
 ## 完整示例：多 Agent 协作系统
 
 ```rust
-use cc_sdk::{
+use nexus_claude::{
     ClaudeCodeOptions, AgentDefinition, PermissionMode,
     InteractiveClient, Message,
 };
@@ -534,7 +534,7 @@ Work through each step systematically.
             Message::Assistant { message } => {
                 for block in message.content {
                     match block {
-                        cc_sdk::ContentBlock::Text(text) => {
+                        nexus_claude::ContentBlock::Text(text) => {
                             println!("{}", text.text);
                         }
                         _ => {}

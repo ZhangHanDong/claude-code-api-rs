@@ -2,7 +2,7 @@
 //! 
 //! This example tests the streaming capabilities of the SDK
 
-use cc_sdk::{ClaudeCodeOptions, ClaudeSDKClient, Message, Result};
+use nexus_claude::{ClaudeCodeOptions, ClaudeSDKClient, Message, Result};
 use futures::StreamExt;
 
 #[tokio::main]
@@ -11,7 +11,7 @@ async fn main() -> Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::from_default_env()
-                .add_directive("cc_sdk=debug".parse().unwrap())
+                .add_directive("nexus_claude=debug".parse().unwrap())
         )
         .init();
 

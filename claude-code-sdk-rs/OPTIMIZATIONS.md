@@ -20,7 +20,7 @@ The optimized API introduces several performance enhancements while maintaining 
 The `OptimizedClient` provides a unified interface with three operating modes:
 
 ```rust
-use cc_sdk::{OptimizedClient, ClientMode, ClaudeCodeOptions};
+use nexus_claude::{OptimizedClient, ClientMode, ClaudeCodeOptions};
 
 // One-shot mode for single queries
 let client = OptimizedClient::new(options, ClientMode::OneShot)?;

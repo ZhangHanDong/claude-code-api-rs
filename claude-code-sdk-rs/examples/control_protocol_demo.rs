@@ -6,7 +6,7 @@
 //! - SDK MCP servers
 //! - Debug stderr output
 
-use cc_sdk::{
+use nexus_claude::{
     ClaudeCodeOptions, ClaudeSDKClient, Result,
     CanUseTool, HookCallback, HookContext, HookMatcher,
     PermissionResult, PermissionResultAllow, PermissionResultDeny,
@@ -60,23 +60,23 @@ struct MyHookHandler {
 impl HookCallback for MyHookHandler {
     async fn execute(
         &self,
-        input: &cc_sdk::HookInput,
+        input: &nexus_claude::HookInput,
         tool_use_id: Option<&str>,
         _context: &HookContext,
-    ) -> std::result::Result<cc_sdk::HookJSONOutput, cc_sdk::SdkError> {
+    ) -> std::result::Result<nexus_claude::HookJSONOutput, nexus_claude::SdkError> {
         println!("🪝 Hook '{}' triggered", self.name);
 
         // Pattern match on strongly-typed input
         match input {
-            cc_sdk::HookInput::PreToolUse(pre_tool_use) => {
+            nexus_claude::HookInput::PreToolUse(pre_tool_use) => {
                 println!("   Tool: {}", pre_tool_use.tool_name);
                 println!("   Input: {:?}", pre_tool_use.tool_input);
             }
-            cc_sdk::HookInput::PostToolUse(post_tool_use) => {
+            nexus_claude::HookInput::PostToolUse(post_tool_use) => {
                 println!("   Tool: {}", post_tool_use.tool_name);
                 println!("   Response: {:?}", post_tool_use.tool_response);
             }
-            cc_sdk::HookInput::UserPromptSubmit(prompt) => {
+            nexus_claude::HookInput::UserPromptSubmit(prompt) => {
                 println!("   Prompt: {}", prompt.prompt);
             }
             _ => {
@@ -86,7 +86,7 @@ impl HookCallback for MyHookHandler {
         println!("   Tool use ID: {:?}", tool_use_id);
 
         // Return strongly-typed hook output
-        Ok(cc_sdk::HookJSONOutput::Sync(cc_sdk::SyncHookJSONOutput {
+        Ok(nexus_claude::HookJSONOutput::Sync(nexus_claude::SyncHookJSONOutput {
             reason: Some(format!("Processed by hook '{}' at {}",
                 self.name,
                 chrono::Utc::now().to_rfc3339()
@@ -190,15 +190,15 @@ async fn main() -> Result<()> {
                     match msg_result {
                         Ok(msg) => {
                             match msg {
-                                cc_sdk::Message::User { .. } => println!("📤 User message"),
-                                cc_sdk::Message::Assistant { .. } => println!("🤖 Assistant message"),
-                                cc_sdk::Message::System { subtype, .. } => {
+                                nexus_claude::Message::User { .. } => println!("📤 User message"),
+                                nexus_claude::Message::Assistant { .. } => println!("🤖 Assistant message"),
+                                nexus_claude::Message::System { subtype, .. } => {
                                     println!("⚙️ System: {subtype}");
                                     if subtype.starts_with("sdk_control:") {
                                         println!("   [Control protocol message detected]");
                                     }
                                 }
-                                cc_sdk::Message::Result { is_error, .. } => {
+                                nexus_claude::Message::Result { is_error, .. } => {
                                     println!("✓ Result (error: {is_error})");
                                     break;
                                 }
@@ -224,7 +224,7 @@ async fn main() -> Result<()> {
             {
                 let mut response = client.receive_response().await;
                 while let Some(msg_result) = response.next().await {
-                    if let Ok(cc_sdk::Message::Result { .. }) = msg_result {
+                    if let Ok(nexus_claude::Message::Result { .. }) = msg_result {
                         break;
                     }
                 }

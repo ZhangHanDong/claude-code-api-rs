@@ -25,7 +25,7 @@ impl ModelRecommendation {
     /// # Example
     ///
     /// ```rust
-    /// use cc_sdk::model_recommendation::ModelRecommendation;
+    /// use nexus_claude::model_recommendation::ModelRecommendation;
     ///
     /// let recommender = ModelRecommendation::default();
     /// let model = recommender.suggest("simple").unwrap();
@@ -62,7 +62,7 @@ impl ModelRecommendation {
     /// # Example
     ///
     /// ```rust
-    /// use cc_sdk::model_recommendation::ModelRecommendation;
+    /// use nexus_claude::model_recommendation::ModelRecommendation;
     /// use std::collections::HashMap;
     ///
     /// let mut custom_map = HashMap::new();
@@ -82,7 +82,7 @@ impl ModelRecommendation {
     /// # Example
     ///
     /// ```rust
-    /// use cc_sdk::model_recommendation::ModelRecommendation;
+    /// use nexus_claude::model_recommendation::ModelRecommendation;
     ///
     /// let recommender = ModelRecommendation::default();
     ///
@@ -101,7 +101,7 @@ impl ModelRecommendation {
     /// # Example
     ///
     /// ```rust
-    /// use cc_sdk::model_recommendation::ModelRecommendation;
+    /// use nexus_claude::model_recommendation::ModelRecommendation;
     ///
     /// let mut recommender = ModelRecommendation::default();
     /// recommender.add("my_task", "sonnet");
@@ -163,7 +163,7 @@ pub fn best_model() -> &'static str {
 /// # Example
 ///
 /// ```rust
-/// use cc_sdk::model_recommendation::estimate_cost_multiplier;
+/// use nexus_claude::model_recommendation::estimate_cost_multiplier;
 ///
 /// // Haiku is baseline (1.0x)
 /// assert_eq!(estimate_cost_multiplier("claude-3-5-haiku-20241022"), 1.0);

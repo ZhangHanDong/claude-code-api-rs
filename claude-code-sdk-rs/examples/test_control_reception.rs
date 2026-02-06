@@ -1,4 +1,4 @@
-use cc_sdk::{ClaudeCodeOptions, ClaudeSDKClient, Result};
+use nexus_claude::{ClaudeCodeOptions, ClaudeSDKClient, Result};
 use futures::StreamExt;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -32,7 +32,7 @@ async fn main() -> Result<()> {
         match msg {
             Ok(msg) => {
                 println!("Received message: {msg:?}");
-                if matches!(msg, cc_sdk::Message::Result { .. }) {
+                if matches!(msg, nexus_claude::Message::Result { .. }) {
                     break;
                 }
             }
@@ -68,19 +68,19 @@ struct TestPermissionCallback {
 }
 
 #[async_trait::async_trait]
-impl cc_sdk::CanUseTool for TestPermissionCallback {
+impl nexus_claude::CanUseTool for TestPermissionCallback {
     async fn can_use_tool(
         &self,
         tool_name: &str,
         _input: &serde_json::Value,
-        _context: &cc_sdk::ToolPermissionContext,
-    ) -> cc_sdk::PermissionResult {
+        _context: &nexus_claude::ToolPermissionContext,
+    ) -> nexus_claude::PermissionResult {
         let mut log = self.log.lock().await;
         log.push(format!("Permission check for tool: {tool_name}"));
         println!("🔐 Permission callback triggered for tool: {}", tool_name);
         
         // Always allow for testing
-        cc_sdk::PermissionResult::Allow(cc_sdk::PermissionResultAllow {
+        nexus_claude::PermissionResult::Allow(nexus_claude::PermissionResultAllow {
             updated_input: None,
             updated_permissions: None,
         })

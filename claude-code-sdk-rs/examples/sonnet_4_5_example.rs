@@ -3,8 +3,8 @@
 //! This example shows how to use the newest Sonnet 4.5 model released in September 2025.
 //! Sonnet 4.5 offers the best balance of performance, speed, and cost for most applications.
 
-use cc_sdk::{query, ClaudeCodeOptions, InteractiveClient, Message, Result};
-use cc_sdk::model_recommendation::{latest_sonnet, balanced_model};
+use nexus_claude::{query, ClaudeCodeOptions, InteractiveClient, Message, Result};
+use nexus_claude::model_recommendation::{latest_sonnet, balanced_model};
 use futures::StreamExt;
 
 /// Simple query using Sonnet 4.5
@@ -24,7 +24,7 @@ async fn simple_query_example() -> Result<()> {
         match msg? {
             Message::Assistant { message } => {
                 for block in message.content {
-                    if let cc_sdk::ContentBlock::Text(text) = block {
+                    if let nexus_claude::ContentBlock::Text(text) = block {
                         println!("{}", text.text);
                     }
                 }
@@ -64,7 +64,7 @@ async fn interactive_session_example() -> Result<()> {
     for msg in messages {
         if let Message::Assistant { message } = msg {
             for block in message.content {
-                if let cc_sdk::ContentBlock::Text(text) = block {
+                if let nexus_claude::ContentBlock::Text(text) = block {
                     println!("{}", text.text);
                 }
             }
@@ -80,7 +80,7 @@ async fn interactive_session_example() -> Result<()> {
     for msg in messages {
         if let Message::Assistant { message } = msg {
             for block in message.content {
-                if let cc_sdk::ContentBlock::Text(text) = block {
+                if let nexus_claude::ContentBlock::Text(text) = block {
                     println!("{}", text.text);
                 }
             }
@@ -115,7 +115,7 @@ async fn model_recommendation_example() -> Result<()> {
     while let Some(msg) = messages.next().await {
         if let Ok(Message::Assistant { message }) = msg {
             for block in message.content {
-                if let cc_sdk::ContentBlock::Text(text) = block {
+                if let nexus_claude::ContentBlock::Text(text) = block {
                     println!("{}", text.text);
                 }
             }
@@ -151,7 +151,7 @@ async fn model_comparison_example() -> Result<()> {
                 while let Some(msg) = stream.next().await {
                     if let Ok(Message::Assistant { message }) = msg {
                         for block in message.content {
-                            if let cc_sdk::ContentBlock::Text(text) = block {
+                            if let nexus_claude::ContentBlock::Text(text) = block {
                                 println!("  Response: {}", text.text);
                             }
                         }
@@ -178,7 +178,7 @@ async fn advanced_features_example() -> Result<()> {
         .max_thinking_tokens(8000)  // Sonnet 4.5 supports extended thinking
         .max_output_tokens(4000)    // Limit output tokens
         .max_turns(3)               // Limit conversation turns
-        .permission_mode(cc_sdk::PermissionMode::AcceptEdits)
+        .permission_mode(nexus_claude::PermissionMode::AcceptEdits)
         .build();
 
     let mut messages = query(
@@ -191,10 +191,10 @@ async fn advanced_features_example() -> Result<()> {
             Message::Assistant { message } => {
                 for block in message.content {
                     match block {
-                        cc_sdk::ContentBlock::Text(text) => {
+                        nexus_claude::ContentBlock::Text(text) => {
                             println!("{}", text.text);
                         }
-                        cc_sdk::ContentBlock::Thinking(thinking) => {
+                        nexus_claude::ContentBlock::Thinking(thinking) => {
                             println!("\n[Thinking]: {}", thinking.thinking);
                         }
                         _ => {}

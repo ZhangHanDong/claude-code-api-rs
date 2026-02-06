@@ -7,7 +7,7 @@ use axum::{
     response::Json,
     routing::{get, post},
 };
-use cc_sdk::{
+use nexus_claude::{
     ClaudeCodeOptions, ClientMode, ContentBlock, Message, OptimizedClient, PermissionMode,
 };
 use serde::{Deserialize, Serialize};
@@ -59,7 +59,7 @@ struct HealthResponse {
 /// App state
 struct AppState {
     mock_mode: bool,
-    metrics: Arc<RwLock<cc_sdk::PerformanceMetrics>>,
+    metrics: Arc<RwLock<nexus_claude::PerformanceMetrics>>,
 }
 
 #[tokio::main]
@@ -86,7 +86,7 @@ async fn main() {
     // Create app state
     let state = Arc::new(AppState {
         mock_mode,
-        metrics: Arc::new(RwLock::new(cc_sdk::PerformanceMetrics::default())),
+        metrics: Arc::new(RwLock::new(nexus_claude::PerformanceMetrics::default())),
     });
 
     // Build router
@@ -303,7 +303,7 @@ fn extract_response_text(messages: Vec<Message>) -> String {
 }
 
 /// Create real client
-async fn create_real_client() -> cc_sdk::Result<OptimizedClient> {
+async fn create_real_client() -> nexus_claude::Result<OptimizedClient> {
     let options = ClaudeCodeOptions::builder()
         .permission_mode(PermissionMode::AcceptEdits)
         .build();
@@ -312,7 +312,7 @@ async fn create_real_client() -> cc_sdk::Result<OptimizedClient> {
 }
 
 /// Create batch client
-async fn create_batch_client(max_concurrent: usize) -> cc_sdk::Result<OptimizedClient> {
+async fn create_batch_client(max_concurrent: usize) -> nexus_claude::Result<OptimizedClient> {
     let options = ClaudeCodeOptions::builder()
         .permission_mode(PermissionMode::AcceptEdits)
         .build();

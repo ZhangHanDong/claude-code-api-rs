@@ -2,7 +2,7 @@
 //! 
 //! Run with: cargo run --example test_models_2025
 
-use cc_sdk::{query, ClaudeCodeOptions, Message, Result};
+use nexus_claude::{query, ClaudeCodeOptions, Message, Result};
 use futures::StreamExt;
 
 async fn test_opus_4_1() -> Result<()> {
@@ -22,7 +22,7 @@ async fn test_opus_4_1() -> Result<()> {
         match msg? {
             Message::Assistant { message } => {
                 for block in message.content {
-                    if let cc_sdk::ContentBlock::Text(text) = block {
+                    if let nexus_claude::ContentBlock::Text(text) = block {
                         println!("Response: {}", text.text);
                         found_response = true;
                     }
@@ -60,7 +60,7 @@ async fn test_sonnet_4() -> Result<()> {
         match msg? {
             Message::Assistant { message } => {
                 for block in message.content {
-                    if let cc_sdk::ContentBlock::Text(text) = block {
+                    if let nexus_claude::ContentBlock::Text(text) = block {
                         println!("Response: {}", text.text);
                         found_response = true;
                     }

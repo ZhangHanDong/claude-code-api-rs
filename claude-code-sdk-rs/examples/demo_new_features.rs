@@ -2,7 +2,7 @@
 //!
 //! This example demonstrates the new settings and add_dirs features
 
-use cc_sdk::ClaudeCodeOptions;
+use nexus_claude::ClaudeCodeOptions;
 use std::env;
 use std::path::PathBuf;
 
@@ -81,7 +81,7 @@ fn main() {
         // Other options
         .system_prompt("You are an expert developer")
         .model("claude-3-opus-20240229")
-        .permission_mode(cc_sdk::PermissionMode::AcceptEdits)
+        .permission_mode(nexus_claude::PermissionMode::AcceptEdits)
         .max_turns(10)
         .build();
 

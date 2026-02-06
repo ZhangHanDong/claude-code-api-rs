@@ -1,8 +1,8 @@
 //! Tests for token optimization features
 
-use cc_sdk::token_tracker::{BudgetLimit, BudgetManager, BudgetStatus, TokenUsageTracker};
-use cc_sdk::model_recommendation::ModelRecommendation;
-use cc_sdk::ClaudeCodeOptions;
+use nexus_claude::token_tracker::{BudgetLimit, BudgetManager, BudgetStatus, TokenUsageTracker};
+use nexus_claude::model_recommendation::ModelRecommendation;
+use nexus_claude::ClaudeCodeOptions;
 
 #[test]
 fn test_token_tracker_basic() {

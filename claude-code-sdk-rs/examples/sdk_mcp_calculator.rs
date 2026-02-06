@@ -7,7 +7,7 @@
 //! runs directly within your Rust application, providing better performance
 //! and simpler deployment.
 
-use cc_sdk::{
+use nexus_claude::{
     create_simple_tool, ClaudeCodeOptions, InteractiveClient, Message, Result,
     SdkMcpServerBuilder, ToolInputSchema,
 };
@@ -40,8 +40,8 @@ async fn main() -> Result<()> {
             required: Some(vec!["a".to_string(), "b".to_string()]),
         },
         |args| async move {
-            let a = args["a"].as_f64().ok_or_else(|| cc_sdk::SdkError::invalid_state("Invalid number"))?;
-            let b = args["b"].as_f64().ok_or_else(|| cc_sdk::SdkError::invalid_state("Invalid number"))?;
+            let a = args["a"].as_f64().ok_or_else(|| nexus_claude::SdkError::invalid_state("Invalid number"))?;
+            let b = args["b"].as_f64().ok_or_else(|| nexus_claude::SdkError::invalid_state("Invalid number"))?;
             let result = a + b;
             Ok(format!("{a} + {b} = {result}"))
         },
@@ -67,8 +67,8 @@ async fn main() -> Result<()> {
             required: Some(vec!["a".to_string(), "b".to_string()]),
         },
         |args| async move {
-            let a = args["a"].as_f64().ok_or_else(|| cc_sdk::SdkError::invalid_state("Invalid number"))?;
-            let b = args["b"].as_f64().ok_or_else(|| cc_sdk::SdkError::invalid_state("Invalid number"))?;
+            let a = args["a"].as_f64().ok_or_else(|| nexus_claude::SdkError::invalid_state("Invalid number"))?;
+            let b = args["b"].as_f64().ok_or_else(|| nexus_claude::SdkError::invalid_state("Invalid number"))?;
             let result = a - b;
             Ok(format!("{a} - {b} = {result}"))
         },
@@ -94,8 +94,8 @@ async fn main() -> Result<()> {
             required: Some(vec!["a".to_string(), "b".to_string()]),
         },
         |args| async move {
-            let a = args["a"].as_f64().ok_or_else(|| cc_sdk::SdkError::invalid_state("Invalid number"))?;
-            let b = args["b"].as_f64().ok_or_else(|| cc_sdk::SdkError::invalid_state("Invalid number"))?;
+            let a = args["a"].as_f64().ok_or_else(|| nexus_claude::SdkError::invalid_state("Invalid number"))?;
+            let b = args["b"].as_f64().ok_or_else(|| nexus_claude::SdkError::invalid_state("Invalid number"))?;
             let result = a * b;
             Ok(format!("{a} × {b} = {result}"))
         },
@@ -121,10 +121,10 @@ async fn main() -> Result<()> {
             required: Some(vec!["a".to_string(), "b".to_string()]),
         },
         |args| async move {
-            let a = args["a"].as_f64().ok_or_else(|| cc_sdk::SdkError::invalid_state("Invalid number"))?;
-            let b = args["b"].as_f64().ok_or_else(|| cc_sdk::SdkError::invalid_state("Invalid number"))?;
+            let a = args["a"].as_f64().ok_or_else(|| nexus_claude::SdkError::invalid_state("Invalid number"))?;
+            let b = args["b"].as_f64().ok_or_else(|| nexus_claude::SdkError::invalid_state("Invalid number"))?;
             if b == 0.0 {
-                return Err(cc_sdk::SdkError::invalid_state("Division by zero is not allowed"));
+                return Err(nexus_claude::SdkError::invalid_state("Division by zero is not allowed"));
             }
             let result = a / b;
             Ok(format!("{a} ÷ {b} = {result}"))
@@ -182,10 +182,10 @@ async fn main() -> Result<()> {
                 Message::Assistant { message } => {
                     for content in message.content {
                         match content {
-                            cc_sdk::ContentBlock::Text(text) => {
+                            nexus_claude::ContentBlock::Text(text) => {
                                 println!("Claude: {}", text.text);
                             }
-                            cc_sdk::ContentBlock::ToolUse(tool_use) => {
+                            nexus_claude::ContentBlock::ToolUse(tool_use) => {
                                 println!("Using tool: {}", tool_use.name);
                                 println!("  Input: {:?}", tool_use.input);
                             }

@@ -1,16 +1,22 @@
 [package]
-name = "cc-sdk"
-version = "0.4.0"
+name = "nexus-claude"
+version = "0.5.0"
 edition = "2024"
-authors = ["ZhangHanDong"]
+authors = [
+    "Original: ZhangHanDong <psiace@outlook.com>",
+    "Fork: Théotime Rivière"
+]
 license = "MIT"
-description = "Rust SDK for Claude Code CLI with full interactive capabilities"
-repository = "https://github.com/ZhangHanDong/claude-code-api-rs"
-documentation = "https://docs.rs/cc-sdk"
+description = "Claude Code SDK for Rust with persistent memory and autonomous context retrieval. Fork of cc-sdk."
+repository = "https://github.com/this-rs/nexus"
+documentation = "https://docs.rs/nexus-claude"
 readme = "README.md"
-keywords = ["claude", "claude-code", "sdk", "ai", "llm"]
+keywords = ["claude", "nexus", "memory", "ai", "sdk", "mcp"]
 categories = ["api-bindings", "asynchronous", "development-tools"]
 exclude = ["examples/", "tests/", "doc/", "README_*.md", "*.sh", "*.py"]
+
+# Fork notice: This is a fork of https://github.com/ZhangHanDong/claude-code-api-rs
+# with additional features for persistent memory and autonomous context retrieval.
 
 [dependencies]
 # Workspace dependencies
@@ -35,11 +41,16 @@ crossbeam-channel = "0.5"
 libc = "0.2"
 # For auto-downloading CLI
 reqwest = { version = "0.11", features = ["rustls-tls"], default-features = false, optional = true }
+# For memory system
+meilisearch-sdk = { version = "0.27", optional = true }
+chrono = { version = "0.4", optional = true }
 
 [features]
 default = ["auto-download"]
 # Enable automatic CLI download when not found
 auto-download = ["reqwest"]
+# Enable persistent memory system (Meilisearch-based)
+memory = ["meilisearch-sdk", "chrono"]
 
 [dev-dependencies]
 tokio-test = "0.4"

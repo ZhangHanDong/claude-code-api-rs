@@ -36,7 +36,7 @@ neo4rs.workspace = true
 meilisearch-sdk.workspace = true
 
 # Local workspace crates
-cc-sdk = { path = "../claude-code-sdk-rs" }
+nexus-claude = { path = "../claude-code-sdk-rs" }
 
 # Local dependencies
 axum = { version = "0.7", features = ["http2", "json", "macros"] }

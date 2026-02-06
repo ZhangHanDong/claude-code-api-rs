@@ -2,8 +2,8 @@
 //!
 //! Demonstrates comprehensive token usage tracking and budget management.
 
-use cc_sdk::{ClaudeCodeOptions, ClaudeSDKClient, Result};
-use cc_sdk::token_tracker::{BudgetLimit, BudgetWarningCallback};
+use nexus_claude::{ClaudeCodeOptions, ClaudeSDKClient, Result};
+use nexus_claude::token_tracker::{BudgetLimit, BudgetWarningCallback};
 use futures::StreamExt;
 use std::sync::{Arc, Mutex};
 
@@ -49,7 +49,7 @@ async fn main() -> Result<()> {
         let mut messages = client.receive_messages().await;
         while let Some(msg) = messages.next().await {
             if let Ok(message) = msg
-                && let cc_sdk::Message::Result { .. } = message {
+                && let nexus_claude::Message::Result { .. } = message {
                     break;
                 }
         }

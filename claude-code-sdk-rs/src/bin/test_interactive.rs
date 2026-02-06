@@ -1,13 +1,13 @@
 //! Simple test for interactive client
 
-use cc_sdk::{ClaudeCodeOptions, ClaudeSDKClient, Result};
+use nexus_claude::{ClaudeCodeOptions, ClaudeSDKClient, Result};
 use futures::StreamExt;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     // Set up simple println-based debugging
     unsafe {
-        std::env::set_var("RUST_LOG", "cc_sdk=debug");
+        std::env::set_var("RUST_LOG", "nexus_claude=debug");
     }
 
     println!("Creating client with default options...");
@@ -35,7 +35,7 @@ async fn main() -> Result<()> {
                 println!("Message {message_count}: {message:?}");
 
                 // Check if it's a result message
-                if matches!(message, cc_sdk::Message::Result { .. }) {
+                if matches!(message, nexus_claude::Message::Result { .. }) {
                     println!("Got result message, stopping...");
                     break;
                 }

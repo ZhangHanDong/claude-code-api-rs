@@ -1,6 +1,6 @@
 //! Manual interactive mode test - type your own messages
 
-use cc_sdk::{
+use nexus_claude::{
     ClaudeCodeOptions, ClientMode, ContentBlock, InteractiveClient, Message, OptimizedClient,
     PermissionMode, Result,
 };

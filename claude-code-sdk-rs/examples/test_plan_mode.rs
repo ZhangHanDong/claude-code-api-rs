@@ -2,7 +2,7 @@
 //! 
 //! Run with: cargo run --example test_plan_mode
 
-use cc_sdk::{query, ClaudeCodeOptions, InteractiveClient, Message, PermissionMode, Result};
+use nexus_claude::{query, ClaudeCodeOptions, InteractiveClient, Message, PermissionMode, Result};
 use futures::StreamExt;
 
 async fn test_plan_mode_query() -> Result<()> {
@@ -25,7 +25,7 @@ async fn test_plan_mode_query() -> Result<()> {
         match msg? {
             Message::Assistant { message } => {
                 for block in message.content {
-                    if let cc_sdk::ContentBlock::Text(text) = block {
+                    if let nexus_claude::ContentBlock::Text(text) = block {
                         println!("Plan Response:\n{}", text.text);
                         found_response = true;
                     }
@@ -71,7 +71,7 @@ async fn test_plan_mode_interactive() -> Result<()> {
     for msg in &messages {
         if let Message::Assistant { message } = msg {
             for block in &message.content {
-                if let cc_sdk::ContentBlock::Text(text) = block {
+                if let nexus_claude::ContentBlock::Text(text) = block {
                     println!("Plan output (truncated): {}", 
                         &text.text[..text.text.len().min(200)]);
                     plan_received = true;
@@ -89,7 +89,7 @@ async fn test_plan_mode_interactive() -> Result<()> {
         for msg in &messages {
             if let Message::Assistant { message } = msg {
                 for block in &message.content {
-                    if let cc_sdk::ContentBlock::Text(text) = block {
+                    if let nexus_claude::ContentBlock::Text(text) = block {
                         println!("Follow-up plan (truncated): {}", 
                             &text.text[..text.text.len().min(200)]);
                     }
@@ -171,12 +171,12 @@ async fn test_plan_with_thinking_tokens() -> Result<()> {
             Message::Assistant { message } => {
                 for block in message.content {
                     match block {
-                        cc_sdk::ContentBlock::Text(text) => {
+                        nexus_claude::ContentBlock::Text(text) => {
                             println!("Plan with thinking (first 300 chars): {}", 
                                 &text.text[..text.text.len().min(300)]);
                             found_response = true;
                         }
-                        cc_sdk::ContentBlock::Thinking(thinking) => {
+                        nexus_claude::ContentBlock::Thinking(thinking) => {
                             println!("Thinking process detected (first 200 chars): {}",
                                 &thinking.thinking[..thinking.thinking.len().min(200)]);
                             found_thinking = true;

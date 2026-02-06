@@ -3,14 +3,14 @@
 //! This example demonstrates how to use the simple `query` function
 //! for one-shot interactions with Claude.
 
-use cc_sdk::{ClaudeCodeOptions, Message, Result, query};
+use nexus_claude::{ClaudeCodeOptions, Message, Result, query};
 use futures::StreamExt;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize logging
     tracing_subscriber::fmt()
-        .with_env_filter("cc_sdk=debug,simple_query=info")
+        .with_env_filter("nexus_claude=debug,simple_query=info")
         .init();
 
     println!("Claude Code SDK - Simple Query Example\n");

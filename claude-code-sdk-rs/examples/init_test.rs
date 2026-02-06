@@ -1,4 +1,4 @@
-use cc_sdk::{ClaudeCodeOptions, ClaudeSDKClient, Result};
+use nexus_claude::{ClaudeCodeOptions, ClaudeSDKClient, Result};
 use futures::StreamExt;
 
 #[tokio::main]
@@ -35,7 +35,7 @@ async fn main() -> Result<()> {
         match msg_result {
             Ok(msg) => {
                 println!("   Message {msg_count}: {msg:?}");
-                if matches!(msg, cc_sdk::Message::Result { .. }) {
+                if matches!(msg, nexus_claude::Message::Result { .. }) {
                     println!("   ✅ Received result message");
                     break;
                 }

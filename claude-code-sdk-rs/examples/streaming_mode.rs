@@ -8,7 +8,7 @@
 //! cargo run --example streaming_mode all      # Run all examples  
 //! cargo run --example streaming_mode basic    # Run specific example
 
-use cc_sdk::{
+use nexus_claude::{
     ClaudeCodeOptions, ClaudeSDKClient, Message, Result,
     ContentBlock, TextContent,
 };

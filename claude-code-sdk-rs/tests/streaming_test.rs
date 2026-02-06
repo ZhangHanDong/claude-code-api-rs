@@ -1,6 +1,6 @@
 //! Tests for streaming functionality
 
-use cc_sdk::{ClaudeCodeOptions, ClaudeSDKClient, Message, Result};
+use nexus_claude::{ClaudeCodeOptions, ClaudeSDKClient, Message, Result};
 use futures::StreamExt;
 use std::pin::Pin;
 
@@ -46,14 +46,14 @@ async fn test_streaming_flow() {
     tokio::spawn(async move {
         // Send a user message
         let _ = tx.send(Ok(Message::User {
-            message: cc_sdk::UserMessage {
+            message: nexus_claude::UserMessage {
                 content: "Test".to_string(),
             },
         })).await;
         
         // Send an assistant message
         let _ = tx.send(Ok(Message::Assistant {
-            message: cc_sdk::AssistantMessage {
+            message: nexus_claude::AssistantMessage {
                 content: vec![],
             },
         })).await;
@@ -98,19 +98,19 @@ async fn test_receive_response_stops_after_result() {
     
     // Create a test stream that yields multiple messages
     let test_stream = stream! {
-        yield Ok::<Message, cc_sdk::SdkError>(Message::User {
-            message: cc_sdk::UserMessage {
+        yield Ok::<Message, nexus_claude::SdkError>(Message::User {
+            message: nexus_claude::UserMessage {
                 content: "Test".to_string(),
             },
         });
         
-        yield Ok::<Message, cc_sdk::SdkError>(Message::Assistant {
-            message: cc_sdk::AssistantMessage {
+        yield Ok::<Message, nexus_claude::SdkError>(Message::Assistant {
+            message: nexus_claude::AssistantMessage {
                 content: vec![],
             },
         });
         
-        yield Ok::<Message, cc_sdk::SdkError>(Message::Result {
+        yield Ok::<Message, nexus_claude::SdkError>(Message::Result {
             subtype: "result".to_string(),
             duration_ms: 100,
             duration_api_ms: 50,
@@ -124,8 +124,8 @@ async fn test_receive_response_stops_after_result() {
         });
 
         // This should NOT be received
-        yield Ok::<Message, cc_sdk::SdkError>(Message::User {
-            message: cc_sdk::UserMessage {
+        yield Ok::<Message, nexus_claude::SdkError>(Message::User {
+            message: nexus_claude::UserMessage {
                 content: "Should not see this".to_string(),
             },
         });

@@ -1,4 +1,4 @@
-use cc_sdk::{Query, transport::mock::MockTransport};
+use nexus_claude::{Query, transport::mock::MockTransport};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 

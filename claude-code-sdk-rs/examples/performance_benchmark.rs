@@ -3,7 +3,7 @@
 //! This example compares the performance of using Claude via command line
 //! versus using the SDK for batch processing.
 
-use cc_sdk::{ClaudeCodeOptions, InteractiveClient, PermissionMode, Result};
+use nexus_claude::{ClaudeCodeOptions, InteractiveClient, PermissionMode, Result};
 use std::process::Command;
 use std::time::{Duration, Instant};
 use tokio::time::sleep;

@@ -1,6 +1,6 @@
 //! Integration tests for the Claude Code SDK
 
-use cc_sdk::{ClaudeCodeOptions, PermissionMode};
+use nexus_claude::{ClaudeCodeOptions, PermissionMode};
 
 #[test]
 #[allow(deprecated)]
@@ -25,7 +25,7 @@ fn test_options_builder() {
 
 #[test]
 fn test_message_types() {
-    use cc_sdk::{ContentBlock, Message, TextContent, UserMessage};
+    use nexus_claude::{ContentBlock, Message, TextContent, UserMessage};
 
     let user_msg = Message::User {
         message: UserMessage {
@@ -54,7 +54,7 @@ fn test_message_types() {
 
 #[test]
 fn test_error_types() {
-    use cc_sdk::SdkError;
+    use nexus_claude::SdkError;
 
     let err = SdkError::timeout(30);
     assert!(err.is_recoverable());

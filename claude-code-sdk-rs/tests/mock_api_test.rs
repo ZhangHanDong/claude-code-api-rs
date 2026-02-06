@@ -1,6 +1,6 @@
 //! Mock tests for API functionality without real Claude connection
 
-use cc_sdk::{
+use nexus_claude::{
     AssistantMessage, ClaudeCodeOptions, ContentBlock, Message, PermissionMode, TextContent,
 };
 use std::sync::Arc;
@@ -140,7 +140,7 @@ async fn test_mock_response_flow() {
 /// Test error handling patterns
 #[test]
 fn test_error_patterns() {
-    use cc_sdk::SdkError;
+    use nexus_claude::SdkError;
 
     // Test timeout error
     let timeout_err = SdkError::Timeout { seconds: 30 };

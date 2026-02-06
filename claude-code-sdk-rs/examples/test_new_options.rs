@@ -1,6 +1,6 @@
 //! Test example for new ClaudeCodeOptions fields
 
-use cc_sdk::{ClaudeCodeOptions, Result};
+use nexus_claude::{ClaudeCodeOptions, Result};
 use std::path::PathBuf;
 
 #[tokio::main]

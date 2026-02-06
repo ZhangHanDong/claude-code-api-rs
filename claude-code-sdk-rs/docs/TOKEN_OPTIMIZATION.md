@@ -14,8 +14,8 @@ Claude Code has weekly usage limits that can be frustrating, especially for heav
 ## Quick Start: Most Effective Strategies
 
 ```rust
-use cc_sdk::{ClaudeCodeOptions, ClaudeSDKClient, ModelRecommendation};
-use cc_sdk::token_tracker::BudgetLimit;
+use nexus_claude::{ClaudeCodeOptions, ClaudeSDKClient, ModelRecommendation};
+use nexus_claude::token_tracker::BudgetLimit;
 
 let options = ClaudeCodeOptions::builder()
     // 1. Use cheaper model for simple tasks
@@ -59,7 +59,7 @@ client.set_budget_limit(
 ### Using ModelRecommendation
 
 ```rust
-use cc_sdk::ModelRecommendation;
+use nexus_claude::ModelRecommendation;
 
 let recommender = ModelRecommendation::default();
 
@@ -141,7 +141,7 @@ let options = ClaudeCodeOptions::builder()
 Track consumption and set budgets:
 
 ```rust
-use cc_sdk::token_tracker::BudgetLimit;
+use nexus_claude::token_tracker::BudgetLimit;
 
 let mut client = ClaudeSDKClient::new(options);
 
@@ -203,9 +203,9 @@ let options = ClaudeCodeOptions::builder()
 ## Complete Optimized Example
 
 ```rust
-use cc_sdk::{ClaudeCodeOptions, ClaudeSDKClient, PermissionMode, Result};
-use cc_sdk::model_recommendation::ModelRecommendation;
-use cc_sdk::token_tracker::BudgetLimit;
+use nexus_claude::{ClaudeCodeOptions, ClaudeSDKClient, PermissionMode, Result};
+use nexus_claude::model_recommendation::ModelRecommendation;
+use nexus_claude::token_tracker::BudgetLimit;
 use futures::StreamExt;
 
 #[tokio::main]

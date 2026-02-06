@@ -751,7 +751,7 @@ impl Query {
     /// # Example
     ///
     /// ```rust,no_run
-    /// # use cc_sdk::{ClaudeSDKClient, ClaudeCodeOptions};
+    /// # use nexus_claude::{ClaudeSDKClient, ClaudeCodeOptions};
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// let options = ClaudeCodeOptions::builder()
     ///     .enable_file_checkpointing(true)

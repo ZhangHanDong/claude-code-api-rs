@@ -14,7 +14,7 @@
 //! ## Quick Start
 //!
 //! ```rust,no_run
-//! use cc_sdk::{query, Result};
+//! use nexus_claude::{query, Result};
 //! use futures::StreamExt;
 //!
 //! #[tokio::main]
@@ -50,6 +50,9 @@ mod sdk_mcp;
 pub mod token_tracker;
 pub mod transport;
 mod types;
+
+/// Memory module for persistent conversation context
+pub mod memory;
 
 // Re-export main types and functions
 pub use client::ClaudeSDKClient;

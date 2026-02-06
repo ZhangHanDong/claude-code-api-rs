@@ -1250,8 +1250,8 @@ fn convert_codex_event_to_agent_event(event: codex_core::protocol::Event) -> Res
 ### Basic Usage with Single Provider
 
 ```rust
-use cc_sdk::unified::{ClaudeCodeProvider, UserInput, AgentEvent};
-use cc_sdk::ClaudeCodeOptions;
+use nexus_claude::unified::{ClaudeCodeProvider, UserInput, AgentEvent};
+use nexus_claude::ClaudeCodeOptions;
 
 async fn simple_query() -> Result<()> {
     // Create provider
@@ -1295,7 +1295,7 @@ async fn simple_query() -> Result<()> {
 ### Dynamic Provider Routing
 
 ```rust
-use cc_sdk::unified::{
+use nexus_claude::unified::{
     ProviderRouter, TaskDescriptor, TaskType, ModelPreference,
     ClaudeCodeProvider, CodexProvider, RoutingStrategy,
 };
@@ -1371,7 +1371,7 @@ async fn dynamic_routing_example() -> Result<()> {
 ### Custom Routing Strategy
 
 ```rust
-use cc_sdk::unified::{ProviderRouter, RoutingStrategy, TaskDescriptor};
+use nexus_claude::unified::{ProviderRouter, RoutingStrategy, TaskDescriptor};
 use std::sync::Arc;
 
 async fn custom_routing() -> Result<()> {
@@ -1407,7 +1407,7 @@ async fn custom_routing() -> Result<()> {
 ### Task-Specific Routing Configuration
 
 ```rust
-use cc_sdk::unified::*;
+use nexus_claude::unified::*;
 
 pub struct TaskRouter {
     router: ProviderRouter,

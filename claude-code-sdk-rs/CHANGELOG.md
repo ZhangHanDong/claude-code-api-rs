@@ -370,7 +370,7 @@ This release introduces a complete strongly-typed hooks system, eliminating all 
 - **Hook Event Names**: Corrected examples to use PascalCase (`"PreToolUse"` not `"pre_tool_use"`)
 - **Documentation Links**: Fixed all broken relative paths in documentation
 - **Test Data Format**: Updated tests to include required `hook_event_name` discriminator field
-- **Result Type**: Fixed confusion between `cc_sdk::Result<T>` and `std::result::Result<T, E>`
+- **Result Type**: Fixed confusion between `nexus_claude::Result<T>` and `std::result::Result<T, E>`
 
 ### Technical Details
 
@@ -395,7 +395,7 @@ Coverage:     All hook types tested
 
 1. **Change trait signature**:
    ```rust
-   use cc_sdk::{HookCallback, HookInput, HookJSONOutput, SyncHookJSONOutput};
+   use nexus_claude::{HookCallback, HookInput, HookJSONOutput, SyncHookJSONOutput};
 
    #[async_trait]
    impl HookCallback for MyHook {
@@ -432,7 +432,7 @@ Coverage:     All hook types tested
 
 3. **Add new imports**:
    ```rust
-   use cc_sdk::{
+   use nexus_claude::{
        HookInput, HookJSONOutput,
        SyncHookJSONOutput, AsyncHookJSONOutput,
        PreToolUseHookInput, PostToolUseHookInput,

@@ -46,7 +46,7 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use cc_sdk::{
+use nexus_claude::{
     HookCallback, HookContext, HookInput, HookJSONOutput, SdkError, SyncHookJSONOutput,
     PostToolUseHookInput, PreToolUseHookInput, UserPromptSubmitHookInput, StopHookInput,
 };

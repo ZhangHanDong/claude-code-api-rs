@@ -58,7 +58,7 @@ ANTHROPIC_USER_EMAIL="your-email@example.com" cargo run
 ### Usage in Code
 
 ```rust
-use cc_sdk::{ClaudeSDKClient, ClaudeCodeOptions, Result};
+use nexus_claude::{ClaudeSDKClient, ClaudeCodeOptions, Result};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -199,11 +199,11 @@ export CLAUDE_CODE_CLI_PATH="/opt/claude/bin/claude"
 # Enable debug logging for entire application
 export RUST_LOG=debug
 
-# Enable debug logging only for cc_sdk
-export RUST_LOG=cc_sdk=debug
+# Enable debug logging only for nexus_claude
+export RUST_LOG=nexus_claude=debug
 
 # Fine-grained control
-export RUST_LOG=cc_sdk::client=debug,cc_sdk::transport=trace
+export RUST_LOG=nexus_claude::client=debug,nexus_claude::transport=trace
 ```
 
 **Log levels** (in order of verbosity):
@@ -244,7 +244,7 @@ cp examples/.env.example .env
 ANTHROPIC_USER_EMAIL=your-email@example.com
 CLAUDE_MODEL=claude-sonnet-4-5-20250929
 CLAUDE_CODE_MAX_OUTPUT_TOKENS=8192
-RUST_LOG=cc_sdk=info
+RUST_LOG=nexus_claude=info
 ```
 
 **3. Add to .gitignore:**
@@ -298,7 +298,7 @@ async fn main() {
 ### Complete Setup
 
 ```rust
-use cc_sdk::{ClaudeCodeOptions, ClaudeSDKClient, Result};
+use nexus_claude::{ClaudeCodeOptions, ClaudeSDKClient, Result};
 use dotenv::dotenv;
 
 #[tokio::main]

@@ -2,14 +2,14 @@
 //!
 //! This example tests basic client connectivity.
 
-use cc_sdk::{ClaudeCodeOptions, ClaudeSDKClient, Message, Result};
+use nexus_claude::{ClaudeCodeOptions, ClaudeSDKClient, Message, Result};
 use futures::StreamExt;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize logging with debug level
     tracing_subscriber::fmt()
-        .with_env_filter("cc_sdk=debug")
+        .with_env_filter("nexus_claude=debug")
         .with_max_level(tracing::Level::DEBUG)
         .init();
 

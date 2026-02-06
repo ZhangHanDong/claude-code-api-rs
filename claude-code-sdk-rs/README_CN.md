@@ -54,9 +54,9 @@
 使用内置优化工具最小化token消耗和控制成本：
 
 ```rust
-use cc_sdk::{ClaudeCodeOptions, ClaudeSDKClient, PermissionMode};
-use cc_sdk::token_tracker::BudgetLimit;
-use cc_sdk::model_recommendation::ModelRecommendation;
+use nexus_claude::{ClaudeCodeOptions, ClaudeSDKClient, PermissionMode};
+use nexus_claude::token_tracker::BudgetLimit;
+use nexus_claude::model_recommendation::ModelRecommendation;
 
 // 1. 选择性价比高的模型
 let recommender = ModelRecommendation::default();
@@ -173,7 +173,7 @@ SDK 支持 2025 年最新的 Claude 模型：
 ### 在代码中使用模型
 
 ```rust
-use cc_sdk::{query, ClaudeCodeOptions, Result};
+use nexus_claude::{query, ClaudeCodeOptions, Result};
 
 // 使用 Opus 4.1（推荐使用别名）
 let options = ClaudeCodeOptions::builder()
@@ -193,7 +193,7 @@ let mut messages = query("你的提示", Some(options)).await?;
 ### 简单查询（一次性）
 
 ```rust
-use cc_sdk::{query, Result};
+use nexus_claude::{query, Result};
 use futures::StreamExt;
 
 #[tokio::main]
@@ -211,7 +211,7 @@ async fn main() -> Result<()> {
 ### 交互式客户端
 
 ```rust
-use cc_sdk::{InteractiveClient, ClaudeCodeOptions, Result};
+use nexus_claude::{InteractiveClient, ClaudeCodeOptions, Result};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -226,7 +226,7 @@ async fn main() -> Result<()> {
     // 处理响应
     for msg in &messages {
         match msg {
-            cc_sdk::Message::Assistant { message } => {
+            nexus_claude::Message::Assistant { message } => {
                 println!("Claude: {:?}", message);
             }
             _ => {}
@@ -246,7 +246,7 @@ async fn main() -> Result<()> {
 ### 高级用法
 
 ```rust
-use cc_sdk::{InteractiveClient, ClaudeCodeOptions, Result};
+use nexus_claude::{InteractiveClient, ClaudeCodeOptions, Result};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -274,7 +274,7 @@ async fn main() -> Result<()> {
 ## 配置选项
 
 ```rust
-use cc_sdk::{ClaudeCodeOptions, PermissionMode};
+use nexus_claude::{ClaudeCodeOptions, PermissionMode};
 
 let options = ClaudeCodeOptions::builder()
     .system_prompt("你是一个有帮助的编程助手")
@@ -299,18 +299,18 @@ let options = ClaudeCodeOptions::builder()
 示例：
 
 ```rust
-use cc_sdk::{Query, ClaudeCodeOptions};
-use cc_sdk::transport::SubprocessTransport;
+use nexus_claude::{Query, ClaudeCodeOptions};
+use nexus_claude::transport::SubprocessTransport;
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::Mutex;
 
-# async fn demo() -> cc_sdk::Result<()> {
+# async fn demo() -> nexus_claude::Result<()> {
 let options = ClaudeCodeOptions::builder()
     .model("sonnet")
     .include_partial_messages(true)
     .build();
 
-let transport: Box<dyn cc_sdk::transport::Transport + Send> =
+let transport: Box<dyn nexus_claude::transport::Transport + Send> =
     Box::new(SubprocessTransport::new(options)?);
 let transport = Arc::new(Mutex::new(transport));
 
@@ -332,7 +332,7 @@ q.stream_input(futures::stream::iter(inputs)).await?;
 - MCP 服务器：通过 `options.mcp_servers` 配置（stdio/http/sse/sdk），SDK 会打包成 `--mcp-config`
 
 ```rust
-use cc_sdk::{ClaudeCodeOptions, PermissionMode, CanUseTool, ToolPermissionContext, PermissionResult,
+use nexus_claude::{ClaudeCodeOptions, PermissionMode, CanUseTool, ToolPermissionContext, PermissionResult,
              PermissionResultAllow, transport::{Transport, SubprocessTransport}, Query};
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::Mutex;
@@ -342,11 +342,11 @@ struct AllowRead;
 impl CanUseTool for AllowRead {
   async fn can_use_tool(&self, tool:&str, _input:&serde_json::Value, _ctx:&ToolPermissionContext) -> PermissionResult {
     if tool == "Read" { PermissionResult::Allow(PermissionResultAllow{updated_input: None, updated_permissions: None}) }
-    else { cc_sdk::PermissionResult::Deny(cc_sdk::PermissionResultDeny{ message: "Not allowed".into(), interrupt: false }) }
+    else { nexus_claude::PermissionResult::Deny(nexus_claude::PermissionResultDeny{ message: "Not allowed".into(), interrupt: false }) }
   }
 }
 
-# async fn demo() -> cc_sdk::Result<()> {
+# async fn demo() -> nexus_claude::Result<()> {
 let mut opts = ClaudeCodeOptions::builder()
   .permission_mode(PermissionMode::AcceptEdits)
   .include_partial_messages(true)
@@ -354,7 +354,7 @@ let mut opts = ClaudeCodeOptions::builder()
 opts.allowed_tools = vec!["Read".into()];
 
 let mut mcp = HashMap::new();
-mcp.insert("filesystem".into(), cc_sdk::McpServerConfig::Stdio{ command: "npx".into(), args: Some(vec!["-y".into(), "@modelcontextprotocol/server-filesystem".into(), "/allowed".into()]), env: None });
+mcp.insert("filesystem".into(), nexus_claude::McpServerConfig::Stdio{ command: "npx".into(), args: Some(vec!["-y".into(), "@modelcontextprotocol/server-filesystem".into(), "/allowed".into()]), env: None });
 opts.mcp_servers = mcp;
 
 let transport: Box<dyn Transport + Send> = Box::new(SubprocessTransport::new(opts)?);

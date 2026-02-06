@@ -1,6 +1,6 @@
 //! Performance testing for the optimized Claude Code SDK
 
-use cc_sdk::{
+use nexus_claude::{
     ClaudeCodeOptions, ClientMode, OptimizedClient, PerformanceMetrics, PermissionMode, Result,
 };
 use std::sync::Arc;

@@ -5,7 +5,7 @@
 //! for better type safety and IDE support.
 
 use async_trait::async_trait;
-use cc_sdk::{
+use nexus_claude::{
     query, ClaudeCodeOptions, HookCallback, HookContext, HookInput, HookJSONOutput,
     HookMatcher, PermissionMode, SdkError, SyncHookJSONOutput,
 };
@@ -117,8 +117,8 @@ impl HookCallback for PromptEnhancer {
             println!("   Adding helpful context...");
 
             // Return hook output with additional context
-            use cc_sdk::UserPromptSubmitHookSpecificOutput;
-            use cc_sdk::HookSpecificOutput;
+            use nexus_claude::UserPromptSubmitHookSpecificOutput;
+            use nexus_claude::HookSpecificOutput;
 
             return Ok(HookJSONOutput::Sync(SyncHookJSONOutput {
                 hook_specific_output: Some(HookSpecificOutput::UserPromptSubmit(

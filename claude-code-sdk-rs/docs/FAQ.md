@@ -144,7 +144,7 @@ let options = ClaudeCodeOptions::builder()
     .build();
 
 // Method 2: Using helper function
-use cc_sdk::model_recommendation::latest_sonnet;
+use nexus_claude::model_recommendation::latest_sonnet;
 let options = ClaudeCodeOptions::builder()
     .model(latest_sonnet())
     .build();
@@ -250,8 +250,8 @@ cargo run --example check_current_account
 **A:** See the [Token Optimization Guide](TOKEN_OPTIMIZATION.md), but here are quick tips:
 
 ```rust
-use cc_sdk::model_recommendation::cheapest_model;
-use cc_sdk::token_tracker::BudgetLimit;
+use nexus_claude::model_recommendation::cheapest_model;
+use nexus_claude::token_tracker::BudgetLimit;
 
 let options = ClaudeCodeOptions::builder()
     .model(cheapest_model())  // Use Haiku
@@ -290,10 +290,10 @@ client.set_budget_limit(
 export RUST_LOG=debug
 
 # Only for cc-sdk
-export RUST_LOG=cc_sdk=debug
+export RUST_LOG=nexus_claude=debug
 
 # Fine-grained
-export RUST_LOG=cc_sdk::client=debug,cc_sdk::transport=trace
+export RUST_LOG=nexus_claude::client=debug,nexus_claude::transport=trace
 ```
 
 ### Q: Can I use this in production?
@@ -316,8 +316,8 @@ export RUST_LOG=cc_sdk::client=debug,cc_sdk::transport=trace
 
 **Example production setup:**
 ```rust
-use cc_sdk::{ClaudeSDKClient, ClaudeCodeOptions, Result};
-use cc_sdk::token_tracker::BudgetLimit;
+use nexus_claude::{ClaudeSDKClient, ClaudeCodeOptions, Result};
+use nexus_claude::token_tracker::BudgetLimit;
 
 async fn production_setup() -> Result<ClaudeSDKClient> {
     // Validate environment

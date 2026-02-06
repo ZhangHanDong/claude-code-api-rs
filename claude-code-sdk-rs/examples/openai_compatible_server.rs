@@ -7,7 +7,7 @@ use axum::{
     response::Json,
     routing::{get, post},
 };
-use cc_sdk::{
+use nexus_claude::{
     ClaudeCodeOptions, ClientMode, ContentBlock, Message, OptimizedClient, PermissionMode,
 };
 use serde::{Deserialize, Serialize};

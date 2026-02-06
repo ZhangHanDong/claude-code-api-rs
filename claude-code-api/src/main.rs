@@ -52,6 +52,7 @@ async fn create_app(settings: Settings) -> Result<Router> {
     use crate::core::{
         cache::{ResponseCache, CacheConfig},
         conversation::{ConversationManager, ConversationConfig},
+        storage::{InMemoryConversationStore, InMemoryConversationConfig},
         interactive_session::InteractiveSessionManager,
     };
     use crate::middleware::{error_handler, request_id};
@@ -92,7 +93,8 @@ async fn create_app(settings: Settings) -> Result<Router> {
         }
     }
     
-    let conversation_manager = Arc::new(ConversationManager::new(ConversationConfig::default()));
+    let conversation_store = InMemoryConversationStore::new(InMemoryConversationConfig::default());
+    let conversation_manager = Arc::new(ConversationManager::new(conversation_store, ConversationConfig::default()));
     let cache = Arc::new(ResponseCache::new(CacheConfig::default()));
 
     let chat_state = ChatState::new(

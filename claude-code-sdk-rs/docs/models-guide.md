@@ -20,7 +20,7 @@ The newest flagship model released on November 24, 2025. Industry-leading perfor
 
 **Example usage:**
 ```rust
-use cc_sdk::{query, ClaudeCodeOptions, Result};
+use nexus_claude::{query, ClaudeCodeOptions, Result};
 use futures::StreamExt;
 
 #[tokio::main]
@@ -52,7 +52,7 @@ Released in September 2025, excellent balance of capability, speed, and cost.
 
 **Example usage:**
 ```rust
-use cc_sdk::{query, ClaudeCodeOptions, Result};
+use nexus_claude::{query, ClaudeCodeOptions, Result};
 use futures::StreamExt;
 
 #[tokio::main]
@@ -82,13 +82,13 @@ Great balance between capability and cost, ideal for most applications.
 
 **Example usage:**
 ```rust
-use cc_sdk::{InteractiveClient, ClaudeCodeOptions, Result};
+use nexus_claude::{InteractiveClient, ClaudeCodeOptions, Result};
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let options = ClaudeCodeOptions::builder()
         .model("claude-sonnet-4-20250514")
-        .permission_mode(cc_sdk::PermissionMode::AcceptEdits)
+        .permission_mode(nexus_claude::PermissionMode::AcceptEdits)
         .build();
 
     let mut client = InteractiveClient::new(options)?;
@@ -153,7 +153,7 @@ async fn main() -> Result<()> {
 
 ### Using Extra Arguments with Models
 ```rust
-use cc_sdk::{ClaudeCodeOptions, PermissionMode};
+use nexus_claude::{ClaudeCodeOptions, PermissionMode};
 use std::collections::HashMap;
 
 let mut extra_args = HashMap::new();
@@ -170,7 +170,7 @@ let options = ClaudeCodeOptions::builder()
 
 ### Interactive Session with Model Selection
 ```rust
-use cc_sdk::{InteractiveClient, ClaudeCodeOptions, Result};
+use nexus_claude::{InteractiveClient, ClaudeCodeOptions, Result};
 
 async fn create_client_with_model(model: &str) -> Result<InteractiveClient> {
     let options = ClaudeCodeOptions::builder()
@@ -200,7 +200,7 @@ async fn main() -> Result<()> {
 
 ### Using fallback_model (v0.4.0+)
 ```rust
-use cc_sdk::{ClaudeCodeOptions, Result};
+use nexus_claude::{ClaudeCodeOptions, Result};
 
 let options = ClaudeCodeOptions::builder()
     .model("claude-opus-4-5-20251101")
@@ -211,7 +211,7 @@ let options = ClaudeCodeOptions::builder()
 ## Checking Model Availability
 
 ```rust
-use cc_sdk::{query, ClaudeCodeOptions, Result};
+use nexus_claude::{query, ClaudeCodeOptions, Result};
 use futures::StreamExt;
 
 async fn test_model(model_name: &str) -> bool {
@@ -258,7 +258,7 @@ async fn main() -> Result<()> {
 ## Error Handling for Invalid Models
 
 ```rust
-use cc_sdk::{query, ClaudeCodeOptions, SdkError, Result};
+use nexus_claude::{query, ClaudeCodeOptions, SdkError, Result};
 
 async fn safe_query_with_fallback(prompt: &str) -> Result<()> {
     // Try with preferred model

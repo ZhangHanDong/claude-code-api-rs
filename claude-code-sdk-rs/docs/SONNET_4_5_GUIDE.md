@@ -14,7 +14,7 @@ Claude Sonnet 4.5 (`claude-sonnet-4-5-20250929`) is the latest model released in
 ### 1. Simple Query
 
 ```rust
-use cc_sdk::{query, ClaudeCodeOptions, Result};
+use nexus_claude::{query, ClaudeCodeOptions, Result};
 use futures::StreamExt;
 
 #[tokio::main]
@@ -36,7 +36,7 @@ async fn main() -> Result<()> {
 ### 2. Using Model Recommendation Helper
 
 ```rust
-use cc_sdk::model_recommendation::latest_sonnet;
+use nexus_claude::model_recommendation::latest_sonnet;
 
 let options = ClaudeCodeOptions::builder()
     .model(latest_sonnet())  // Returns "claude-sonnet-4-5-20250929"
@@ -46,7 +46,7 @@ let options = ClaudeCodeOptions::builder()
 ### 3. Interactive Session
 
 ```rust
-use cc_sdk::{InteractiveClient, ClaudeCodeOptions, Result};
+use nexus_claude::{InteractiveClient, ClaudeCodeOptions, Result};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -84,13 +84,13 @@ async fn main() -> Result<()> {
 // After (Sonnet 4.5 - Latest)
 .model("claude-sonnet-4-5-20250929")
 // Or simply use the helper
-.model(cc_sdk::model_recommendation::latest_sonnet())
+.model(nexus_claude::model_recommendation::latest_sonnet())
 ```
 
 ### Using the Recommendation System
 
 ```rust
-use cc_sdk::model_recommendation::ModelRecommendation;
+use nexus_claude::model_recommendation::ModelRecommendation;
 
 let recommender = ModelRecommendation::default();
 
@@ -117,7 +117,7 @@ let options = ClaudeCodeOptions::builder()
 ### With Permission Management
 
 ```rust
-use cc_sdk::PermissionMode;
+use nexus_claude::PermissionMode;
 
 let options = ClaudeCodeOptions::builder()
     .model("claude-sonnet-4-5-20250929")
@@ -133,7 +133,7 @@ let options = ClaudeCodeOptions::builder()
 ### Budget Control
 
 ```rust
-use cc_sdk::token_tracker::BudgetLimit;
+use nexus_claude::token_tracker::BudgetLimit;
 
 let options = ClaudeCodeOptions::builder()
     .model("claude-sonnet-4-5-20250929")
@@ -181,9 +181,9 @@ println!("Cost: ${:.4}", usage.total_cost_usd);
 ## Example: Complete Application
 
 ```rust
-use cc_sdk::{ClaudeSDKClient, ClaudeCodeOptions, Message, Result};
-use cc_sdk::model_recommendation::latest_sonnet;
-use cc_sdk::token_tracker::BudgetLimit;
+use nexus_claude::{ClaudeSDKClient, ClaudeCodeOptions, Message, Result};
+use nexus_claude::model_recommendation::latest_sonnet;
+use nexus_claude::token_tracker::BudgetLimit;
 use futures::StreamExt;
 
 #[tokio::main]
@@ -212,7 +212,7 @@ async fn main() -> Result<()> {
         match msg? {
             Message::Assistant { message } => {
                 for block in message.content {
-                    if let cc_sdk::ContentBlock::Text(text) = block {
+                    if let nexus_claude::ContentBlock::Text(text) = block {
                         println!("{}", text.text);
                     }
                 }

@@ -20,7 +20,7 @@ When registering hooks with the Claude Code SDK, **event names must be in Pascal
 ### Correct ✅
 
 ```rust
-use cc_sdk::{ClaudeCodeOptions, HookMatcher};
+use nexus_claude::{ClaudeCodeOptions, HookMatcher};
 use std::collections::HashMap;
 
 let mut hooks = HashMap::new();

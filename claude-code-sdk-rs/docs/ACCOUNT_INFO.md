@@ -72,7 +72,7 @@ This should match the account Claude CLI is logged in with.
 ## Basic Usage
 
 ```rust
-use cc_sdk::{ClaudeSDKClient, ClaudeCodeOptions, Result};
+use nexus_claude::{ClaudeSDKClient, ClaudeCodeOptions, Result};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -107,7 +107,7 @@ The `get_account_info()` method attempts to retrieve account information through
 ### Example 1: Using Environment Variable (Recommended)
 
 ```rust
-use cc_sdk::{ClaudeSDKClient, ClaudeCodeOptions, Result};
+use nexus_claude::{ClaudeSDKClient, ClaudeCodeOptions, Result};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -137,7 +137,7 @@ cargo run --example account_info
 ### Example 2: Simple Account Info Display with Fallback
 
 ```rust
-use cc_sdk::{ClaudeSDKClient, ClaudeCodeOptions, Result};
+use nexus_claude::{ClaudeSDKClient, ClaudeCodeOptions, Result};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -160,7 +160,7 @@ async fn main() -> Result<()> {
 ### Example 2: Session Startup with Account Verification
 
 ```rust
-use cc_sdk::{ClaudeSDKClient, ClaudeCodeOptions, Result};
+use nexus_claude::{ClaudeSDKClient, ClaudeCodeOptions, Result};
 
 async fn start_session_with_verification() -> Result<()> {
     let options = ClaudeCodeOptions::builder()
@@ -187,7 +187,7 @@ async fn start_session_with_verification() -> Result<()> {
 ### Example 3: Error Handling
 
 ```rust
-use cc_sdk::{ClaudeSDKClient, ClaudeCodeOptions, Result, SdkError};
+use nexus_claude::{ClaudeSDKClient, ClaudeCodeOptions, Result, SdkError};
 
 async fn get_account_with_fallback() -> Result<String> {
     let mut client = ClaudeSDKClient::new(ClaudeCodeOptions::default());
@@ -208,7 +208,7 @@ async fn get_account_with_fallback() -> Result<String> {
 ### Example 4: Logging Account Info
 
 ```rust
-use cc_sdk::{ClaudeSDKClient, ClaudeCodeOptions, Result};
+use nexus_claude::{ClaudeSDKClient, ClaudeCodeOptions, Result};
 use tracing::{info, error};
 
 #[tokio::main]
@@ -237,7 +237,7 @@ async fn main() -> Result<()> {
 ### Example 5: Multi-Account Verification
 
 ```rust
-use cc_sdk::{ClaudeSDKClient, ClaudeCodeOptions, Result};
+use nexus_claude::{ClaudeSDKClient, ClaudeCodeOptions, Result};
 
 async fn verify_expected_account(expected_email: &str) -> Result<bool> {
     let mut client = ClaudeSDKClient::new(ClaudeCodeOptions::default());
@@ -319,7 +319,7 @@ async fn start_debug_session() -> Result<()> {
 Track costs per account for billing or analytics:
 
 ```rust
-use cc_sdk::token_tracker::BudgetLimit;
+use nexus_claude::token_tracker::BudgetLimit;
 
 async fn track_usage_by_account() -> Result<()> {
     let mut client = ClaudeSDKClient::new(ClaudeCodeOptions::default());
@@ -412,6 +412,6 @@ match client.get_account_info().await {
 
 ## See Also
 
-- [Client API Documentation](https://docs.rs/cc-sdk/latest/cc_sdk/struct.ClaudeSDKClient.html)
+- [Client API Documentation](https://docs.rs/cc-sdk/latest/nexus_claude/struct.ClaudeSDKClient.html)
 - [Examples Directory](../examples/) - Complete working examples
 - [Error Handling Guide](../README.md#error-handling)

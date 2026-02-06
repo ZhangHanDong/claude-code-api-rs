@@ -97,7 +97,7 @@ npm install -g @anthropic-ai/claude-code
 ### シンプルクエリ（一度きり）
 
 ```rust
-use cc_sdk::{query, Result};
+use nexus_claude::{query, Result};
 use futures::StreamExt;
 
 #[tokio::main]
@@ -115,7 +115,7 @@ async fn main() -> Result<()> {
 ### インタラクティブクライアント
 
 ```rust
-use cc_sdk::{InteractiveClient, ClaudeCodeOptions, Result};
+use nexus_claude::{InteractiveClient, ClaudeCodeOptions, Result};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -130,7 +130,7 @@ async fn main() -> Result<()> {
     // レスポンスを処理
     for msg in &messages {
         match msg {
-            cc_sdk::Message::Assistant { message } => {
+            nexus_claude::Message::Assistant { message } => {
                 println!("Claude: {:?}", message);
             }
             _ => {}
@@ -150,7 +150,7 @@ async fn main() -> Result<()> {
 ### 高度な使用方法
 
 ```rust
-use cc_sdk::{InteractiveClient, ClaudeCodeOptions, Result};
+use nexus_claude::{InteractiveClient, ClaudeCodeOptions, Result};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -178,7 +178,7 @@ async fn main() -> Result<()> {
 ## 設定オプション
 
 ```rust
-use cc_sdk::{ClaudeCodeOptions, PermissionMode};
+use nexus_claude::{ClaudeCodeOptions, PermissionMode};
 
 let options = ClaudeCodeOptions::builder()
     .system_prompt("あなたは役立つコーディングアシスタントです")

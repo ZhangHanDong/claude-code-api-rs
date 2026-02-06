@@ -38,7 +38,7 @@ cargo run --example simple_model_test
 ## Example Usage
 
 ```rust
-use cc_sdk::{query, ClaudeCodeOptions, PermissionMode, Result};
+use nexus_claude::{query, ClaudeCodeOptions, PermissionMode, Result};
 
 #[tokio::main]
 async fn main() -> Result<()> {

@@ -220,7 +220,7 @@ SDK 提供全面的错误类型：
 
 ### 基础查询
 ```rust
-use cc_sdk::{query, Result};
+use nexus_claude::{query, Result};
 use futures::StreamExt;
 
 #[tokio::main]
@@ -229,9 +229,9 @@ async fn main() -> Result<()> {
     
     while let Some(msg) = messages.next().await {
         match msg? {
-            cc_sdk::Message::Assistant { message } => {
+            nexus_claude::Message::Assistant { message } => {
                 for content in message.content {
-                    if let cc_sdk::ContentBlock::Text(text) = content {
+                    if let nexus_claude::ContentBlock::Text(text) = content {
                         println!("{}", text.text);
                     }
                 }
@@ -246,7 +246,7 @@ async fn main() -> Result<()> {
 
 ### 交互式对话
 ```rust
-use cc_sdk::{InteractiveClient, ClaudeCodeOptions, PermissionMode, Result};
+use nexus_claude::{InteractiveClient, ClaudeCodeOptions, PermissionMode, Result};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -277,7 +277,7 @@ async fn main() -> Result<()> {
 
 ### 使用优化客户端
 ```rust
-use cc_sdk::{OptimizedClient, ClientMode, ClaudeCodeOptions, Result};
+use nexus_claude::{OptimizedClient, ClientMode, ClaudeCodeOptions, Result};
 
 #[tokio::main]
 async fn main() -> Result<()> {

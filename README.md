@@ -1,35 +1,34 @@
-# Claude Code API
+# Nexus - Claude Code SDK & API
 
-[![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](https://github.com/ZhangHanDong/claude-code-api-rs)
+[![Version](https://img.shields.io/badge/version-0.5.0-blue.svg)](https://github.com/this-rs/nexus)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Rust](https://img.shields.io/badge/rust-1.75+-orange.svg)](https://www.rust-lang.org)
 
-[中文文档](README_CN.md) | [日本語](README_JA.md) | English
-
 ---
 
-## 🦀 cc-sdk v0.4.0 - Rust SDK for Claude Code
+## nexus-claude v0.5.0 - Rust SDK with Persistent Memory
 
-> **🎉 100% Feature Parity with Python claude-agent-sdk v0.1.14!**
+[![Crates.io](https://img.shields.io/crates/v/nexus-claude.svg)](https://crates.io/crates/nexus-claude)
+[![Documentation](https://docs.rs/nexus-claude/badge.svg)](https://docs.rs/nexus-claude)
 
-[![Crates.io](https://img.shields.io/crates/v/cc-sdk.svg)](https://crates.io/crates/cc-sdk)
-[![Documentation](https://docs.rs/cc-sdk/badge.svg)](https://docs.rs/cc-sdk)
+**[nexus-claude](./claude-code-sdk-rs)** is a Rust SDK for Claude Code CLI with **persistent memory** and **autonomous context retrieval**:
 
-**[cc-sdk](./claude-code-sdk-rs)** is the official Rust SDK for Claude Code CLI, providing:
+- **Persistent Memory System** - Conversations stored and indexed for future retrieval
+- **Multi-Factor Relevance Scoring** - Context scored by semantic similarity, working directory, file overlap, and recency
+- **Autonomous Context Injection** - Relevant historical context automatically injected into prompts
+- **Auto CLI Download** - Automatically downloads Claude Code CLI if not found
+- **File Checkpointing** - Rewind file changes to any conversation point
+- **Structured Output** - JSON schema validation for responses
+- **Full Control Protocol** - Permissions, hooks, MCP servers
 
-- 📥 **Auto CLI Download** - Automatically downloads Claude Code CLI if not found
-- 📁 **File Checkpointing** - Rewind file changes to any conversation point
-- 📊 **Structured Output** - JSON schema validation for responses
-- 🔧 **Full Control Protocol** - Permissions, hooks, MCP servers
-- 💰 **Budget Control** - `max_budget_usd` and `fallback_model` support
-- 🏖️ **Sandbox** - Bash isolation for filesystem/network
+> **Fork Notice**: This project is a fork of [ZhangHanDong/claude-code-api-rs](https://github.com/ZhangHanDong/claude-code-api-rs) (`cc-sdk`), extended with persistent memory capabilities.
 
 ```rust
-use cc_sdk::{query, ClaudeCodeOptions};
+use nexus_claude::{query, ClaudeCodeOptions};
 use futures::StreamExt;
 
 #[tokio::main]
-async fn main() -> cc_sdk::Result<()> {
+async fn main() -> nexus_claude::Result<()> {
     let options = ClaudeCodeOptions::builder()
         .model("claude-opus-4-5-20251101")  // Latest Opus 4.5
         .auto_download_cli(true)             // Auto-download CLI
@@ -44,42 +43,49 @@ async fn main() -> cc_sdk::Result<()> {
 }
 ```
 
-👉 **[Full SDK Documentation](./claude-code-sdk-rs/README.md)** | **[API Docs](https://docs.rs/cc-sdk)**
+### With Persistent Memory
+
+```rust
+use nexus_claude::memory::{MemoryIntegrationBuilder, ContextInjector, MemoryConfig};
+
+// Create a memory manager for conversation tracking
+let mut manager = MemoryIntegrationBuilder::new()
+    .enabled(true)
+    .cwd("/projects/my-app")
+    .url("http://localhost:7700")  // Meilisearch URL
+    .min_relevance_score(0.3)
+    .max_context_items(5)
+    .build();
+
+// Record messages and tool calls during conversation
+manager.record_user_message("How do I implement JWT auth?");
+manager.process_tool_call("Read", &serde_json::json!({
+    "file_path": "/projects/my-app/src/auth.rs"
+}));
+manager.record_assistant_message("I've analyzed your auth module...");
+```
+
+**[Full SDK Documentation](./claude-code-sdk-rs/README.md)** | **[API Docs](https://docs.rs/nexus-claude)**
 
 ---
 
-A high-performance Rust implementation of an OpenAI-compatible API gateway for Claude Code CLI. Built on top of the robust [cc-sdk](https://github.com/ZhangHanDong/claude-code-api-rs/tree/main/claude-code-sdk-rs), this project provides a RESTful API interface that allows you to interact with Claude Code using the familiar OpenAI API format.
+## Claude Code API Server
 
-## 🎉 Who's Using Claude Code API
+A high-performance Rust implementation of an OpenAI-compatible API gateway for Claude Code CLI. Built on top of the robust nexus-claude SDK, this project provides a RESTful API interface that allows you to interact with Claude Code using the familiar OpenAI API format.
 
-- **[url-preview v0.6.0](https://github.com/ZhangHanDong/url-preview/releases/tag/0.6.0)** - A Rust library for extracting structured data from web pages using LLMs. It leverages claude-code-api to provide Claude-powered web content extraction alongside OpenAI support.
+### Features
 
-## ✨ Features
+- **OpenAI API Compatibility** - Drop-in replacement for OpenAI API
+- **High Performance** - Built with Rust, Axum, and Tokio
+- **Connection Pooling** - Reuse Claude processes for 5-10x faster responses
+- **Conversation Management** - Built-in session support for multi-turn conversations
+- **Multimodal Support** - Process images alongside text
+- **Response Caching** - Intelligent caching to reduce latency and costs
+- **MCP Support** - Model Context Protocol integration
+- **Streaming Responses** - Real-time streaming support
+- **Tool Calling** - OpenAI tools format support
 
-- **🔌 OpenAI API Compatibility** - Drop-in replacement for OpenAI API, works with existing OpenAI client libraries
-- **🚀 High Performance** - Built with Rust, Axum, and Tokio for exceptional performance
-- **📦 Powered by claude-code-sdk-rs** - Built on a robust SDK with full Claude Code CLI integration
-- **⚡ Connection Pooling** - Reuse Claude processes with optimized connection pooling for 5-10x faster responses
-- **💬 Conversation Management** - Built-in session support for multi-turn conversations
-- **🖼️ Multimodal Support** - Process images alongside text in your requests
-- **⚡ Response Caching** - Intelligent caching system to reduce latency and costs
-- **🔧 MCP Support** - Model Context Protocol integration for accessing external tools and services
-- **📁 File Access Control** - Configurable file system permissions for secure operations
-- **🌊 Streaming Responses** - Real-time streaming support for long-form content
-- **🛡️ Robust Error Handling** - Comprehensive error handling with automatic retries
-- **📊 Statistics API** - Monitor usage and performance metrics
-- **🔄 Multiple Client Modes** - OneShot, Interactive, and Batch processing modes
-- **🔧 Tool Calling** - OpenAI tools format support for AI tool integrations
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-- Rust 1.75 or higher
-- [Claude CLI](https://claude.ai/download) installed and configured
-- (Optional) MCP servers for extended functionality
-
-### Installation
+### Quick Start
 
 **Option 1: Install from crates.io**
 
@@ -97,21 +103,11 @@ RUST_LOG=info ccapi
 **Option 2: Build from source**
 
 ```bash
-git clone https://github.com/ZhangHanDong/claude-code-api-rs.git
-cd claude-code-api-rs
-```
-
-Build the entire workspace (API server + SDK):
-```bash
+git clone https://github.com/this-rs/nexus.git
+cd nexus
 cargo build --release
-```
-
-Start the server:
-```bash
 ./target/release/claude-code-api
 ```
-
-**Note**: The API server automatically includes and uses `claude-code-sdk-rs` for all Claude Code CLI interactions.
 
 The API server will start on `http://localhost:8080` by default.
 
@@ -128,12 +124,10 @@ curl -X POST http://localhost:8080/v1/chat/completions \
   }'
 ```
 
-## 🤖 Supported Models (December 2025)
-
-The API supports the latest Claude models:
+## Supported Models
 
 ### Latest Models
-- **Opus 4.5** ⭐ NEW (November 2025) - Most capable model
+- **Opus 4.5** (November 2025) - Most capable model
   - Recommended: `"opus"` (alias for latest)
   - Full name: `"claude-opus-4-5-20251101"`
   - SWE-bench: 80.9% (industry-leading)
@@ -147,26 +141,7 @@ The API supports the latest Claude models:
 - **Claude 3.5 Sonnet** (`claude-3-5-sonnet-20241022`)
 - **Claude 3.5 Haiku** (`claude-3-5-haiku-20241022`) - Fastest response times
 
-### Model Usage Examples
-
-```bash
-# Using Opus 4.1 (recommended: use alias)
-curl -X POST http://localhost:8080/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{"model": "opus", "messages": [{"role": "user", "content": "Hello"}]}'
-
-# Using Sonnet 4 (recommended: use alias)
-curl -X POST http://localhost:8080/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{"model": "sonnet", "messages": [{"role": "user", "content": "Hello"}]}'
-
-# Using latest aliases
-curl -X POST http://localhost:8080/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{"model": "opus", "messages": [{"role": "user", "content": "Hello"}]}'
-```
-
-## 📖 Core Features
+## Core Features
 
 ### 1. OpenAI-Compatible Chat API
 
@@ -230,11 +205,6 @@ response = client.chat.completions.create(
     }]
 )
 ```
-
-Supported image formats:
-- Local file paths
-- HTTP/HTTPS URLs
-- Base64 encoded data URLs
 
 ### 4. Streaming Responses
 
@@ -308,37 +278,9 @@ response = client.chat.completions.create(
     ],
     tool_choice="auto"
 )
-
-# Response will include tool_calls:
-# {
-#   "choices": [{
-#     "message": {
-#       "role": "assistant",
-#       "tool_calls": [{
-#         "id": "call_xxx",
-#         "type": "function",
-#         "function": {
-#           "name": "url_preview",
-#           "arguments": "{\"url\": \"https://rust-lang.org\"}"
-#         }
-#       }]
-#     }
-#   }]
-# }
 ```
 
-This feature enables seamless integration with modern AI tools like [url-preview](https://github.com/ZhangHanDong/url-preview) and other OpenAI-compatible tool chains. url-preview v0.6.0+ uses this exact format to extract structured data from web pages using Claude.
-
-### Agent Tools & Permissions
-
-- Tools control (SDK): set `allowed_tools` / `disallowed_tools` and `permission_mode` in `ClaudeCodeOptions` to whitelist/blacklist and choose approval behavior.
-- Runtime approvals (SDK): implement `CanUseTool` to decide `{allow, input?/reason?}` per tool call.
-- MCP (server): configure via `config/*.toml` or `mcp_config.json` and use scripts under `script/` (e.g., `start_with_mcp.sh`). The API reuses the SDK’s MCP wiring.
-- Programmatic agents (SDK): define `agents` and `setting_sources` to pass structured agent definitions to CLI.
-
-See `claude-code-sdk-rs/README.md` for a full Rust example enabling tools and MCP.
-
-## 🔧 Configuration
+## Configuration
 
 ### Environment Variables
 
@@ -386,7 +328,7 @@ port = 8080
 command = "claude"
 timeout_seconds = 300
 max_concurrent_sessions = 10
-use_interactive_sessions = false  # Disabled by default due to stability issues
+use_interactive_sessions = false
 
 [file_access]
 skip_permissions = false
@@ -399,31 +341,25 @@ strict = false
 debug = false
 ```
 
-## 📦 Built on claude-code-sdk-rs
-
-This API server is built on top of [claude-code-sdk-rs](https://github.com/ZhangHanDong/claude-code-api-rs/tree/main/claude-code-sdk-rs), a powerful Rust SDK for Claude Code CLI that provides:
-
-- **Full Feature Parity** with the official Python SDK
-- **Multiple Client Types**: 
-  - `query()` - Simple one-shot queries
-  - `InteractiveClient` - Stateful conversations with context
-  - `OptimizedClient` - Advanced client with connection pooling and performance features
-- **Streaming Support** - Real-time message streaming
-- **Complete Type Safety** - Strongly typed with serde support
-- **Async/Await** - Built on Tokio for high-performance async operations
-
-### Using the SDK Directly
+## Using the SDK Directly
 
 If you prefer to build your own integration, you can use the SDK directly:
 
 ```toml
 [dependencies]
-cc-sdk = "0.1.5"
+nexus-claude = "0.5.0"
 tokio = { version = "1.0", features = ["full"] }
 ```
 
+With persistent memory:
+
+```toml
+[dependencies]
+nexus-claude = { version = "0.5.0", features = ["memory"] }
+```
+
 ```rust
-use cc_sdk::{query, ClaudeCodeOptions, PermissionMode};
+use nexus_claude::{query, ClaudeCodeOptions, PermissionMode};
 use futures::StreamExt;
 
 #[tokio::main]
@@ -449,7 +385,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-## 📚 API Endpoints
+## API Endpoints
 
 ### Chat Completions
 - `POST /v1/chat/completions` - Create a chat completion
@@ -468,7 +404,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Health Check
 - `GET /health` - Check service health
 
-## 🛠️ Advanced Usage
+## Advanced Usage
 
 ### Using with LangChain
 
@@ -505,72 +441,17 @@ async function chat() {
 }
 ```
 
-### Using with curl
+## Performance Optimization
 
-```bash
-# Basic request
-curl -X POST http://localhost:8080/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "claude-opus-4-20250514",
-    "messages": [{"role": "user", "content": "Hello"}]
-  }'
-
-# With conversation ID
-curl -X POST http://localhost:8080/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "claude-opus-4-20250514",
-    "conversation_id": "uuid-here",
-    "messages": [{"role": "user", "content": "Continue our chat"}]
-  }'
-
-# With image
-curl -X POST http://localhost:8080/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "claude-opus-4-20250514",
-    "messages": [{
-      "role": "user",
-      "content": [
-        {"type": "text", "text": "What is this?"},
-        {"type": "image_url", "image_url": {"url": "/path/to/image.png"}}
-      ]
-    }]
-  }'
-```
-
-## 🔒 Security
-
-- File access is controlled through configurable permissions
-- MCP servers run in isolated processes
-- No API key required (relies on Claude CLI authentication)
-- Supports CORS for web applications
-- Request ID tracking for audit trails
-
-## ⚡ Performance Optimization
-
-### Advanced Performance Features (via claude-code-sdk-rs)
-
-The API leverages advanced performance optimizations from the underlying SDK:
-
-#### Connection Pooling
+### Connection Pooling
 - **First request**: 2-5 seconds (with pre-warmed connection pool)
 - **Subsequent requests**: < 0.1 seconds (reusing existing connections)
 - **Concurrent handling**: Multiple requests can share the connection pool
 
-#### Client Modes
+### Client Modes
 1. **OneShot Mode**: Simple, stateless queries (default)
 2. **Interactive Mode**: Maintains conversation context across requests
 3. **Batch Mode**: Process multiple queries concurrently for high throughput
-
-#### Performance Metrics
-```bash
-# Example performance improvements with OptimizedClient:
-- Sequential queries: ~5s for 5 queries
-- Batch processing: ~1.5s for 5 queries (3x speedup)
-- With connection pooling: < 100ms per query after warm-up
-```
 
 ### Configuration for Performance
 
@@ -586,17 +467,15 @@ max_entries = 1000
 ttl_seconds = 3600
 ```
 
-### Best Practices
+## Security
 
-1. **Use the optimized REST endpoints** that leverage `OptimizedClient` from the SDK
-2. **Enable connection pooling** for frequently used endpoints
-3. **Use batch endpoints** for processing multiple queries
-4. **Monitor performance** via the `/stats` endpoint
-5. **Configure appropriate connection pool size** based on load
+- File access is controlled through configurable permissions
+- MCP servers run in isolated processes
+- No API key required (relies on Claude CLI authentication)
+- Supports CORS for web applications
+- Request ID tracking for audit trails
 
-For detailed performance tuning, see the [SDK Performance Guide](https://github.com/ZhangHanDong/claude-code-api-rs/tree/main/claude-code-sdk-rs#performance-optimization).
-
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
@@ -620,7 +499,7 @@ For detailed performance tuning, see the [SDK Performance Guide](https://github.
    - This is normal as Claude CLI needs to start up
    - Subsequent requests will be faster due to process reuse
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
@@ -630,24 +509,22 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
-- Built on top of [claude-code-sdk-rs](https://github.com/ZhangHanDong/claude-code-api-rs/tree/main/claude-code-sdk-rs) - The robust Rust SDK for Claude Code CLI
+- Original SDK: [ZhangHanDong/claude-code-api-rs](https://github.com/ZhangHanDong/claude-code-api-rs) (`cc-sdk`)
 - Powered by [Claude Code CLI](https://claude.ai/download) from Anthropic
-- Inspired by OpenAI's API design for maximum compatibility
 - Web framework: [Axum](https://github.com/tokio-rs/axum) for high-performance HTTP serving
 - Async runtime: [Tokio](https://tokio.rs/) for blazing-fast async I/O
 
-## 📞 Support
+## Support
 
-- [Report Issues](https://github.com/ZhangHanDong/claude-code-api-rs/issues)
-- [Documentation](https://github.com/ZhangHanDong/claude-code-api-rs/wiki)
-- [Discussions](https://github.com/ZhangHanDong/claude-code-api-rs/discussions)
+- [Report Issues](https://github.com/this-rs/nexus/issues)
+- [Discussions](https://github.com/this-rs/nexus/discussions)
 
 ---
 
-Made with ❤️ by the Claude Code API team
+Made with Rust by the Nexus team

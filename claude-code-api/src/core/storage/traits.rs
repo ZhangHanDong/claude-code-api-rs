@@ -8,7 +8,9 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 
 use crate::core::conversation::{Conversation, ConversationMetadata};
-use crate::models::openai::ChatMessage;
+use crate::core::session_manager::Session;
+use crate::core::cache::CacheStats;
+use crate::models::openai::{ChatMessage, ChatCompletionResponse};
 
 /// Trait for conversation storage backends
 ///
@@ -36,4 +38,39 @@ pub trait ConversationStore: Send + Sync {
 
     /// Delete a specific conversation
     async fn delete(&self, id: &str) -> Result<bool>;
+}
+
+/// Trait for session storage backends
+#[async_trait]
+pub trait SessionStore: Send + Sync {
+    /// Create a new session and return its ID
+    async fn create(&self, project_path: Option<String>) -> Result<String>;
+
+    /// Get a session by ID
+    async fn get(&self, id: &str) -> Result<Option<Session>>;
+
+    /// Update a session's last activity timestamp
+    async fn update(&self, id: &str) -> Result<()>;
+
+    /// Remove a session by ID
+    async fn remove(&self, id: &str) -> Result<Option<Session>>;
+
+    /// List all sessions
+    async fn list(&self) -> Result<Vec<Session>>;
+}
+
+/// Trait for response cache storage backends
+#[async_trait]
+pub trait CacheStore: Send + Sync {
+    /// Get a cached response by key
+    async fn get(&self, key: &str) -> Option<ChatCompletionResponse>;
+
+    /// Store a response in the cache
+    async fn put(&self, key: String, response: ChatCompletionResponse);
+
+    /// Get cache statistics
+    async fn stats(&self) -> CacheStats;
+
+    /// Clean up expired entries
+    async fn cleanup(&self) -> Result<usize>;
 }

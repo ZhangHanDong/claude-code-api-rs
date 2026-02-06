@@ -6,15 +6,19 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
+use dashmap::DashMap;
 use parking_lot::RwLock;
 use std::collections::HashMap;
-use tracing::info;
+use std::time::{Duration, Instant};
+use tracing::{info, debug};
 use uuid::Uuid;
 
+use crate::core::cache::CacheStats;
 use crate::core::conversation::{Conversation, ConversationMetadata};
-use crate::models::openai::ChatMessage;
+use crate::core::session_manager::Session;
+use crate::models::openai::{ChatMessage, ChatCompletionResponse};
 
-use super::traits::ConversationStore;
+use super::traits::{CacheStore, ConversationStore, SessionStore};
 
 /// Configuration for in-memory conversation storage
 #[derive(Clone)]
@@ -150,6 +154,219 @@ impl ConversationStore for InMemoryConversationStore {
 
     async fn delete(&self, id: &str) -> Result<bool> {
         Ok(self.conversations.write().remove(id).is_some())
+    }
+}
+
+// ============================================================================
+// InMemorySessionStore
+// ============================================================================
+
+/// In-memory implementation of SessionStore
+pub struct InMemorySessionStore {
+    sessions: RwLock<HashMap<String, Session>>,
+}
+
+impl InMemorySessionStore {
+    pub fn new() -> Self {
+        Self {
+            sessions: RwLock::new(HashMap::new()),
+        }
+    }
+}
+
+impl Default for InMemorySessionStore {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[async_trait]
+impl SessionStore for InMemorySessionStore {
+    async fn create(&self, project_path: Option<String>) -> Result<String> {
+        let id = Uuid::new_v4().to_string();
+        let now = Utc::now();
+
+        let session = Session {
+            id: id.clone(),
+            project_path,
+            created_at: now,
+            updated_at: now,
+        };
+
+        self.sessions.write().insert(id.clone(), session);
+        info!("Created new session: {}", id);
+
+        Ok(id)
+    }
+
+    async fn get(&self, id: &str) -> Result<Option<Session>> {
+        Ok(self.sessions.read().get(id).cloned())
+    }
+
+    async fn update(&self, id: &str) -> Result<()> {
+        if let Some(session) = self.sessions.write().get_mut(id) {
+            session.updated_at = Utc::now();
+            Ok(())
+        } else {
+            Err(anyhow::anyhow!("Session not found: {}", id))
+        }
+    }
+
+    async fn remove(&self, id: &str) -> Result<Option<Session>> {
+        Ok(self.sessions.write().remove(id))
+    }
+
+    async fn list(&self) -> Result<Vec<Session>> {
+        Ok(self.sessions.read().values().cloned().collect())
+    }
+}
+
+// ============================================================================
+// InMemoryCacheStore
+// ============================================================================
+
+/// Cache entry with metadata
+#[derive(Clone)]
+struct CacheEntry {
+    response: ChatCompletionResponse,
+    created_at: Instant,
+    hit_count: usize,
+}
+
+/// Configuration for in-memory cache
+#[derive(Clone)]
+pub struct InMemoryCacheConfig {
+    pub max_entries: usize,
+    pub ttl_seconds: u64,
+    pub enabled: bool,
+}
+
+impl Default for InMemoryCacheConfig {
+    fn default() -> Self {
+        Self {
+            max_entries: 1000,
+            ttl_seconds: 3600,
+            enabled: true,
+        }
+    }
+}
+
+/// In-memory implementation of CacheStore using DashMap
+pub struct InMemoryCacheStore {
+    cache: DashMap<String, CacheEntry>,
+    config: InMemoryCacheConfig,
+}
+
+impl InMemoryCacheStore {
+    pub fn new(config: InMemoryCacheConfig) -> Self {
+        Self {
+            cache: DashMap::new(),
+            config,
+        }
+    }
+
+    fn evict_oldest(&self) {
+        let mut oldest_key = None;
+        let mut oldest_time = Instant::now();
+
+        for entry in self.cache.iter() {
+            if entry.value().created_at < oldest_time {
+                oldest_time = entry.value().created_at;
+                oldest_key = Some(entry.key().clone());
+            }
+        }
+
+        if let Some(key) = oldest_key {
+            self.cache.remove(&key);
+            debug!("Evicted oldest cache entry: {}", key);
+        }
+    }
+}
+
+impl Default for InMemoryCacheStore {
+    fn default() -> Self {
+        Self::new(InMemoryCacheConfig::default())
+    }
+}
+
+#[async_trait]
+impl CacheStore for InMemoryCacheStore {
+    async fn get(&self, key: &str) -> Option<ChatCompletionResponse> {
+        if !self.config.enabled {
+            return None;
+        }
+
+        let mut entry = self.cache.get_mut(key)?;
+
+        // Check if expired
+        if entry.created_at.elapsed() > Duration::from_secs(self.config.ttl_seconds) {
+            drop(entry);
+            self.cache.remove(key);
+            debug!("Cache entry expired: {}", key);
+            return None;
+        }
+
+        entry.hit_count += 1;
+        let hit_count = entry.hit_count;
+        let response = entry.response.clone();
+
+        info!("Cache hit for key: {} (hits: {})", key, hit_count);
+        Some(response)
+    }
+
+    async fn put(&self, key: String, response: ChatCompletionResponse) {
+        if !self.config.enabled {
+            return;
+        }
+
+        if self.cache.len() >= self.config.max_entries {
+            self.evict_oldest();
+        }
+
+        let entry = CacheEntry {
+            response,
+            created_at: Instant::now(),
+            hit_count: 0,
+        };
+
+        self.cache.insert(key.clone(), entry);
+        debug!("Cached response for key: {}", key);
+    }
+
+    async fn stats(&self) -> CacheStats {
+        let mut total_hits = 0;
+        let mut total_entries = 0;
+
+        for entry in self.cache.iter() {
+            total_entries += 1;
+            total_hits += entry.value().hit_count;
+        }
+
+        CacheStats {
+            total_entries,
+            total_hits,
+            enabled: self.config.enabled,
+        }
+    }
+
+    async fn cleanup(&self) -> Result<usize> {
+        let ttl = Duration::from_secs(self.config.ttl_seconds);
+        let mut expired_keys = Vec::new();
+
+        for entry in self.cache.iter() {
+            if entry.value().created_at.elapsed() > ttl {
+                expired_keys.push(entry.key().clone());
+            }
+        }
+
+        let count = expired_keys.len();
+        for key in expired_keys {
+            self.cache.remove(&key);
+            debug!("Removed expired cache entry: {}", key);
+        }
+
+        info!("Cache cleanup: removed {} entries, {} remaining", count, self.cache.len());
+        Ok(count)
     }
 }
 

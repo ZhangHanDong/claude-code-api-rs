@@ -1,6 +1,9 @@
 //! In-memory mock transport for testing and E2E simulations
 use super::{InputMessage, Transport};
-use crate::{errors::Result, types::{ControlRequest, ControlResponse, Message}};
+use crate::{
+    errors::Result,
+    types::{ControlRequest, ControlResponse, Message},
+};
 use async_trait::async_trait;
 use futures::stream::{Stream, StreamExt};
 use std::pin::Pin;
@@ -75,7 +78,9 @@ impl MockTransport {
 
 #[async_trait]
 impl Transport for MockTransport {
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any { self }
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
 
     async fn connect(&mut self) -> Result<()> {
         self.connected.store(true, Ordering::SeqCst);
@@ -87,14 +92,18 @@ impl Transport for MockTransport {
         Ok(())
     }
 
-    fn receive_messages(&mut self) -> Pin<Box<dyn Stream<Item = Result<Message>> + Send + 'static>> {
+    fn receive_messages(
+        &mut self,
+    ) -> Pin<Box<dyn Stream<Item = Result<Message>> + Send + 'static>> {
         let rx = self.message_tx.subscribe();
-        Box::pin(tokio_stream::wrappers::BroadcastStream::new(rx).filter_map(|r| async move {
-            match r {
-                Ok(m) => Some(Ok(m)),
-                Err(_) => None,
-            }
-        }))
+        Box::pin(
+            tokio_stream::wrappers::BroadcastStream::new(rx).filter_map(|r| async move {
+                match r {
+                    Ok(m) => Some(Ok(m)),
+                    Err(_) => None,
+                }
+            }),
+        )
     }
 
     async fn send_control_request(&mut self, request: ControlRequest) -> Result<()> {
@@ -111,7 +120,11 @@ impl Transport for MockTransport {
     }
 
     async fn receive_control_response(&mut self) -> Result<Option<ControlResponse>> {
-        if let Some(rx) = &mut self.control_resp_rx { Ok(rx.recv().await) } else { Ok(None) }
+        if let Some(rx) = &mut self.control_resp_rx {
+            Ok(rx.recv().await)
+        } else {
+            Ok(None)
+        }
     }
 
     async fn send_sdk_control_request(&mut self, request: serde_json::Value) -> Result<()> {
@@ -134,7 +147,9 @@ impl Transport for MockTransport {
         self.sdk_control_rx.take()
     }
 
-    fn is_connected(&self) -> bool { self.connected.load(Ordering::SeqCst) }
+    fn is_connected(&self) -> bool {
+        self.connected.load(Ordering::SeqCst)
+    }
 
     async fn disconnect(&mut self) -> Result<()> {
         self.connected.store(false, Ordering::SeqCst);

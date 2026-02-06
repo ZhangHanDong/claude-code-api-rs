@@ -3,14 +3,9 @@
 //! This module provides the glue between the memory system and the
 //! SDK's conversation management.
 
-use super::{
-    MessageDocument, MemoryConfig, MessageContextAggregator,
-    DefaultToolContextExtractor,
-};
 #[cfg(feature = "memory")]
-use super::{
-    MemoryProvider, MeilisearchMemoryProvider, ContextFormatter,
-};
+use super::{ContextFormatter, MeilisearchMemoryProvider, MemoryProvider};
+use super::{DefaultToolContextExtractor, MemoryConfig, MessageContextAggregator, MessageDocument};
 
 #[cfg(feature = "memory")]
 use chrono::Utc;
@@ -352,7 +347,8 @@ impl ContextInjector {
             files: files.to_vec(),
         };
 
-        let results = self.provider
+        let results = self
+            .provider
             .retrieve_context(&context, self.config.max_context_items)
             .await?;
 
@@ -419,7 +415,7 @@ impl SummaryGenerator {
 
         // Simple extractive summary: first sentence + "..." + last sentence
         let sentences: Vec<&str> = content
-            .split(|c| c == '.' || c == '!' || c == '?')
+            .split(['.', '!', '?'])
             .map(|s| s.trim())
             .filter(|s| !s.is_empty())
             .collect();
@@ -428,11 +424,7 @@ impl SummaryGenerator {
             0 => content[..self.threshold.min(content.len())].to_string() + "...",
             1 => sentences[0].to_string(),
             2 => format!("{}. ... {}", sentences[0], sentences[1]),
-            _ => format!(
-                "{}. ... {}",
-                sentences[0],
-                sentences[sentences.len() - 1]
-            ),
+            _ => format!("{}. ... {}", sentences[0], sentences[sentences.len() - 1]),
         }
     }
 }
@@ -454,8 +446,7 @@ mod tests {
     #[test]
     fn test_conversation_memory_manager_with_cwd() {
         let config = MemoryConfig::default().with_enabled(true);
-        let manager = ConversationMemoryManager::new(config)
-            .with_cwd("/projects/test");
+        let manager = ConversationMemoryManager::new(config).with_cwd("/projects/test");
 
         assert_eq!(manager.cwd(), Some("/projects/test"));
     }
@@ -463,8 +454,7 @@ mod tests {
     #[test]
     fn test_record_messages() {
         let config = MemoryConfig::default().with_enabled(true);
-        let mut manager = ConversationMemoryManager::new(config)
-            .with_cwd("/projects/test");
+        let mut manager = ConversationMemoryManager::new(config).with_cwd("/projects/test");
 
         manager.record_user_message("Hello");
         manager.record_assistant_message("Hi there!");
@@ -481,12 +471,18 @@ mod tests {
         let config = MemoryConfig::default().with_enabled(true);
         let mut manager = ConversationMemoryManager::new(config);
 
-        manager.process_tool_call("Read", &serde_json::json!({
-            "file_path": "/src/main.rs"
-        }));
-        manager.process_tool_call("Bash", &serde_json::json!({
-            "command": "cd /projects/app && cargo build"
-        }));
+        manager.process_tool_call(
+            "Read",
+            &serde_json::json!({
+                "file_path": "/src/main.rs"
+            }),
+        );
+        manager.process_tool_call(
+            "Bash",
+            &serde_json::json!({
+                "command": "cd /projects/app && cargo build"
+            }),
+        );
 
         assert_eq!(manager.cwd(), Some("/projects/app"));
 

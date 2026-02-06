@@ -3,8 +3,8 @@
 //! This example shows how to start a session and automatically display
 //! account information at the beginning for verification purposes.
 
-use nexus_claude::{ClaudeCodeOptions, ClaudeSDKClient, Message, Result};
 use futures::StreamExt;
+use nexus_claude::{ClaudeCodeOptions, ClaudeSDKClient, Message, Result};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -36,10 +36,10 @@ async fn main() -> Result<()> {
                 println!("│ {:<44}│", line);
             }
             println!("╰─────────────────────────────────────────────╯\n");
-        }
+        },
         Err(e) => {
             eprintln!("⚠️  Warning: Could not retrieve account info: {}\n", e);
-        }
+        },
     }
 
     // Step 3: Continue with normal session
@@ -47,7 +47,9 @@ async fn main() -> Result<()> {
     println!("─────────────────────────────────────────────────\n");
 
     // Send a query
-    client.send_user_message("What is the capital of France?".to_string()).await?;
+    client
+        .send_user_message("What is the capital of France?".to_string())
+        .await?;
 
     // Receive response
     let mut messages = client.receive_messages().await;
@@ -59,8 +61,13 @@ async fn main() -> Result<()> {
                         println!("🤖 Claude: {}\n", text.text);
                     }
                 }
-            }
-            Message::Result { duration_ms, usage, total_cost_usd, .. } => {
+            },
+            Message::Result {
+                duration_ms,
+                usage,
+                total_cost_usd,
+                ..
+            } => {
                 println!("─────────────────────────────────────────────────");
                 println!("📊 Response Stats:");
                 println!("   ⏱️  Duration: {}ms", duration_ms);
@@ -79,8 +86,8 @@ async fn main() -> Result<()> {
                 }
                 println!("─────────────────────────────────────────────────\n");
                 break;
-            }
-            _ => {}
+            },
+            _ => {},
         }
     }
 

@@ -3,6 +3,8 @@
 //! Provides semantic search across all past conversations and
 //! knowledge notes.
 
+#![allow(dead_code)] // Public API - may not be used internally
+
 use anyhow::Result;
 use async_trait::async_trait;
 use chrono::{DateTime, TimeZone, Utc};
@@ -74,7 +76,10 @@ impl ContextualMemoryProvider for LongTermMemory {
                 true
             })
             .map(|msg| {
-                let timestamp = Utc.timestamp_opt(msg.created_at, 0).single().unwrap_or_else(Utc::now);
+                let timestamp = Utc
+                    .timestamp_opt(msg.created_at, 0)
+                    .single()
+                    .unwrap_or_else(Utc::now);
                 let recency = self.recency_score(timestamp);
 
                 // Meilisearch already did semantic search, so semantic score is high
@@ -124,12 +129,16 @@ impl ContextualMemoryProvider for LongTermMemory {
                 // For now, notes come from medium-term (project-orchestrator)
                 // This could be extended to search Meilisearch for notes
                 Ok(vec![])
-            }
+            },
             _ => self.query(query, limit).await,
         }
     }
 
-    async fn get_relevant_decisions(&self, _topic: &str, _limit: usize) -> Result<Vec<MemoryResult>> {
+    async fn get_relevant_decisions(
+        &self,
+        _topic: &str,
+        _limit: usize,
+    ) -> Result<Vec<MemoryResult>> {
         // Decisions are stored in project-orchestrator (medium-term)
         // Long-term only has conversation messages
         Ok(vec![])

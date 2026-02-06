@@ -2,8 +2,8 @@
 //!
 //! This example includes more debugging output to diagnose issues.
 
-use nexus_claude::{ClaudeCodeOptions, ClaudeSDKClient, Message, PermissionMode, Result};
 use futures::StreamExt;
+use nexus_claude::{ClaudeCodeOptions, ClaudeSDKClient, Message, PermissionMode, Result};
 use std::io::{self, Write};
 
 #[tokio::main]
@@ -62,23 +62,23 @@ async fn main() -> Result<()> {
                                 }
                             }
                             println!();
-                        }
+                        },
                         Message::System { subtype, .. } => {
                             println!("[System: {subtype}]");
-                        }
+                        },
                         Message::Result { duration_ms, .. } => {
                             println!("[Response time: {duration_ms}ms]");
                             return Ok(());
-                        }
+                        },
                         _ => {
                             println!("[Other message type]");
-                        }
+                        },
                     }
-                }
+                },
                 Err(e) => {
                     println!("Error receiving message: {e}");
                     return Err(e);
-                }
+                },
             }
         }
         Ok(())
@@ -92,16 +92,16 @@ async fn main() -> Result<()> {
             } else {
                 println!("\nWarning: No response received for test message.\n");
             }
-        }
+        },
         Ok(Err(e)) => {
             println!("\nError during initial test: {e}");
             println!("Continuing anyway...\n");
-        }
+        },
         Err(_) => {
             println!("\nTimeout: No response received within 10 seconds.");
             println!("This might indicate a connection issue.\n");
             println!("Continuing anyway...\n");
-        }
+        },
     }
 
     // Interactive loop
@@ -150,12 +150,12 @@ async fn main() -> Result<()> {
                             print!("{}", text.text);
                         }
                     }
-                }
+                },
                 Message::Result { duration_ms, .. } => {
                     println!("\n[Response time: {duration_ms}ms]\n");
                     break;
-                }
-                _ => {}
+                },
+                _ => {},
             }
         }
 

@@ -19,8 +19,8 @@
 //! cargo run --example check_current_account
 //! ```
 
-use nexus_claude::{ClaudeCodeOptions, ClaudeSDKClient, Message, Result};
 use futures::StreamExt;
+use nexus_claude::{ClaudeCodeOptions, ClaudeSDKClient, Message, Result};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -40,9 +40,7 @@ async fn main() -> Result<()> {
         println!("   Will attempt to detect from CLI session\n");
     }
 
-    let options = ClaudeCodeOptions::builder()
-        .max_turns(1)
-        .build();
+    let options = ClaudeCodeOptions::builder().max_turns(1).build();
 
     let mut client = ClaudeSDKClient::new(options);
 
@@ -55,20 +53,23 @@ async fn main() -> Result<()> {
     match client.get_account_info().await {
         Ok(info) => {
             println!("   ✅ Account detected: {}\n", info);
-        }
+        },
         Err(e) => {
             println!("   ⚠️  Could not detect via env var: {}\n", e);
-        }
+        },
     }
 
     // Method 2: Ask Claude who they are
     println!("🔍 Method 2: Asking Claude directly");
     println!("   Sending query: 'What account am I using?'\n");
 
-    client.send_user_message(
-        "What is the current account email or user that you're running under? \
-         Just tell me the account identifier, nothing else.".to_string()
-    ).await?;
+    client
+        .send_user_message(
+            "What is the current account email or user that you're running under? \
+         Just tell me the account identifier, nothing else."
+                .to_string(),
+        )
+        .await?;
 
     let mut messages = client.receive_messages().await;
     while let Some(msg_result) = messages.next().await {
@@ -79,9 +80,9 @@ async fn main() -> Result<()> {
                         println!("   🤖 Response: {}\n", text.text);
                     }
                 }
-            }
+            },
             Message::Result { .. } => break,
-            _ => {}
+            _ => {},
         }
     }
 

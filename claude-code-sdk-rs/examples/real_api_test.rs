@@ -81,10 +81,10 @@ async fn test_oneshot_query(options: ClaudeCodeOptions) -> Result<()> {
                     }
                 }
                 info!("Time: {:?}", elapsed);
-            }
+            },
             Err(e) => {
                 info!("Error: {}", e);
-            }
+            },
         }
         info!("---");
     }
@@ -175,10 +175,10 @@ async fn test_batch_processing(options: ClaudeCodeOptions) -> Result<()> {
                         }
                     }
                 }
-            }
+            },
             Err(e) => {
                 info!("Query {} failed: {}", i + 1, e);
-            }
+            },
         }
         info!("---");
     }

@@ -100,14 +100,14 @@ async fn main() -> Result<()> {
                     match block {
                         nexus_claude::ContentBlock::Text(text) => {
                             println!("{}", text.text);
-                        }
+                        },
                         nexus_claude::ContentBlock::ToolUse(tool) => {
                             println!("[Using tool: {}]", tool.name);
-                        }
-                        _ => {}
+                        },
+                        _ => {},
                     }
                 }
-            }
+            },
             nexus_claude::Message::Result {
                 duration_ms,
                 total_cost_usd,
@@ -119,8 +119,8 @@ async fn main() -> Result<()> {
                 if let Some(cost) = total_cost_usd {
                     println!("Cost: ${cost:.6}");
                 }
-            }
-            _ => {}
+            },
+            _ => {},
         }
     }
 

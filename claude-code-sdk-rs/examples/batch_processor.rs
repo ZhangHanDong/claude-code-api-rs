@@ -19,9 +19,10 @@ struct ProcessingStats {
 
 /// Process a batch of questions from a file
 async fn process_question_batch(file_path: &Path) -> Result<ProcessingStats> {
-    let content = fs::read_to_string(file_path).map_err(|e| nexus_claude::SdkError::InvalidState {
-        message: format!("Failed to read file: {e}"),
-    })?;
+    let content =
+        fs::read_to_string(file_path).map_err(|e| nexus_claude::SdkError::InvalidState {
+            message: format!("Failed to read file: {e}"),
+        })?;
 
     let questions: Vec<&str> = content
         .lines()
@@ -60,7 +61,7 @@ async fn process_question_batch(file_path: &Path) -> Result<ProcessingStats> {
             Ok(_) => {
                 stats.successful += 1;
                 println!("✅ Success! (took {:.2}s)", question_duration.as_secs_f64());
-            }
+            },
             Err(e) => {
                 stats.failed += 1;
                 println!(
@@ -74,7 +75,7 @@ async fn process_question_batch(file_path: &Path) -> Result<ProcessingStats> {
                     println!("⏳ Rate limit detected, waiting 30 seconds...");
                     sleep(Duration::from_secs(30)).await;
                 }
-            }
+            },
         }
 
         // Progress update
@@ -202,10 +203,10 @@ Create a generic binary tree with in-order traversal"#;
         Ok(stats) => {
             print_stats(&stats);
             println!("\n✨ Batch processing completed successfully!");
-        }
+        },
         Err(e) => {
             eprintln!("\n❌ Batch processing failed: {e:?}");
-        }
+        },
     }
 
     Ok(())

@@ -3,9 +3,9 @@
 use crate::{
     models::{
         claude::ClaudeCodeOutput,
-        openai::{ChatCompletionStreamResponse, StreamChoice, DeltaMessage},
+        openai::{ChatCompletionStreamResponse, DeltaMessage, StreamChoice},
     },
-    utils::text_chunker::{chunk_text, ChunkConfig},
+    utils::text_chunker::{ChunkConfig, chunk_text},
 };
 use chrono::Utc;
 use futures::stream::{Stream, StreamExt};
@@ -20,7 +20,7 @@ pub async fn handle_enhanced_streaming_response(
 ) -> Pin<Box<dyn Stream<Item = ChatCompletionStreamResponse> + Send>> {
     let stream = async_stream::stream! {
         let stream_id = Uuid::new_v4().to_string();
-        
+
         // First, send the initial message with role
         yield ChatCompletionStreamResponse {
             id: stream_id.clone(),
@@ -43,7 +43,7 @@ pub async fn handle_enhanced_streaming_response(
                     // Extract the full text content
                     if let Some(message) = output.data.get("message")
                         && let Some(content_array) = message.get("content").and_then(|c| c.as_array()) {
-                        
+
                         for content in content_array {
                             if let Some(text) = content.get("text").and_then(|t| t.as_str()) {
                                 // Chunk the text for streaming
@@ -52,9 +52,9 @@ pub async fn handle_enhanced_streaming_response(
                                     chunk_delay_ms: 30,  // 30ms between chunks
                                     word_boundary: true,
                                 };
-                                
+
                                 let mut chunker = chunk_text(text.to_string(), Some(config));
-                                
+
                                 while let Some(chunk) = chunker.next().await {
                                     yield ChatCompletionStreamResponse {
                                         id: stream_id.clone(),

@@ -3,9 +3,9 @@
 //! This example shows how to use the newest Sonnet 4.5 model released in September 2025.
 //! Sonnet 4.5 offers the best balance of performance, speed, and cost for most applications.
 
-use nexus_claude::{query, ClaudeCodeOptions, InteractiveClient, Message, Result};
-use nexus_claude::model_recommendation::{latest_sonnet, balanced_model};
 use futures::StreamExt;
+use nexus_claude::model_recommendation::{balanced_model, latest_sonnet};
+use nexus_claude::{ClaudeCodeOptions, InteractiveClient, Message, Result, query};
 
 /// Simple query using Sonnet 4.5
 async fn simple_query_example() -> Result<()> {
@@ -17,8 +17,9 @@ async fn simple_query_example() -> Result<()> {
 
     let mut messages = query(
         "What are the key improvements in Claude Sonnet 4.5 compared to previous versions?",
-        Some(options)
-    ).await?;
+        Some(options),
+    )
+    .await?;
 
     while let Some(msg) = messages.next().await {
         match msg? {
@@ -28,15 +29,19 @@ async fn simple_query_example() -> Result<()> {
                         println!("{}", text.text);
                     }
                 }
-            }
-            Message::Result { total_cost_usd, duration_ms, .. } => {
+            },
+            Message::Result {
+                total_cost_usd,
+                duration_ms,
+                ..
+            } => {
                 println!("\n---");
                 println!("Response time: {}ms", duration_ms);
                 if let Some(cost) = total_cost_usd {
                     println!("Cost: ${:.6}", cost);
                 }
-            }
-            _ => {}
+            },
+            _ => {},
         }
     }
 
@@ -57,9 +62,11 @@ async fn interactive_session_example() -> Result<()> {
 
     // First query
     println!("Query 1: Creating a simple async function");
-    let messages = client.send_and_receive(
-        "Write a simple async function in Rust that fetches data from an API".to_string()
-    ).await?;
+    let messages = client
+        .send_and_receive(
+            "Write a simple async function in Rust that fetches data from an API".to_string(),
+        )
+        .await?;
 
     for msg in messages {
         if let Message::Assistant { message } = msg {
@@ -73,9 +80,9 @@ async fn interactive_session_example() -> Result<()> {
 
     // Follow-up query
     println!("\n---\nQuery 2: Adding error handling");
-    let messages = client.send_and_receive(
-        "Now add proper error handling to that function".to_string()
-    ).await?;
+    let messages = client
+        .send_and_receive("Now add proper error handling to that function".to_string())
+        .await?;
 
     for msg in messages {
         if let Message::Assistant { message } = msg {
@@ -103,14 +110,13 @@ async fn model_recommendation_example() -> Result<()> {
     println!("Balanced model (also Sonnet 4.5): {}", balanced);
 
     // Use recommended model
-    let options = ClaudeCodeOptions::builder()
-        .model(latest)
-        .build();
+    let options = ClaudeCodeOptions::builder().model(latest).build();
 
     let mut messages = query(
         "What makes you a good choice for most applications?",
-        Some(options)
-    ).await?;
+        Some(options),
+    )
+    .await?;
 
     while let Some(msg) = messages.next().await {
         if let Ok(Message::Assistant { message }) = msg {
@@ -159,10 +165,10 @@ async fn model_comparison_example() -> Result<()> {
                 }
                 let elapsed = start.elapsed();
                 println!("  Time: {:?}\n", elapsed);
-            }
+            },
             Err(e) => {
                 println!("  Error: {:?}\n", e);
-            }
+            },
         }
     }
 
@@ -193,15 +199,19 @@ async fn advanced_features_example() -> Result<()> {
                     match block {
                         nexus_claude::ContentBlock::Text(text) => {
                             println!("{}", text.text);
-                        }
+                        },
                         nexus_claude::ContentBlock::Thinking(thinking) => {
                             println!("\n[Thinking]: {}", thinking.thinking);
-                        }
-                        _ => {}
+                        },
+                        _ => {},
                     }
                 }
-            }
-            Message::Result { usage, total_cost_usd, .. } => {
+            },
+            Message::Result {
+                usage,
+                total_cost_usd,
+                ..
+            } => {
                 println!("\n---");
                 if let Some(usage_json) = usage {
                     println!("Token usage: {:?}", usage_json);
@@ -209,8 +219,8 @@ async fn advanced_features_example() -> Result<()> {
                 if let Some(cost) = total_cost_usd {
                     println!("Total cost: ${:.6}", cost);
                 }
-            }
-            _ => {}
+            },
+            _ => {},
         }
     }
 
@@ -235,10 +245,13 @@ async fn main() -> Result<()> {
             "advanced" => advanced_features_example().await?,
             _ => {
                 println!("Unknown command: {}", args[1]);
-                println!("Usage: {} [simple|interactive|recommendation|compare|advanced]", args[0]);
+                println!(
+                    "Usage: {} [simple|interactive|recommendation|compare|advanced]",
+                    args[0]
+                );
                 println!("\nRunning all examples...\n");
                 run_all_examples().await?;
-            }
+            },
         }
     } else {
         run_all_examples().await?;

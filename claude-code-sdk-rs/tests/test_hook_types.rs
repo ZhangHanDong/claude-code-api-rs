@@ -4,7 +4,8 @@
 //! serialize and deserialize correctly for communication with the CLI.
 
 use nexus_claude::{
-    AsyncHookJSONOutput, HookInput, HookJSONOutput, HookSpecificOutput, PostToolUseHookSpecificOutput, PreToolUseHookSpecificOutput, SyncHookJSONOutput,
+    AsyncHookJSONOutput, HookInput, HookJSONOutput, HookSpecificOutput,
+    PostToolUseHookSpecificOutput, PreToolUseHookSpecificOutput, SyncHookJSONOutput,
     UserPromptSubmitHookSpecificOutput,
 };
 use serde_json::json;
@@ -22,7 +23,10 @@ fn test_pre_tool_use_hook_input_deserialization() {
     }"#;
 
     let result: Result<HookInput, _> = serde_json::from_str(json_str);
-    assert!(result.is_ok(), "Failed to deserialize PreToolUse hook input");
+    assert!(
+        result.is_ok(),
+        "Failed to deserialize PreToolUse hook input"
+    );
 
     if let HookInput::PreToolUse(input) = result.unwrap() {
         assert_eq!(input.tool_name, "Bash");
@@ -46,7 +50,10 @@ fn test_post_tool_use_hook_input_deserialization() {
     }"#;
 
     let result: Result<HookInput, _> = serde_json::from_str(json_str);
-    assert!(result.is_ok(), "Failed to deserialize PostToolUse hook input");
+    assert!(
+        result.is_ok(),
+        "Failed to deserialize PostToolUse hook input"
+    );
 
     if let HookInput::PostToolUse(input) = result.unwrap() {
         assert_eq!(input.tool_name, "Bash");
@@ -67,7 +74,10 @@ fn test_user_prompt_submit_hook_input_deserialization() {
     }"#;
 
     let result: Result<HookInput, _> = serde_json::from_str(json_str);
-    assert!(result.is_ok(), "Failed to deserialize UserPromptSubmit hook input");
+    assert!(
+        result.is_ok(),
+        "Failed to deserialize UserPromptSubmit hook input"
+    );
 
     if let HookInput::UserPromptSubmit(input) = result.unwrap() {
         assert_eq!(input.prompt, "What is 2 + 2?");
@@ -108,7 +118,10 @@ fn test_subagent_stop_hook_input_deserialization() {
     }"#;
 
     let result: Result<HookInput, _> = serde_json::from_str(json_str);
-    assert!(result.is_ok(), "Failed to deserialize SubagentStop hook input");
+    assert!(
+        result.is_ok(),
+        "Failed to deserialize SubagentStop hook input"
+    );
 
     if let HookInput::SubagentStop(input) = result.unwrap() {
         assert!(!input.stop_hook_active);
@@ -129,7 +142,10 @@ fn test_pre_compact_hook_input_deserialization() {
     }"#;
 
     let result: Result<HookInput, _> = serde_json::from_str(json_str);
-    assert!(result.is_ok(), "Failed to deserialize PreCompact hook input");
+    assert!(
+        result.is_ok(),
+        "Failed to deserialize PreCompact hook input"
+    );
 
     if let HookInput::PreCompact(input) = result.unwrap() {
         assert_eq!(input.trigger, "manual");
@@ -230,9 +246,10 @@ fn test_post_tool_use_hook_specific_output() {
 
 #[test]
 fn test_user_prompt_submit_hook_specific_output() {
-    let specific_output = HookSpecificOutput::UserPromptSubmit(UserPromptSubmitHookSpecificOutput {
-        additional_context: Some("Remember to be concise".to_string()),
-    });
+    let specific_output =
+        HookSpecificOutput::UserPromptSubmit(UserPromptSubmitHookSpecificOutput {
+            additional_context: Some("Remember to be concise".to_string()),
+        });
 
     let json = serde_json::to_value(&specific_output)
         .expect("Failed to serialize UserPromptSubmitHookSpecificOutput");
@@ -250,8 +267,7 @@ fn test_hook_specific_output_discriminated_union() {
         updated_input: None,
     });
 
-    let json =
-        serde_json::to_value(&pre_tool_use).expect("Failed to serialize HookSpecificOutput");
+    let json = serde_json::to_value(&pre_tool_use).expect("Failed to serialize HookSpecificOutput");
     assert_eq!(json["hookEventName"], "PreToolUse");
     assert_eq!(json["permissionDecision"], "allow");
 

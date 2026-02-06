@@ -3,6 +3,8 @@
 //! Combines short-term, medium-term, and long-term memory with
 //! intelligent scoring and deduplication.
 
+#![allow(dead_code, unused_imports)] // Public API - may not be used internally
+
 use anyhow::Result;
 use async_trait::async_trait;
 use std::collections::HashSet;
@@ -26,9 +28,9 @@ pub struct UnifiedMemoryConfig {
 impl Default for UnifiedMemoryConfig {
     fn default() -> Self {
         Self {
-            short_term_weight: 1.2,  // Boost current conversation
+            short_term_weight: 1.2, // Boost current conversation
             medium_term_weight: 1.0,
-            long_term_weight: 0.8,   // Slight penalty for old context
+            long_term_weight: 0.8, // Slight penalty for old context
             min_score_threshold: 0.1,
         }
     }
@@ -166,20 +168,31 @@ impl ContextualMemoryProvider for UnifiedMemoryProvider {
         limit: usize,
     ) -> Result<Vec<MemoryResult>> {
         match source_filter {
-            Some("conversation") => self.short_term.search_context(query, source_filter, limit).await,
+            Some("conversation") => {
+                self.short_term
+                    .search_context(query, source_filter, limit)
+                    .await
+            },
             Some("plan") | Some("task") | Some("decision") | Some("note") => {
-                self.medium_term.search_context(query, source_filter, limit).await
-            }
+                self.medium_term
+                    .search_context(query, source_filter, limit)
+                    .await
+            },
             Some("cross_conversation") => {
-                self.long_term.search_context(query, source_filter, limit).await
-            }
+                self.long_term
+                    .search_context(query, source_filter, limit)
+                    .await
+            },
             _ => self.query(query, limit).await,
         }
     }
 
     async fn get_relevant_decisions(&self, topic: &str, limit: usize) -> Result<Vec<MemoryResult>> {
         // Decisions primarily come from medium-term
-        let mut results = self.medium_term.get_relevant_decisions(topic, limit).await?;
+        let mut results = self
+            .medium_term
+            .get_relevant_decisions(topic, limit)
+            .await?;
 
         // Also check long-term for decision-related discussions
         let long_results = self
@@ -285,11 +298,7 @@ mod tests {
 
         let long = MockMemoryProvider::new(vec![]);
 
-        let unified = UnifiedMemoryProvider::new(
-            Box::new(short),
-            Box::new(medium),
-            Box::new(long),
-        );
+        let unified = UnifiedMemoryProvider::new(Box::new(short), Box::new(medium), Box::new(long));
 
         let results = unified.query("authentication", 10).await.unwrap();
         assert_eq!(results.len(), 2);
@@ -324,11 +333,7 @@ mod tests {
 
         let long = MockMemoryProvider::new(vec![]);
 
-        let unified = UnifiedMemoryProvider::new(
-            Box::new(short),
-            Box::new(medium),
-            Box::new(long),
-        );
+        let unified = UnifiedMemoryProvider::new(Box::new(short), Box::new(medium), Box::new(long));
 
         let results = unified.query("JWT", 10).await.unwrap();
         // Should be deduplicated to 1 result

@@ -1,7 +1,7 @@
 //! Simple real API test - the easiest way to test
 
-use nexus_claude::{ClaudeCodeOptions, PermissionMode, Result, query};
 use futures::StreamExt;
+use nexus_claude::{ClaudeCodeOptions, PermissionMode, Result, query};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -19,7 +19,7 @@ async fn main() -> Result<()> {
                     Err(e) => println!("Stream error: {e}"),
                 }
             }
-        }
+        },
         Err(e) => println!("Query error: {e}"),
     }
 
@@ -47,11 +47,11 @@ async fn main() -> Result<()> {
                                 }
                             }
                         }
-                    }
+                    },
                     Err(e) => println!("Stream error: {e}"),
                 }
             }
-        }
+        },
         Err(e) => println!("Query error: {e}"),
     }
 

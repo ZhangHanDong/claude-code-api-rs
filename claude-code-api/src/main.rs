@@ -1,22 +1,25 @@
 use anyhow::Result;
-use axum::{routing::{get, post}, Router};
+use axum::{
+    Router,
+    routing::{get, post},
+};
+use std::net::SocketAddr;
 use tower_http::cors::CorsLayer;
 use tracing::info;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-use std::net::SocketAddr;
 
 mod api;
 mod core;
+mod middleware;
 mod models;
 mod utils;
-mod middleware;
 
-use crate::core::{
-    config::Settings, 
-    claude_manager::ClaudeManager,
-    process_pool::{ProcessPool, PoolConfig},
-};
 use crate::api::chat::ChatState;
+use crate::core::{
+    claude_manager::ClaudeManager,
+    config::Settings,
+    process_pool::{PoolConfig, ProcessPool},
+};
 use std::sync::Arc;
 
 #[tokio::main]
@@ -25,16 +28,17 @@ async fn main() -> Result<()> {
 
     tracing_subscriber::registry()
         .with(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "info".into()),
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()),
         )
         .with(tracing_subscriber::fmt::layer())
         .init();
 
     let settings = Settings::new()?;
 
-    info!("Starting Claude Code API Gateway on {}:{}",
-          settings.server.host, settings.server.port);
+    info!(
+        "Starting Claude Code API Gateway on {}:{}",
+        settings.server.host, settings.server.port
+    );
 
     let app = create_app(settings.clone()).await?;
 
@@ -50,10 +54,10 @@ async fn main() -> Result<()> {
 
 async fn create_app(settings: Settings) -> Result<Router> {
     use crate::core::{
-        cache::{ResponseCache, CacheConfig},
-        conversation::{ConversationManager, ConversationConfig},
-        storage::{InMemoryConversationStore, InMemoryConversationConfig},
+        cache::{CacheConfig, ResponseCache},
+        conversation::{ConversationConfig, ConversationManager},
         interactive_session::InteractiveSessionManager,
+        storage::{InMemoryConversationConfig, InMemoryConversationStore},
     };
     use crate::middleware::{error_handler, request_id};
     use axum::middleware;
@@ -63,9 +67,9 @@ async fn create_app(settings: Settings) -> Result<Router> {
     let claude_manager = Arc::new(ClaudeManager::new(
         settings.claude.command.clone(),
         settings.file_access.clone(),
-        settings.mcp.clone()
+        settings.mcp.clone(),
     ));
-    
+
     // 创建进程池配置
     let pool_config = PoolConfig {
         min_idle: settings.process_pool.min_idle,
@@ -74,27 +78,33 @@ async fn create_app(settings: Settings) -> Result<Router> {
         idle_timeout_secs: 300,
         default_model: "claude-sonnet-4-20250514".to_string(),
     };
-    
+
     // 初始化进程池
-    info!("Initializing process pool with {} min idle processes", pool_config.min_idle);
+    info!(
+        "Initializing process pool with {} min idle processes",
+        pool_config.min_idle
+    );
     let process_pool = Arc::new(ProcessPool::new(claude_manager.clone(), pool_config));
-    
+
     // 初始化交互式会话管理器
     info!("Initializing interactive session manager");
     let interactive_session_manager = Arc::new(InteractiveSessionManager::new(
         claude_manager.clone(),
-        settings.claude.command.clone()
+        settings.claude.command.clone(),
     ));
-    
+
     // 如果启用了交互式会话，预热一个默认进程
-    if settings.claude.use_interactive_sessions {
-        if let Err(e) = interactive_session_manager.prewarm_default_session().await {
-            tracing::error!("Failed to pre-warm Claude process: {}", e);
-        }
+    if settings.claude.use_interactive_sessions
+        && let Err(e) = interactive_session_manager.prewarm_default_session().await
+    {
+        tracing::error!("Failed to pre-warm Claude process: {}", e);
     }
-    
+
     let conversation_store = InMemoryConversationStore::new(InMemoryConversationConfig::default());
-    let conversation_manager = Arc::new(ConversationManager::new(conversation_store, ConversationConfig::default()));
+    let conversation_manager = Arc::new(ConversationManager::new(
+        conversation_store,
+        ConversationConfig::default(),
+    ));
     let cache = Arc::new(ResponseCache::new(CacheConfig::default()));
 
     let chat_state = ChatState::new(
@@ -120,9 +130,18 @@ async fn create_app(settings: Settings) -> Result<Router> {
         .with_state(chat_state);
 
     let conversation_routes = Router::new()
-        .route("/v1/conversations", post(api::conversations::create_conversation))
-        .route("/v1/conversations", get(api::conversations::list_conversations))
-        .route("/v1/conversations/:id", get(api::conversations::get_conversation))
+        .route(
+            "/v1/conversations",
+            post(api::conversations::create_conversation),
+        )
+        .route(
+            "/v1/conversations",
+            get(api::conversations::list_conversations),
+        )
+        .route(
+            "/v1/conversations/:id",
+            get(api::conversations::get_conversation),
+        )
         .with_state(conversation_state);
 
     let stats_routes = Router::new()

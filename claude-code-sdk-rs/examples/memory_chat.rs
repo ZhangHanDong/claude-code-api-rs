@@ -46,19 +46,15 @@
 //! 4. **Injection**: Retrieved context is injected into the prompt
 
 use std::io::{self, Write};
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 #[cfg(feature = "memory")]
-use nexus_claude::memory::{
-    ContextInjector, MemoryIntegrationBuilder, MemoryConfig,
-};
+use nexus_claude::memory::{ContextInjector, MemoryConfig, MemoryIntegrationBuilder};
 
-use nexus_claude::{
-    query, ClaudeCodeOptions, Message, PermissionMode, Result,
-};
 use futures::StreamExt;
+use nexus_claude::{ClaudeCodeOptions, Message, PermissionMode, Result, query};
 
 /// Spinner frames for thinking animation
 const SPINNER_FRAMES: &[&str] = &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
@@ -72,7 +68,10 @@ fn start_spinner(message: &str) -> Arc<AtomicBool> {
     tokio::spawn(async move {
         let mut frame = 0;
         while running_clone.load(Ordering::Relaxed) {
-            print!("\r\x1b[1;33m{} {}\x1b[0m\x1b[K", SPINNER_FRAMES[frame], message);
+            print!(
+                "\r\x1b[1;33m{} {}\x1b[0m\x1b[K",
+                SPINNER_FRAMES[frame], message
+            );
             io::stdout().flush().unwrap();
             frame = (frame + 1) % SPINNER_FRAMES.len();
             tokio::time::sleep(Duration::from_millis(80)).await;
@@ -116,9 +115,15 @@ impl Default for ChatConfig {
 }
 
 fn print_banner() {
-    println!("\n\x1b[1;36m╔═══════════════════════════════════════════════════════════════╗\x1b[0m");
-    println!("\x1b[1;36m║\x1b[0m   \x1b[1;33m◈ NEXUS\x1b[0m - Claude Code with Persistent Memory              \x1b[1;36m║\x1b[0m");
-    println!("\x1b[1;36m╚═══════════════════════════════════════════════════════════════╝\x1b[0m\n");
+    println!(
+        "\n\x1b[1;36m╔═══════════════════════════════════════════════════════════════╗\x1b[0m"
+    );
+    println!(
+        "\x1b[1;36m║\x1b[0m   \x1b[1;33m◈ NEXUS\x1b[0m - Claude Code with Persistent Memory              \x1b[1;36m║\x1b[0m"
+    );
+    println!(
+        "\x1b[1;36m╚═══════════════════════════════════════════════════════════════╝\x1b[0m\n"
+    );
 }
 
 fn print_help() {
@@ -134,7 +139,11 @@ fn print_help() {
 }
 
 fn print_status(msg: &str, is_ok: bool) {
-    let icon = if is_ok { "\x1b[1;32m✓\x1b[0m" } else { "\x1b[1;31m✗\x1b[0m" };
+    let icon = if is_ok {
+        "\x1b[1;32m✓\x1b[0m"
+    } else {
+        "\x1b[1;31m✗\x1b[0m"
+    };
     println!("  {} {}", icon, msg);
 }
 
@@ -151,20 +160,28 @@ async fn main() -> Result<()> {
     let memory_available = {
         match check_meilisearch(&config.meilisearch_url).await {
             Ok(_) => {
-                print_status(&format!("Meilisearch connected at {}", config.meilisearch_url), true);
+                print_status(
+                    &format!("Meilisearch connected at {}", config.meilisearch_url),
+                    true,
+                );
                 true
-            }
+            },
             Err(e) => {
                 print_status(&format!("Meilisearch unavailable: {}", e), false);
-                println!("  \x1b[33m→ Memory features disabled. Start Meilisearch for persistence.\x1b[0m");
+                println!(
+                    "  \x1b[33m→ Memory features disabled. Start Meilisearch for persistence.\x1b[0m"
+                );
                 false
-            }
+            },
         }
     };
 
     #[cfg(not(feature = "memory"))]
     let memory_available = {
-        print_status("Memory feature not enabled. Compile with --features memory", false);
+        print_status(
+            "Memory feature not enabled. Compile with --features memory",
+            false,
+        );
         false
     };
 
@@ -191,7 +208,7 @@ async fn main() -> Result<()> {
                 .url(&config.meilisearch_url)
                 .min_relevance_score(0.3)
                 .max_context_items(5)
-                .build()
+                .build(),
         )
     } else {
         None
@@ -202,13 +219,18 @@ async fn main() -> Result<()> {
         match ContextInjector::new(
             MemoryConfig::default()
                 .with_url(&config.meilisearch_url)
-                .with_enabled(true)
-        ).await {
+                .with_enabled(true),
+        )
+        .await
+        {
             Ok(injector) => Some(injector),
             Err(e) => {
-                println!("  \x1b[33mWarning: Could not initialize context injector: {}\x1b[0m", e);
+                println!(
+                    "  \x1b[33mWarning: Could not initialize context injector: {}\x1b[0m",
+                    e
+                );
                 None
-            }
+            },
         }
     } else {
         None
@@ -238,13 +260,16 @@ async fn main() -> Result<()> {
                 "/help" | "/h" => {
                     print_help();
                     continue;
-                }
+                },
                 "/quit" | "/exit" | "/q" => {
                     println!("\n\x1b[1;33mGoodbye! Your conversation has been saved.\x1b[0m\n");
                     break;
-                }
+                },
                 "/session" | "/s" => {
-                    println!("\n\x1b[1;34mSession History ({} messages):\x1b[0m", conversation_history.len());
+                    println!(
+                        "\n\x1b[1;34mSession History ({} messages):\x1b[0m",
+                        conversation_history.len()
+                    );
                     if conversation_history.is_empty() {
                         println!("  \x1b[2m(empty)\x1b[0m");
                     } else {
@@ -256,13 +281,18 @@ async fn main() -> Result<()> {
                             } else {
                                 content.clone()
                             };
-                            println!("  \x1b[1;{}m{}.\x1b[0m \x1b[1;{}m{}>\x1b[0m {}",
-                                "2", i + 1, role_color, role_label, preview.replace('\n', " "));
+                            println!(
+                                "  \x1b[1;2m{}.\x1b[0m \x1b[1;{}m{}>\x1b[0m {}",
+                                i + 1,
+                                role_color,
+                                role_label,
+                                preview.replace('\n', " ")
+                            );
                         }
                     }
                     println!();
                     continue;
-                }
+                },
                 "/clear" => {
                     // Clear session conversation history
                     conversation_history.clear();
@@ -271,10 +301,10 @@ async fn main() -> Result<()> {
                     if let Some(ref mut manager) = memory_manager {
                         // Store pending messages before clearing
                         let pending = manager.take_pending_messages();
-                        if !pending.is_empty() {
-                            if let Some(ref injector) = context_injector {
-                                let _ = injector.store_messages(&pending).await;
-                            }
+                        if !pending.is_empty()
+                            && let Some(ref injector) = context_injector
+                        {
+                            let _ = injector.store_messages(&pending).await;
                         }
                         // Create new manager (new conversation)
                         *manager = MemoryIntegrationBuilder::new()
@@ -286,7 +316,7 @@ async fn main() -> Result<()> {
                     }
                     println!("\x1b[1;33mConversation cleared. Starting fresh.\x1b[0m\n");
                     continue;
-                }
+                },
                 "/context" => {
                     #[cfg(feature = "memory")]
                     if let Some(ref manager) = memory_manager {
@@ -306,26 +336,31 @@ async fn main() -> Result<()> {
                     #[cfg(not(feature = "memory"))]
                     println!("\x1b[33mMemory not enabled.\x1b[0m\n");
                     continue;
-                }
+                },
                 "/history" => {
                     #[cfg(feature = "memory")]
                     if let Some(ref injector) = context_injector {
                         if let Some(ref manager) = memory_manager {
                             println!("\n\x1b[1;34mRetrieving historical context...\x1b[0m\n");
-                            match injector.get_context_prefix(
-                                "recent conversation context",
-                                manager.cwd(),
-                                &manager.current_context("").files,
-                            ).await {
+                            match injector
+                                .get_context_prefix(
+                                    "recent conversation context",
+                                    manager.cwd(),
+                                    &manager.current_context("").files,
+                                )
+                                .await
+                            {
                                 Ok(Some(ctx)) => {
                                     println!("{}", ctx);
-                                }
+                                },
                                 Ok(None) => {
-                                    println!("\x1b[33mNo relevant historical context found.\x1b[0m\n");
-                                }
+                                    println!(
+                                        "\x1b[33mNo relevant historical context found.\x1b[0m\n"
+                                    );
+                                },
                                 Err(e) => {
                                     println!("\x1b[31mError retrieving context: {}\x1b[0m\n", e);
-                                }
+                                },
                             }
                         }
                     } else {
@@ -334,26 +369,35 @@ async fn main() -> Result<()> {
                     #[cfg(not(feature = "memory"))]
                     println!("\x1b[33mMemory not enabled.\x1b[0m\n");
                     continue;
-                }
+                },
                 "/stats" => {
                     #[cfg(feature = "memory")]
                     if let Some(ref manager) = memory_manager {
                         println!("\n\x1b[1;34mMemory Statistics:\x1b[0m");
                         println!("  Memory Enabled: {}", manager.is_enabled());
                         println!("  Current Turn: {}", manager.turn_index());
-                        println!("  Min Relevance Score: {}", manager.config().min_relevance_score);
-                        println!("  Max Context Items: {}", manager.config().max_context_items);
+                        println!(
+                            "  Min Relevance Score: {}",
+                            manager.config().min_relevance_score
+                        );
+                        println!(
+                            "  Max Context Items: {}",
+                            manager.config().max_context_items
+                        );
                         println!("  Token Budget: {}", manager.config().token_budget);
                         println!();
                     }
                     #[cfg(not(feature = "memory"))]
                     println!("\x1b[33mMemory not enabled.\x1b[0m\n");
                     continue;
-                }
+                },
                 _ => {
-                    println!("\x1b[31mUnknown command: {}\x1b[0m. Type /help for available commands.\n", input);
+                    println!(
+                        "\x1b[31mUnknown command: {}\x1b[0m. Type /help for available commands.\n",
+                        input
+                    );
                     continue;
-                }
+                },
             }
         }
 
@@ -368,11 +412,9 @@ async fn main() -> Result<()> {
         let context_prefix: Option<String> = if let Some(ref injector) = context_injector {
             if let Some(ref manager) = memory_manager {
                 let spinner = start_spinner("Retrieving context...");
-                let result = injector.get_context_prefix(
-                    input,
-                    manager.cwd(),
-                    &manager.current_context(input).files,
-                ).await;
+                let result = injector
+                    .get_context_prefix(input, manager.cwd(), &manager.current_context(input).files)
+                    .await;
                 stop_spinner(spinner);
 
                 match result {
@@ -387,14 +429,14 @@ async fn main() -> Result<()> {
                             println!("\x1b[2m📚 Context retrieved ({} chars)\x1b[0m", ctx.len());
                         }
                         Some(ctx)
-                    }
+                    },
                     Ok(None) => None,
                     Err(e) => {
                         if config.verbose {
                             println!("\x1b[33mWarning: Context retrieval error: {}\x1b[0m", e);
                         }
                         None
-                    }
+                    },
                 }
             } else {
                 None
@@ -455,12 +497,18 @@ async fn main() -> Result<()> {
 
         // Show prompt in verbose mode
         if config.verbose {
-            println!("\n\x1b[1;35m┌─── Full Prompt ({} chars) ───\x1b[0m", prompt.len());
+            println!(
+                "\n\x1b[1;35m┌─── Full Prompt ({} chars) ───\x1b[0m",
+                prompt.len()
+            );
             for line in prompt.lines().take(30) {
                 println!("\x1b[35m│\x1b[0m {}", line);
             }
             if prompt.lines().count() > 30 {
-                println!("\x1b[35m│\x1b[0m ... ({} more lines)\x1b[0m", prompt.lines().count() - 30);
+                println!(
+                    "\x1b[35m│\x1b[0m ... ({} more lines)\x1b[0m",
+                    prompt.lines().count() - 30
+                );
             }
             println!("\x1b[1;35m└────────────────────────────────\x1b[0m\n");
         }
@@ -495,10 +543,13 @@ async fn main() -> Result<()> {
                                         print!("{}", text_content.text);
                                         io::stdout().flush().unwrap();
                                         response_text.push_str(&text_content.text);
-                                    }
+                                    },
                                     nexus_claude::ContentBlock::ToolUse(tool_use) => {
                                         // Show tool usage
-                                        println!("\n\x1b[2m  🔧 Using tool: {}\x1b[0m", tool_use.name);
+                                        println!(
+                                            "\n\x1b[2m  🔧 Using tool: {}\x1b[0m",
+                                            tool_use.name
+                                        );
                                         io::stdout().flush().unwrap();
 
                                         // Record tool call for memory context
@@ -506,19 +557,29 @@ async fn main() -> Result<()> {
                                         if let Some(ref mut mgr) = memory_manager {
                                             mgr.process_tool_call(&tool_use.name, &tool_use.input);
                                         }
-                                    }
+                                    },
                                     nexus_claude::ContentBlock::Thinking(thinking) => {
                                         // Show thinking if verbose
                                         if config.verbose {
-                                            println!("\n\x1b[2;3m  💭 {}\x1b[0m",
-                                                thinking.thinking.chars().take(100).collect::<String>());
+                                            println!(
+                                                "\n\x1b[2;3m  💭 {}\x1b[0m",
+                                                thinking
+                                                    .thinking
+                                                    .chars()
+                                                    .take(100)
+                                                    .collect::<String>()
+                                            );
                                         }
-                                    }
-                                    _ => {}
+                                    },
+                                    _ => {},
                                 }
                             }
-                        }
-                        Ok(Message::Result { total_cost_usd, duration_ms, .. }) => {
+                        },
+                        Ok(Message::Result {
+                            total_cost_usd,
+                            duration_ms,
+                            ..
+                        }) => {
                             if first_token {
                                 stop_spinner(spinner.clone());
                             }
@@ -531,22 +592,22 @@ async fn main() -> Result<()> {
                                 println!("\n\x1b[2m  {} {}\x1b[0m", cost_str, time_str);
                             }
                             break;
-                        }
+                        },
                         Err(e) => {
                             if first_token {
                                 stop_spinner(spinner.clone());
                             }
                             println!("\n\x1b[31mError: {}\x1b[0m", e);
                             break;
-                        }
-                        _ => {}
+                        },
+                        _ => {},
                     }
                 }
-            }
+            },
             Err(e) => {
                 stop_spinner(spinner);
                 println!("\x1b[31mError: {}\x1b[0m", e);
-            }
+            },
         }
 
         println!();
@@ -564,24 +625,22 @@ async fn main() -> Result<()> {
 
         // Record assistant message
         #[cfg(feature = "memory")]
-        if let Some(ref mut manager) = memory_manager {
-            if !response_text.is_empty() {
-                manager.record_assistant_message(&response_text);
-            }
+        if let Some(ref mut manager) = memory_manager
+            && !response_text.is_empty()
+        {
+            manager.record_assistant_message(&response_text);
         }
 
         // Store messages periodically
         #[cfg(feature = "memory")]
         if let Some(ref mut manager) = memory_manager {
             let pending = manager.take_pending_messages();
-            if !pending.is_empty() {
-                if let Some(ref injector) = context_injector {
-                    if let Err(e) = injector.store_messages(&pending).await {
-                        if config.verbose {
-                            println!("\x1b[33mWarning: Could not store messages: {}\x1b[0m", e);
-                        }
-                    }
-                }
+            if !pending.is_empty()
+                && let Some(ref injector) = context_injector
+                && let Err(e) = injector.store_messages(&pending).await
+                && config.verbose
+            {
+                println!("\x1b[33mWarning: Could not store messages: {}\x1b[0m", e);
             }
         }
     }
@@ -596,11 +655,9 @@ async fn main() -> Result<()> {
 async fn check_meilisearch(url: &str) -> std::result::Result<(), String> {
     use meilisearch_sdk::client::Client;
 
-    let client = Client::new(url, Option::<&str>::None)
-        .map_err(|e| e.to_string())?;
+    let client = Client::new(url, Option::<&str>::None).map_err(|e| e.to_string())?;
 
-    client.health().await
-        .map_err(|e| e.to_string())?;
+    client.health().await.map_err(|e| e.to_string())?;
 
     Ok(())
 }

@@ -1,13 +1,13 @@
 //! Simple test for model availability
 //! Run with: cargo run --example simple_model_test
 
-use nexus_claude::{query, ClaudeCodeOptions, PermissionMode, Result};
 use futures::StreamExt;
+use nexus_claude::{ClaudeCodeOptions, PermissionMode, Result, query};
 
 #[tokio::main]
 async fn main() -> Result<()> {
     println!("=== Testing Model and Plan Mode ===\n");
-    
+
     // Test 1: Use working model with Plan mode
     println!("Test 1: Using 'sonnet' alias with Plan mode");
     let options = ClaudeCodeOptions::builder()
@@ -15,7 +15,7 @@ async fn main() -> Result<()> {
         .permission_mode(PermissionMode::Plan)
         .max_turns(1)
         .build();
-    
+
     match query("Say 'Plan mode works'", Some(options)).await {
         Ok(mut stream) => {
             let mut success = false;
@@ -32,17 +32,17 @@ async fn main() -> Result<()> {
             if success {
                 println!("✅ Plan mode with 'sonnet' works!\n");
             }
-        }
+        },
         Err(e) => println!("❌ Error: {e:?}\n"),
     }
-    
+
     // Test 2: Use full model name
     println!("Test 2: Using full Opus 4.1 name");
     let options = ClaudeCodeOptions::builder()
         .model("claude-opus-4-1-20250805")
         .max_turns(1)
         .build();
-    
+
     match query("What model are you?", Some(options)).await {
         Ok(mut stream) => {
             let mut success = false;
@@ -64,10 +64,10 @@ async fn main() -> Result<()> {
             if success {
                 println!("✅ Full Opus 4.1 name works!\n");
             }
-        }
+        },
         Err(e) => println!("❌ Error: {e:?}\n"),
     }
-    
+
     // Test 3: Working model names summary
     println!("=== Working Model Names ===");
     println!("✅ Aliases that work:");
@@ -86,6 +86,6 @@ async fn main() -> Result<()> {
     println!("   - PermissionMode::AcceptEdits");
     println!("   - PermissionMode::Plan (new in v0.1.7)");
     println!("   - PermissionMode::BypassPermissions");
-    
+
     Ok(())
 }

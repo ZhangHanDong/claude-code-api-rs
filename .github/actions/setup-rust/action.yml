@@ -1,0 +1,50 @@
+name: 'Setup Rust'
+description: 'Setup Rust toolchain with caching for Nexus CI/CD'
+
+inputs:
+  toolchain:
+    description: 'Rust toolchain to install (stable, beta, nightly)'
+    required: false
+    default: 'stable'
+  components:
+    description: 'Additional components to install (comma-separated: clippy, rustfmt)'
+    required: false
+    default: 'clippy, rustfmt'
+  targets:
+    description: 'Additional targets to install (comma-separated)'
+    required: false
+    default: ''
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ inputs.toolchain }}
+        components: ${{ inputs.components }}
+        targets: ${{ inputs.targets }}
+
+    - name: Setup Rust cache
+      uses: Swatinem/rust-cache@v2
+      with:
+        # Cache key prefix
+        prefix-key: 'nexus-rust'
+        # Shared cache key for workspace
+        shared-key: 'workspace'
+        # Cache ~/.cargo/bin
+        cache-bin: true
+        # Cache on failure for debugging
+        cache-on-failure: true
+        # Additional paths to cache
+        cache-directories: |
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+
+    - name: Print Rust version
+      shell: bash
+      run: |
+        rustc --version
+        cargo --version
+        rustup show

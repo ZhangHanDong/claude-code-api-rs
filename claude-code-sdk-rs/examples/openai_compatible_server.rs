@@ -246,7 +246,7 @@ async fn chat_completions(
             };
 
             Ok(Json(response))
-        }
+        },
         Err(e) => {
             warn!("Claude Code error: {}", e);
             Err((
@@ -260,7 +260,7 @@ async fn chat_completions(
                     },
                 }),
             ))
-        }
+        },
     }
 }
 
@@ -306,7 +306,7 @@ async fn completions(
             });
 
             Ok(Json(response))
-        }
+        },
         Err(e) => Err((
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ErrorResponse {
@@ -356,10 +356,12 @@ async fn list_models() -> Json<ModelsResponse> {
 async fn get_model(
     axum::extract::Path(model): axum::extract::Path<String>,
 ) -> Result<Json<ModelObject>, (StatusCode, Json<ErrorResponse>)> {
-    let models = [("gpt-3.5-turbo", 1677610602),
+    let models = [
+        ("gpt-3.5-turbo", 1677610602),
         ("gpt-4", 1687882410),
         ("claude-3-sonnet", 1709856000),
-        ("claude-3.5-sonnet", 1718841600)];
+        ("claude-3.5-sonnet", 1718841600),
+    ];
 
     if let Some((_, created)) = models.iter().find(|(m, _)| *m == model) {
         Ok(Json(ModelObject {
@@ -405,7 +407,7 @@ fn extract_response_text(messages: Vec<Message>) -> String {
                     })
                     .collect();
                 Some(texts.join("\n"))
-            }
+            },
             _ => None,
         })
         .collect::<Vec<String>>()

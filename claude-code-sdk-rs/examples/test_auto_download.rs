@@ -42,11 +42,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Ok(path) => {
             println!("   ✅ Found CLI at: {}", path.display());
             println!("   No download needed!");
-        }
+        },
         Err(e) => {
             println!("   ℹ️  CLI not found in standard locations");
             println!("   Details: {}", e);
-        }
+        },
     }
     println!();
 
@@ -90,16 +90,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("5. Testing SubprocessTransport::new_async:");
     println!("   This will attempt to find or download CLI...");
 
-    let options_for_transport = ClaudeCodeOptions::builder()
-        .auto_download_cli(true)
-        .build();
+    let options_for_transport = ClaudeCodeOptions::builder().auto_download_cli(true).build();
 
     match nexus_claude::transport::SubprocessTransport::new_async(options_for_transport).await {
         Ok(transport) => {
             println!("   ✅ Transport created successfully!");
             println!("   CLI is ready to use.");
             drop(transport);
-        }
+        },
         Err(e) => {
             println!("   ❌ Failed to create transport: {}", e);
             println!();
@@ -107,7 +105,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("   - npm is not installed");
             println!("   - Network is unavailable");
             println!("   - Official install script is not accessible");
-        }
+        },
     }
     println!();
 

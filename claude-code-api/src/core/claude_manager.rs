@@ -1,16 +1,16 @@
 use anyhow::{Result, anyhow};
+use parking_lot::RwLock;
+use std::collections::HashMap;
 use std::process::Stdio;
-use tokio::process::{Command, Child};
+use std::sync::Arc;
 use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::process::{Child, Command};
 use tokio::sync::mpsc;
 use tracing::{error, info, warn};
 use uuid::Uuid;
-use std::collections::HashMap;
-use parking_lot::RwLock;
-use std::sync::Arc;
 
-use crate::models::claude::ClaudeCodeOutput;
 use crate::core::config::{FileAccessConfig, MCPConfig};
+use crate::models::claude::ClaudeCodeOutput;
 
 pub struct ClaudeProcess {
     #[allow(dead_code)]
@@ -29,7 +29,11 @@ pub struct ClaudeManager {
 }
 
 impl ClaudeManager {
-    pub fn new(claude_command: String, file_access_config: FileAccessConfig, mcp_config: MCPConfig) -> Self {
+    pub fn new(
+        claude_command: String,
+        file_access_config: FileAccessConfig,
+        mcp_config: MCPConfig,
+    ) -> Self {
         Self {
             processes: Arc::new(RwLock::new(HashMap::new())),
             claude_command,
@@ -49,7 +53,8 @@ impl ClaudeManager {
 
         let mut cmd = Command::new(&self.claude_command);
         // 交互模式，使用 stream-json 输出以支持多轮对话
-        cmd.arg("--output-format").arg("stream-json")
+        cmd.arg("--output-format")
+            .arg("stream-json")
             .arg("--verbose");
 
         if let Some(model) = model {
@@ -64,11 +69,20 @@ impl ClaudeManager {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
 
-        info!("Starting interactive Claude session {} with command: {:?}", session_id, cmd);
+        info!(
+            "Starting interactive Claude session {} with command: {:?}",
+            session_id, cmd
+        );
 
         let mut child = cmd.spawn()?;
-        let stdout = child.stdout.take().ok_or_else(|| anyhow!("Failed to get stdout"))?;
-        let stderr = child.stderr.take().ok_or_else(|| anyhow!("Failed to get stderr"))?;
+        let stdout = child
+            .stdout
+            .take()
+            .ok_or_else(|| anyhow!("Failed to get stdout"))?;
+        let stderr = child
+            .stderr
+            .take()
+            .ok_or_else(|| anyhow!("Failed to get stderr"))?;
 
         let (tx, rx) = mpsc::channel(100);
 
@@ -97,18 +111,28 @@ impl ClaudeManager {
                     Ok(json) => {
                         // 转换为 ClaudeCodeOutput 格式
                         let output = ClaudeCodeOutput {
-                            r#type: json.get("type").and_then(|v| v.as_str()).unwrap_or("unknown").to_string(),
-                            subtype: json.get("subtype").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                            r#type: json
+                                .get("type")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("unknown")
+                                .to_string(),
+                            subtype: json
+                                .get("subtype")
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_string()),
                             data: json,
                         };
 
                         if tx_clone.send(output).await.is_err() {
                             break;
                         }
-                    }
+                    },
                     Err(e) => {
-                        error!("Failed to parse Claude output as JSON: {} - Line: {}", e, line);
-                    }
+                        error!(
+                            "Failed to parse Claude output as JSON: {} - Line: {}",
+                            e, line
+                        );
+                    },
                 }
             }
         });
@@ -172,13 +196,25 @@ impl ClaudeManager {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
 
-        info!("Starting Claude process for session {} with command: {:?}", session_id, cmd);
+        info!(
+            "Starting Claude process for session {} with command: {:?}",
+            session_id, cmd
+        );
 
         let mut child = cmd.spawn()?;
-        let stdin = child.stdin.take().ok_or_else(|| anyhow!("Failed to get stdin"))?;
-        let stdout = child.stdout.take().ok_or_else(|| anyhow!("Failed to get stdout"))?;
-        let stderr = child.stderr.take().ok_or_else(|| anyhow!("Failed to get stderr"))?;
-        
+        let stdin = child
+            .stdin
+            .take()
+            .ok_or_else(|| anyhow!("Failed to get stdin"))?;
+        let stdout = child
+            .stdout
+            .take()
+            .ok_or_else(|| anyhow!("Failed to get stdout"))?;
+        let stderr = child
+            .stderr
+            .take()
+            .ok_or_else(|| anyhow!("Failed to get stderr"))?;
+
         // 将消息写入 stdin
         use tokio::io::AsyncWriteExt;
         let message_bytes = message.as_bytes().to_vec();
@@ -196,7 +232,11 @@ impl ClaudeManager {
         let session_id_clone = session_id.clone();
         let child_id = child.id();
         tokio::spawn(async move {
-            info!("Monitoring Claude process {} for session {}", child_id.unwrap_or(0), session_id_clone);
+            info!(
+                "Monitoring Claude process {} for session {}",
+                child_id.unwrap_or(0),
+                session_id_clone
+            );
         });
 
         tokio::spawn(async move {
@@ -223,14 +263,17 @@ impl ClaudeManager {
 
                 match serde_json::from_str::<ClaudeCodeOutput>(&line) {
                     Ok(output) => {
-                        info!("Parsed Claude output: type={}, subtype={:?}", output.r#type, output.subtype);
+                        info!(
+                            "Parsed Claude output: type={}, subtype={:?}",
+                            output.r#type, output.subtype
+                        );
                         if tx_clone.send(output).await.is_err() {
                             break;
                         }
-                    }
+                    },
                     Err(e) => {
                         error!("Failed to parse Claude output: {} - Line: {}", e, line);
-                    }
+                    },
                 }
             }
             info!("Claude output stream ended");
@@ -251,7 +294,8 @@ impl ClaudeManager {
     pub async fn send_message(&self, session_id: &str, message: &str) -> Result<()> {
         let stdin = {
             let mut processes = self.processes.write();
-            let process = processes.get_mut(session_id)
+            let process = processes
+                .get_mut(session_id)
                 .ok_or_else(|| anyhow!("Session not found"))?;
 
             if let Some(ref mut child) = process.child {
@@ -272,9 +316,10 @@ impl ClaudeManager {
             // 把 stdin 放回去
             let mut processes = self.processes.write();
             if let Some(process) = processes.get_mut(session_id)
-                && let Some(ref mut child) = process.child {
-                    child.stdin = Some(stdin);
-                }
+                && let Some(ref mut child) = process.child
+            {
+                child.stdin = Some(stdin);
+            }
         } else {
             error!("No stdin available for session {}", session_id);
         }
@@ -285,7 +330,9 @@ impl ClaudeManager {
     pub async fn close_session(&self, session_id: &str) -> Result<()> {
         let child = {
             let mut processes = self.processes.write();
-            processes.remove(session_id).and_then(|mut p| p.child.take())
+            processes
+                .remove(session_id)
+                .and_then(|mut p| p.child.take())
         };
 
         if let Some(mut child) = child {
@@ -299,14 +346,17 @@ impl ClaudeManager {
     #[allow(dead_code)]
     pub fn get_session_info(&self, session_id: &str) -> Option<(String, Option<String>)> {
         let processes = self.processes.read();
-        processes.get(session_id).map(|p| (p.id.clone(), p.project_path.clone()))
+        processes
+            .get(session_id)
+            .map(|p| (p.id.clone(), p.project_path.clone()))
     }
 
     #[allow(dead_code)]
     pub async fn cleanup(&self) {
         let children: Vec<_> = {
             let mut processes = self.processes.write();
-            processes.drain()
+            processes
+                .drain()
                 .filter_map(|(_, mut p)| p.child.take())
                 .collect()
         };

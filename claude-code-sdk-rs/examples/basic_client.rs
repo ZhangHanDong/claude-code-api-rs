@@ -2,8 +2,8 @@
 //!
 //! Tests the absolute minimum functionality.
 
-use nexus_claude::{ClaudeCodeOptions, ClaudeSDKClient, Message, Result};
 use futures::StreamExt;
+use nexus_claude::{ClaudeCodeOptions, ClaudeSDKClient, Message, Result};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -42,21 +42,21 @@ async fn main() -> Result<()> {
                             println!("Assistant: {}", text.text);
                         }
                     }
-                }
+                },
                 Ok(Message::System { subtype, .. }) => {
                     println!("System: {subtype}");
-                }
+                },
                 Ok(Message::Result { duration_ms, .. }) => {
                     println!("Completed in {duration_ms}ms");
                     return Ok(());
-                }
+                },
                 Ok(Message::User { .. }) => {
                     println!("User message (unexpected)");
-                }
+                },
                 Err(e) => {
                     println!("Error: {e}");
                     return Err(e);
-                }
+                },
             }
         }
 

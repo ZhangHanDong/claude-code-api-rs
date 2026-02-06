@@ -5,10 +5,7 @@
 
 #![cfg(feature = "memory")]
 
-use nexus_claude::memory::{
-    ConversationMemoryManager, MemoryIntegrationBuilder, MessageDocument,
-    MemoryConfig, SummaryGenerator,
-};
+use nexus_claude::memory::{MemoryIntegrationBuilder, MessageDocument, SummaryGenerator};
 use serde_json::json;
 
 /// Test the full conversation flow with memory capture.
@@ -29,22 +26,31 @@ fn test_conversation_memory_flow() {
     manager.record_user_message("How do I implement JWT authentication?");
 
     // 2. Assistant uses tools during response
-    manager.process_tool_call("Grep", &json!({
-        "pattern": "jwt|auth",
-        "path": "/projects/test-app/src"
-    }));
-    manager.process_tool_call("Read", &json!({
-        "file_path": "/projects/test-app/src/auth.rs"
-    }));
-    manager.process_tool_call("Edit", &json!({
-        "file_path": "/projects/test-app/src/auth.rs",
-        "old_string": "fn authenticate()",
-        "new_string": "fn authenticate_jwt()"
-    }));
+    manager.process_tool_call(
+        "Grep",
+        &json!({
+            "pattern": "jwt|auth",
+            "path": "/projects/test-app/src"
+        }),
+    );
+    manager.process_tool_call(
+        "Read",
+        &json!({
+            "file_path": "/projects/test-app/src/auth.rs"
+        }),
+    );
+    manager.process_tool_call(
+        "Edit",
+        &json!({
+            "file_path": "/projects/test-app/src/auth.rs",
+            "old_string": "fn authenticate()",
+            "new_string": "fn authenticate_jwt()"
+        }),
+    );
 
     // 3. Assistant completes response
     manager.record_assistant_message(
-        "I've updated the authentication to use JWT. The changes are in src/auth.rs."
+        "I've updated the authentication to use JWT. The changes are in src/auth.rs.",
     );
 
     // Verify captured context
@@ -59,7 +65,11 @@ fn test_conversation_memory_flow() {
     // Check assistant message with captured files
     let assistant_msg = &messages[1];
     assert_eq!(assistant_msg.role, "assistant");
-    assert!(assistant_msg.files_touched.contains(&"/projects/test-app/src/auth.rs".to_string()));
+    assert!(
+        assistant_msg
+            .files_touched
+            .contains(&"/projects/test-app/src/auth.rs".to_string())
+    );
     assert_eq!(assistant_msg.turn_index, 0);
 
     // Verify turn incremented
@@ -75,9 +85,12 @@ fn test_disabled_memory_noop() {
         .build();
 
     manager.record_user_message("Sensitive information");
-    manager.process_tool_call("Read", &json!({
-        "file_path": "/projects/secret/passwords.txt"
-    }));
+    manager.process_tool_call(
+        "Read",
+        &json!({
+            "file_path": "/projects/secret/passwords.txt"
+        }),
+    );
     manager.record_assistant_message("Here's the secret data...");
 
     // Nothing should be captured
@@ -96,9 +109,12 @@ fn test_cwd_tracking() {
     assert_eq!(manager.cwd(), Some("/home/user"));
 
     // cd command should update cwd
-    manager.process_tool_call("Bash", &json!({
-        "command": "cd /projects/app && cargo build"
-    }));
+    manager.process_tool_call(
+        "Bash",
+        &json!({
+            "command": "cd /projects/app && cargo build"
+        }),
+    );
 
     assert_eq!(manager.cwd(), Some("/projects/app"));
 
@@ -110,21 +126,28 @@ fn test_cwd_tracking() {
 /// Test file aggregation across multiple tool calls.
 #[test]
 fn test_file_aggregation() {
-    let mut manager = MemoryIntegrationBuilder::new()
-        .enabled(true)
-        .build();
+    let mut manager = MemoryIntegrationBuilder::new().enabled(true).build();
 
-    manager.process_tool_call("Read", &json!({
-        "file_path": "/src/main.rs"
-    }));
-    manager.process_tool_call("Read", &json!({
-        "file_path": "/src/lib.rs"
-    }));
-    manager.process_tool_call("Edit", &json!({
-        "file_path": "/src/main.rs",
-        "old_string": "a",
-        "new_string": "b"
-    }));
+    manager.process_tool_call(
+        "Read",
+        &json!({
+            "file_path": "/src/main.rs"
+        }),
+    );
+    manager.process_tool_call(
+        "Read",
+        &json!({
+            "file_path": "/src/lib.rs"
+        }),
+    );
+    manager.process_tool_call(
+        "Edit",
+        &json!({
+            "file_path": "/src/main.rs",
+            "old_string": "a",
+            "new_string": "b"
+        }),
+    );
 
     let ctx = manager.current_context("query");
 
@@ -162,9 +185,7 @@ fn test_summary_generation() {
 /// Test multiple conversation turns.
 #[test]
 fn test_multiple_turns() {
-    let mut manager = MemoryIntegrationBuilder::new()
-        .enabled(true)
-        .build();
+    let mut manager = MemoryIntegrationBuilder::new().enabled(true).build();
 
     // Turn 1
     manager.record_user_message("Question 1");
@@ -237,13 +258,19 @@ fn test_query_context() {
         .cwd("/projects/api")
         .build();
 
-    manager.process_tool_call("Read", &json!({
-        "file_path": "/projects/api/src/routes.rs"
-    }));
+    manager.process_tool_call(
+        "Read",
+        &json!({
+            "file_path": "/projects/api/src/routes.rs"
+        }),
+    );
 
     let ctx = manager.current_context("How do I add a new route?");
 
     assert_eq!(ctx.query, "How do I add a new route?");
     assert_eq!(ctx.cwd, Some("/projects/api".to_string()));
-    assert!(ctx.files.contains(&"/projects/api/src/routes.rs".to_string()));
+    assert!(
+        ctx.files
+            .contains(&"/projects/api/src/routes.rs".to_string())
+    );
 }

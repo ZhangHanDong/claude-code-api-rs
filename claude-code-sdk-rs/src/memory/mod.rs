@@ -13,28 +13,21 @@
 //!
 //! ## Components
 //!
-//! - [`MessageDocument`]: Persistent message storage format
-//! - [`ToolContextExtractor`]: Extracts context from tool calls
-//! - [`RelevanceScorer`]: Multi-factor relevance scoring
-//! - [`MemoryProvider`]: Unified memory access trait
+//! - `MessageDocument`: Persistent message storage format
+//! - `ToolContextExtractor`: Extracts context from tool calls
+//! - `RelevanceScorer`: Multi-factor relevance scoring
+//! - `MemoryProvider`: Unified memory access trait
 
-mod message_document;
-mod tool_context;
-mod scoring;
 mod integration;
+mod message_document;
+mod scoring;
+mod tool_context;
 
-pub use message_document::{
-    MessageDocument, ConversationDocument, MemoryConfig,
-};
+pub use integration::{ConversationMemoryManager, MemoryIntegrationBuilder, SummaryGenerator};
+pub use message_document::{ConversationDocument, MemoryConfig, MessageDocument};
+pub use scoring::{RelevanceConfig, RelevanceScore, RelevanceScorer};
 pub use tool_context::{
-    ToolContext, ToolContextExtractor, MessageContextAggregator,
-    DefaultToolContextExtractor,
-};
-pub use scoring::{
-    RelevanceScore, RelevanceConfig, RelevanceScorer,
-};
-pub use integration::{
-    ConversationMemoryManager, MemoryIntegrationBuilder, SummaryGenerator,
+    DefaultToolContextExtractor, MessageContextAggregator, ToolContext, ToolContextExtractor,
 };
 
 #[cfg(not(feature = "memory"))]
@@ -45,8 +38,8 @@ mod provider;
 
 #[cfg(feature = "memory")]
 pub use provider::{
-    MemoryProvider, MeilisearchMemoryProvider, MemoryResult, MemoryError,
-    QueryContext, ScoredMemoryResult, ContextFormatter, MemoryProviderBuilder,
+    ContextFormatter, MeilisearchMemoryProvider, MemoryError, MemoryProvider,
+    MemoryProviderBuilder, MemoryResult, QueryContext, ScoredMemoryResult,
 };
 
 #[cfg(feature = "memory")]

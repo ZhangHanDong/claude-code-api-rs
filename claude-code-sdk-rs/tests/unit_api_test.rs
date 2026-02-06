@@ -1,6 +1,8 @@
 //! Unit tests for API components (no Claude CLI required)
 
-use nexus_claude::{ClaudeCodeOptions, ClientMode, PerformanceMetrics, PermissionMode, RetryConfig};
+use nexus_claude::{
+    ClaudeCodeOptions, ClientMode, PerformanceMetrics, PermissionMode, RetryConfig,
+};
 use std::time::Duration;
 
 /// Test ClientMode variants
@@ -25,7 +27,7 @@ fn test_client_modes() {
     match batch {
         ClientMode::Batch { max_concurrent } => {
             assert_eq!(max_concurrent, 5);
-        }
+        },
         _ => panic!("Expected Batch mode"),
     }
 }

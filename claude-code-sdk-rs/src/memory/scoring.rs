@@ -45,12 +45,7 @@ impl RelevanceConfig {
     ///
     /// # Panics
     /// Panics if weights don't sum to approximately 1.0 (within 0.01 tolerance).
-    pub fn with_weights(
-        semantic: f64,
-        cwd: f64,
-        files: f64,
-        recency: f64,
-    ) -> Self {
+    pub fn with_weights(semantic: f64, cwd: f64, files: f64, recency: f64) -> Self {
         let sum = semantic + cwd + files + recency;
         assert!(
             (sum - 1.0).abs() < 0.01,
@@ -158,7 +153,7 @@ impl RelevanceScorer {
     pub fn semantic_score(&self, meilisearch_score: f64) -> f64 {
         // Meilisearch scores are typically 0-1 for BM25-like scoring
         // but can exceed 1.0. We clamp and normalize.
-        (meilisearch_score.min(2.0) / 2.0).min(1.0).max(0.0)
+        (meilisearch_score.min(2.0) / 2.0).clamp(0.0, 1.0)
     }
 
     /// Computes the working directory match score.
@@ -194,7 +189,7 @@ impl RelevanceScorer {
                 }
 
                 0.0
-            }
+            },
             // If either is missing, neutral score
             (None, _) | (_, None) => 0.0,
         }
@@ -263,7 +258,11 @@ impl RelevanceScorer {
     /// # Arguments
     /// * `stored_timestamp` - Unix timestamp of the stored message
     /// * `current_timestamp` - Current Unix timestamp
-    pub fn recency_score_from_timestamps(&self, stored_timestamp: i64, current_timestamp: i64) -> f64 {
+    pub fn recency_score_from_timestamps(
+        &self,
+        stored_timestamp: i64,
+        current_timestamp: i64,
+    ) -> f64 {
         let age_seconds = (current_timestamp - stored_timestamp).max(0) as f64;
         let age_hours = age_seconds / 3600.0;
         self.recency_score(age_hours)
@@ -340,10 +339,7 @@ mod tests {
     fn test_cwd_match_exact() {
         let scorer = RelevanceScorer::default();
 
-        let score = scorer.cwd_match_score(
-            Some("/projects/my-app"),
-            Some("/projects/my-app"),
-        );
+        let score = scorer.cwd_match_score(Some("/projects/my-app"), Some("/projects/my-app"));
 
         assert_eq!(score, 1.0);
     }
@@ -353,10 +349,7 @@ mod tests {
         let scorer = RelevanceScorer::default();
 
         // Current is child of stored
-        let score1 = scorer.cwd_match_score(
-            Some("/projects/my-app/src"),
-            Some("/projects/my-app"),
-        );
+        let score1 = scorer.cwd_match_score(Some("/projects/my-app/src"), Some("/projects/my-app"));
         assert_eq!(score1, 0.5);
 
         // Current is parent of stored
@@ -385,10 +378,8 @@ mod tests {
     fn test_cwd_match_no_relation() {
         let scorer = RelevanceScorer::default();
 
-        let score = scorer.cwd_match_score(
-            Some("/home/user/project-a"),
-            Some("/var/www/project-b"),
-        );
+        let score =
+            scorer.cwd_match_score(Some("/home/user/project-a"), Some("/var/www/project-b"));
 
         assert_eq!(score, 0.0);
     }
@@ -411,8 +402,16 @@ mod tests {
         // Intersection = {f2, f3} = 2
         // Union = {f1, f2, f3, f4} = 4
         // Jaccard = 2/4 = 0.5
-        let current = vec!["/f1.rs".to_string(), "/f2.rs".to_string(), "/f3.rs".to_string()];
-        let stored = vec!["/f2.rs".to_string(), "/f3.rs".to_string(), "/f4.rs".to_string()];
+        let current = vec![
+            "/f1.rs".to_string(),
+            "/f2.rs".to_string(),
+            "/f3.rs".to_string(),
+        ];
+        let stored = vec![
+            "/f2.rs".to_string(),
+            "/f3.rs".to_string(),
+            "/f4.rs".to_string(),
+        ];
 
         let score = scorer.files_overlap_score(&current, &stored);
 
@@ -498,12 +497,12 @@ mod tests {
         let scorer = RelevanceScorer::default();
 
         let score = scorer.compute_score(
-            1.5,  // meilisearch_score -> normalized to 0.75
+            1.5, // meilisearch_score -> normalized to 0.75
             Some("/projects/app"),
-            Some("/projects/app"),  // exact match -> 1.0
+            Some("/projects/app"), // exact match -> 1.0
             &["/src/main.rs".to_string()],
-            &["/src/main.rs".to_string(), "/src/lib.rs".to_string()],  // 1/2 = 0.5
-            1.0,  // 1 hour ago -> ~0.959
+            &["/src/main.rs".to_string(), "/src/lib.rs".to_string()], // 1/2 = 0.5
+            1.0,                                                      // 1 hour ago -> ~0.959
         );
 
         // semantic: 0.75 * 0.4 = 0.3

@@ -141,14 +141,14 @@ async fn chat_completions(
         match message.role.as_str() {
             "system" => {
                 conversation.push_str(&format!("System: {}\n\n", message.content));
-            }
+            },
             "user" => {
                 conversation.push_str(&format!("Human: {}\n\n", message.content));
-            }
+            },
             "assistant" => {
                 conversation.push_str(&format!("Assistant: {}\n\n", message.content));
-            }
-            _ => {}
+            },
+            _ => {},
         }
     }
 
@@ -199,7 +199,7 @@ async fn chat_completions(
             };
 
             Ok(Json(response))
-        }
+        },
         Err(e) => {
             warn!("Error from Claude: {}", e);
             Err((
@@ -213,7 +213,7 @@ async fn chat_completions(
                     },
                 }),
             ))
-        }
+        },
     }
 }
 

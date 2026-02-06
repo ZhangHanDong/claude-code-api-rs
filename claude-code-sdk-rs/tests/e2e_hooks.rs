@@ -1,9 +1,8 @@
-use nexus_claude::{
-    Query, HookCallback, HookContext, HookInput, HookJSONOutput,
-    SyncHookJSONOutput, Result, SdkError,
-    transport::mock::MockTransport,
-};
 use async_trait::async_trait;
+use nexus_claude::{
+    HookCallback, HookContext, HookInput, HookJSONOutput, Query, Result, SdkError,
+    SyncHookJSONOutput, transport::mock::MockTransport,
+};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -18,8 +17,7 @@ impl HookCallback for EchoHook {
         _context: &HookContext,
     ) -> std::result::Result<HookJSONOutput, SdkError> {
         // Echo the input back as additional context
-        let input_json = serde_json::to_value(input)
-            .unwrap_or_else(|_| serde_json::json!({}));
+        let input_json = serde_json::to_value(input).unwrap_or_else(|_| serde_json::json!({}));
 
         Ok(HookJSONOutput::Sync(SyncHookJSONOutput {
             reason: Some(format!("Echoed input: {input_json}")),
@@ -33,11 +31,18 @@ async fn e2e_hook_callback_success() -> Result<()> {
     let (transport, mut handle) = MockTransport::pair();
     let transport = Arc::new(Mutex::new(transport));
 
-    let mut q = Query::new(transport.clone(), false, None, None, std::collections::HashMap::new());
+    let mut q = Query::new(
+        transport.clone(),
+        false,
+        None,
+        None,
+        std::collections::HashMap::new(),
+    );
     q.start().await?;
 
     // Register a known callback ID
-    q.register_hook_callback_for_test("cb_test_1".to_string(), Arc::new(EchoHook)).await;
+    q.register_hook_callback_for_test("cb_test_1".to_string(), Arc::new(EchoHook))
+        .await;
 
     // Send hook_callback control message from CLI -> SDK
     // Must use strongly-typed format with hook_event_name

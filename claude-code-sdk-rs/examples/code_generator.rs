@@ -99,9 +99,11 @@ async fn main() -> Result<()> {
     println!("🦀 Claude Code SDK - Rust Code Generator Example\n");
 
     // Example problems to solve
-    let examples = [("Binary Search Implementation", "binary_search"),
+    let examples = [
+        ("Binary Search Implementation", "binary_search"),
         ("LRU Cache with Generics", "lru_cache"),
-        ("Thread-Safe Counter", "safe_counter")];
+        ("Thread-Safe Counter", "safe_counter"),
+    ];
 
     // Process each example
     for (i, (question, project_name)) in examples.iter().enumerate() {

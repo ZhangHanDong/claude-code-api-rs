@@ -28,8 +28,8 @@
 //! cargo run --example with_dotenv
 //! ```
 
-use nexus_claude::{ClaudeCodeOptions, ClaudeSDKClient, Message, Result};
 use futures::StreamExt;
+use nexus_claude::{ClaudeCodeOptions, ClaudeSDKClient, Message, Result};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -52,8 +52,7 @@ async fn main() -> Result<()> {
     println!("  Account: {}", account_email);
 
     // Read model preference
-    let model = std::env::var("CLAUDE_MODEL")
-        .unwrap_or_else(|_| "Default (Sonnet)".to_string());
+    let model = std::env::var("CLAUDE_MODEL").unwrap_or_else(|_| "Default (Sonnet)".to_string());
     println!("  Model: {}", model);
 
     // Read max output tokens
@@ -90,16 +89,18 @@ async fn main() -> Result<()> {
     match client.get_account_info().await {
         Ok(info) => {
             println!("   ✅ {}\n", info);
-        }
+        },
         Err(e) => {
             println!("   ⚠️  Could not verify: {}", e);
             println!("   Tip: Set ANTHROPIC_USER_EMAIL in .env file\n");
-        }
+        },
     }
 
     // Send a test query
     println!("💬 Sending test query...\n");
-    client.send_user_message("What is 2 + 2?".to_string()).await?;
+    client
+        .send_user_message("What is 2 + 2?".to_string())
+        .await?;
 
     // Receive response
     let mut messages = client.receive_messages().await;
@@ -111,8 +112,13 @@ async fn main() -> Result<()> {
                         println!("🤖 Claude: {}\n", text.text);
                     }
                 }
-            }
-            Message::Result { duration_ms, usage, total_cost_usd, .. } => {
+            },
+            Message::Result {
+                duration_ms,
+                usage,
+                total_cost_usd,
+                ..
+            } => {
                 println!("─────────────────────────────────────────────");
                 println!("📊 Response Stats:");
                 println!("   Duration: {}ms", duration_ms);
@@ -131,8 +137,8 @@ async fn main() -> Result<()> {
                 }
                 println!("─────────────────────────────────────────────\n");
                 break;
-            }
-            _ => {}
+            },
+            _ => {},
         }
     }
 

@@ -1,0 +1,20 @@
+# Nexus rustfmt configuration
+# https://rust-lang.github.io/rustfmt/
+
+edition = "2024"
+max_width = 100
+tab_spaces = 4
+use_small_heuristics = "Default"
+
+# Imports (stable options only)
+reorder_imports = true
+
+# Functions
+fn_params_layout = "Tall"
+
+# Control flow
+match_block_trailing_comma = true
+
+# Misc
+use_field_init_shorthand = true
+use_try_shorthand = true

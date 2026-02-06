@@ -232,7 +232,10 @@ impl BudgetManager {
     /// Update usage and check limits
     pub async fn update_usage(&self, input_tokens: u64, output_tokens: u64, cost_usd: f64) {
         // Update tracker
-        self.tracker.write().await.update(input_tokens, output_tokens, cost_usd);
+        self.tracker
+            .write()
+            .await
+            .update(input_tokens, output_tokens, cost_usd);
 
         // Check limits
         if let Some(limit) = self.limit.read().await.as_ref() {
@@ -250,19 +253,22 @@ impl BudgetManager {
                             callback(&message);
                         }
                     }
-                }
+                },
                 BudgetStatus::Exceeded => {
-                    warn!("Budget exceeded! Current usage: {} tokens, ${:.2}",
-                          usage.total_tokens(), usage.total_cost_usd);
+                    warn!(
+                        "Budget exceeded! Current usage: {} tokens, ${:.2}",
+                        usage.total_tokens(),
+                        usage.total_cost_usd
+                    );
 
                     if let Some(callback) = self.on_warning.read().await.as_ref() {
                         callback("Budget limit exceeded");
                     }
-                }
+                },
                 BudgetStatus::Ok => {
                     // Reset warning flag if usage dropped below threshold
                     *self.warning_fired.write().await = false;
-                }
+                },
             }
         }
     }
@@ -322,10 +328,16 @@ mod tests {
         assert!(matches!(limit.check_limits(&tracker), BudgetStatus::Ok));
 
         tracker.update(100, 200, 0.35);
-        assert!(matches!(limit.check_limits(&tracker), BudgetStatus::Warning { .. }));
+        assert!(matches!(
+            limit.check_limits(&tracker),
+            BudgetStatus::Warning { .. }
+        ));
 
         tracker.update(100, 200, 0.2);
-        assert!(matches!(limit.check_limits(&tracker), BudgetStatus::Exceeded));
+        assert!(matches!(
+            limit.check_limits(&tracker),
+            BudgetStatus::Exceeded
+        ));
     }
 
     #[tokio::test]

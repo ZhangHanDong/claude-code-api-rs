@@ -63,7 +63,7 @@ async fn test_interactive_mode(options: ClaudeCodeOptions) -> Result<()> {
                         }
                     }
                 }
-            }
+            },
             Err(e) => info!("Error: {}", e),
         }
         info!("---");
@@ -173,7 +173,7 @@ async fn test_batch_mode(options: ClaudeCodeOptions) -> Result<()> {
                                 }
                             }
                         }
-                    }
+                    },
                     Err(e) => info!("Error: {}", e),
                 }
                 info!("---");
@@ -182,7 +182,7 @@ async fn test_batch_mode(options: ClaudeCodeOptions) -> Result<()> {
             if queries.len() > 3 {
                 info!("... and {} more queries processed", queries.len() - 3);
             }
-        }
+        },
         Err(e) => info!("Batch processing error: {}", e),
     }
 

@@ -1,8 +1,8 @@
 //! Tests for token optimization features
 
-use nexus_claude::token_tracker::{BudgetLimit, BudgetManager, BudgetStatus, TokenUsageTracker};
-use nexus_claude::model_recommendation::ModelRecommendation;
 use nexus_claude::ClaudeCodeOptions;
+use nexus_claude::model_recommendation::ModelRecommendation;
+use nexus_claude::token_tracker::{BudgetLimit, BudgetManager, BudgetStatus, TokenUsageTracker};
 
 #[test]
 fn test_token_tracker_basic() {
@@ -40,10 +40,16 @@ fn test_budget_limit_cost() {
     assert!(matches!(limit.check_limits(&tracker), BudgetStatus::Ok));
 
     tracker.update(100, 200, 0.35);
-    assert!(matches!(limit.check_limits(&tracker), BudgetStatus::Warning { .. }));
+    assert!(matches!(
+        limit.check_limits(&tracker),
+        BudgetStatus::Warning { .. }
+    ));
 
     tracker.update(100, 200, 0.2);
-    assert!(matches!(limit.check_limits(&tracker), BudgetStatus::Exceeded));
+    assert!(matches!(
+        limit.check_limits(&tracker),
+        BudgetStatus::Exceeded
+    ));
 }
 
 #[test]
@@ -55,7 +61,10 @@ fn test_budget_limit_tokens() {
     assert!(matches!(limit.check_limits(&tracker), BudgetStatus::Ok));
 
     tracker.update(300, 300, 0.05);
-    assert!(matches!(limit.check_limits(&tracker), BudgetStatus::Exceeded));
+    assert!(matches!(
+        limit.check_limits(&tracker),
+        BudgetStatus::Exceeded
+    ));
 }
 
 #[tokio::test]
@@ -78,10 +87,19 @@ async fn test_budget_manager() {
 fn test_model_recommendations() {
     let recommender = ModelRecommendation::default();
 
-    assert_eq!(recommender.suggest("simple"), Some("claude-3-5-haiku-20241022"));
-    assert_eq!(recommender.suggest("fast"), Some("claude-3-5-haiku-20241022"));
+    assert_eq!(
+        recommender.suggest("simple"),
+        Some("claude-3-5-haiku-20241022")
+    );
+    assert_eq!(
+        recommender.suggest("fast"),
+        Some("claude-3-5-haiku-20241022")
+    );
     // balanced now returns full Sonnet 4.5 model ID
-    assert_eq!(recommender.suggest("balanced"), Some("claude-sonnet-4-5-20250929"));
+    assert_eq!(
+        recommender.suggest("balanced"),
+        Some("claude-sonnet-4-5-20250929")
+    );
     assert_eq!(recommender.suggest("complex"), Some("opus"));
     assert_eq!(recommender.suggest("unknown"), None);
 }
@@ -99,9 +117,7 @@ fn test_custom_model_recommendations() {
 
 #[test]
 fn test_max_output_tokens_option() {
-    let options = ClaudeCodeOptions::builder()
-        .max_output_tokens(2000)
-        .build();
+    let options = ClaudeCodeOptions::builder().max_output_tokens(2000).build();
 
     assert_eq!(options.max_output_tokens, Some(2000));
 }
@@ -116,9 +132,7 @@ fn test_max_output_tokens_clamping() {
     assert_eq!(options.max_output_tokens, Some(32000));
 
     // Should clamp to 1
-    let options2 = ClaudeCodeOptions::builder()
-        .max_output_tokens(0)
-        .build();
+    let options2 = ClaudeCodeOptions::builder().max_output_tokens(0).build();
 
     assert_eq!(options2.max_output_tokens, Some(1));
 }

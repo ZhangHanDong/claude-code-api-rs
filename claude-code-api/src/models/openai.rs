@@ -152,7 +152,7 @@ pub struct Tool {
 pub enum ToolChoice {
     Auto,
     None,
-    Tool { 
+    Tool {
         #[serde(rename = "type")]
         tool_type: String,
         function: ToolChoiceFunction,

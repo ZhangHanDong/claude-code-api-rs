@@ -175,11 +175,11 @@ impl<S: ConversationStore + 'static> ConversationManager<S> {
             match store.cleanup_expired(timeout_minutes).await {
                 Ok(count) if count > 0 => {
                     info!("Cleaned up {} expired conversations", count);
-                }
+                },
                 Err(e) => {
                     tracing::error!("Failed to cleanup expired conversations: {}", e);
-                }
-                _ => {}
+                },
+                _ => {},
             }
         }
     }

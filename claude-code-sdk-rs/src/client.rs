@@ -12,8 +12,8 @@ use crate::{
 };
 use futures::stream::{Stream, StreamExt};
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::pin::Pin;
+use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock, mpsc};
 use tokio_stream::wrappers::ReceiverStream;
 use tracing::{debug, error, info};
@@ -129,7 +129,7 @@ impl ClaudeSDKClient {
                 error!("Failed to create transport: {}", e);
                 // Create with empty path, will fail on connect
                 SubprocessTransport::with_cli_path(options.clone(), "")
-            }
+            },
         };
 
         // Wrap transport in Arc for sharing
@@ -160,15 +160,17 @@ impl ClaudeSDKClient {
     /// let client = ClaudeSDKClient::with_transport(options, Box::new(transport));
     /// # }
     /// ```
-    pub fn with_transport(options: ClaudeCodeOptions, transport: Box<dyn Transport + Send>) -> Self {
+    pub fn with_transport(
+        options: ClaudeCodeOptions,
+        transport: Box<dyn Transport + Send>,
+    ) -> Self {
         // Set environment variable to indicate SDK usage
         unsafe {
             std::env::set_var("CLAUDE_CODE_ENTRYPOINT", "sdk-rust");
         }
 
         // Wrap transport in Arc for sharing
-        let transport_arc: Arc<Mutex<Box<dyn Transport + Send>>> =
-            Arc::new(Mutex::new(transport));
+        let transport_arc: Arc<Mutex<Box<dyn Transport + Send>>> = Arc::new(Mutex::new(transport));
 
         Self::with_transport_internal(options, transport_arc)
     }
@@ -182,9 +184,11 @@ impl ClaudeSDKClient {
         let query_handler = if options.can_use_tool.is_some()
             || options.hooks.is_some()
             || !options.mcp_servers.is_empty()
-            || options.enable_file_checkpointing {
+            || options.enable_file_checkpointing
+        {
             // Extract SDK MCP server instances
-            let sdk_mcp_servers: HashMap<String, Arc<dyn std::any::Any + Send + Sync>> = options.mcp_servers
+            let sdk_mcp_servers: HashMap<String, Arc<dyn std::any::Any + Send + Sync>> = options
+                .mcp_servers
                 .iter()
                 .filter_map(|(k, v)| {
                     // Only extract SDK type MCP servers
@@ -203,7 +207,7 @@ impl ClaudeSDKClient {
 
             let query = Query::new(
                 transport_arc.clone(), // Share the same transport
-                is_streaming, // Enable streaming for control protocol
+                is_streaming,          // Enable streaming for control protocol
                 options.can_use_tool.clone(),
                 options.hooks.clone(),
                 sdk_mcp_servers,
@@ -414,7 +418,7 @@ impl ClaudeSDKClient {
                             "Interrupt not acknowledged successfully".into(),
                         ))
                     }
-                }
+                },
                 Ok(Ok(None)) => Err(SdkError::ControlRequestError(
                     "No interrupt acknowledgment received".into(),
                 )),
@@ -444,9 +448,11 @@ impl ClaudeSDKClient {
     ///
     /// This is a convenience method that collects all messages from a single response.
     /// It will automatically stop after receiving a ResultMessage.
-    pub async fn receive_response(&mut self) -> Pin<Box<dyn Stream<Item = Result<Message>> + Send + '_>> {
+    pub async fn receive_response(
+        &mut self,
+    ) -> Pin<Box<dyn Stream<Item = Result<Message>> + Send + '_>> {
         let mut messages = self.receive_messages().await;
-        
+
         // Create a stream that stops after ResultMessage
         Box::pin(async_stream::stream! {
             while let Some(msg_result) = messages.next().await {
@@ -482,9 +488,10 @@ impl ClaudeSDKClient {
         let buffer = self.message_buffer.lock().await;
         for msg in buffer.iter() {
             if let Message::System { subtype, data } = msg
-                && subtype == "init" {
-                    return Some(data.clone());
-                }
+                && subtype == "init"
+            {
+                return Some(data.clone());
+            }
         }
         None
     }
@@ -557,21 +564,21 @@ impl ClaudeSDKClient {
                             account_info.push('\n');
                         }
                     }
-                }
+                },
                 Message::Result { .. } => break,
-                _ => {}
+                _ => {},
             }
         }
 
         let trimmed = account_info.trim();
 
         // Check if we got actual status info or just a chat response
-        if !trimmed.is_empty() && (
-            trimmed.contains("account") ||
-            trimmed.contains("email") ||
-            trimmed.contains("subscription") ||
-            trimmed.contains("authenticated")
-        ) {
+        if !trimmed.is_empty()
+            && (trimmed.contains("account")
+                || trimmed.contains("email")
+                || trimmed.contains("subscription")
+                || trimmed.contains("authenticated"))
+        {
             return Ok(trimmed.to_string());
         }
 
@@ -584,19 +591,22 @@ impl ClaudeSDKClient {
     async fn read_claude_config() -> Option<String> {
         // Try common config locations
         let config_paths = vec![
-            dirs::home_dir()?.join(".config").join("claude").join("config.json"),
+            dirs::home_dir()?
+                .join(".config")
+                .join("claude")
+                .join("config.json"),
             dirs::home_dir()?.join(".claude").join("config.json"),
         ];
 
         for path in config_paths {
-            if let Ok(content) = tokio::fs::read_to_string(&path).await {
-                if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
-                    if let Some(email) = json.get("email").and_then(|v| v.as_str()) {
-                        return Some(format!("Email: {}", email));
-                    }
-                    if let Some(user) = json.get("user").and_then(|v| v.as_str()) {
-                        return Some(format!("User: {}", user));
-                    }
+            if let Ok(content) = tokio::fs::read_to_string(&path).await
+                && let Ok(json) = serde_json::from_str::<serde_json::Value>(&content)
+            {
+                if let Some(email) = json.get("email").and_then(|v| v.as_str()) {
+                    return Some(format!("Email: {}", email));
+                }
+                if let Some(user) = json.get("user").and_then(|v| v.as_str()) {
+                    return Some(format!("User: {}", user));
                 }
             }
         }
@@ -805,28 +815,38 @@ impl ClaudeSDKClient {
                     Ok(message) => {
                         // Update token usage for Result messages
                         if let Message::Result { .. } = &message
-                            && let Message::Result { usage, total_cost_usd, .. } = &message {
-                                let (input_tokens, output_tokens) = if let Some(usage_json) = usage {
-                                    let input = usage_json.get("input_tokens")
-                                        .and_then(|v| v.as_u64())
-                                        .unwrap_or(0);
-                                    let output = usage_json.get("output_tokens")
-                                        .and_then(|v| v.as_u64())
-                                        .unwrap_or(0);
-                                    (input, output)
-                                } else {
-                                    (0, 0)
-                                };
-                                let cost = total_cost_usd.unwrap_or(0.0);
-                                budget_manager.update_usage(input_tokens, output_tokens, cost).await;
-                            }
+                            && let Message::Result {
+                                usage,
+                                total_cost_usd,
+                                ..
+                            } = &message
+                        {
+                            let (input_tokens, output_tokens) = if let Some(usage_json) = usage {
+                                let input = usage_json
+                                    .get("input_tokens")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0);
+                                let output = usage_json
+                                    .get("output_tokens")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0);
+                                (input, output)
+                            } else {
+                                (0, 0)
+                            };
+                            let cost = total_cost_usd.unwrap_or(0.0);
+                            budget_manager
+                                .update_usage(input_tokens, output_tokens, cost)
+                                .await;
+                        }
 
                         // Buffer init messages for get_server_info()
                         if let Message::System { subtype, .. } = &message
-                            && subtype == "init" {
-                                let mut buffer = message_buffer.lock().await;
-                                buffer.push(message.clone());
-                            }
+                            && subtype == "init"
+                        {
+                            let mut buffer = message_buffer.lock().await;
+                            buffer.push(message.clone());
+                        }
 
                         // Try to send to current receiver
                         let sent = {
@@ -843,7 +863,7 @@ impl ClaudeSDKClient {
                             let mut buffer = message_buffer.lock().await;
                             buffer.push(message);
                         }
-                    }
+                    },
                     Err(e) => {
                         error!("Error receiving message: {}", e);
 
@@ -857,7 +877,7 @@ impl ClaudeSDKClient {
                         let mut state = state.write().await;
                         *state = ClientState::Error;
                         break;
-                    }
+                    },
                 }
             }
 

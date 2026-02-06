@@ -85,7 +85,7 @@ impl InteractiveClient {
                         if is_result {
                             break;
                         }
-                    }
+                    },
                     Err(e) => return Err(e),
                 }
             } else {
@@ -126,8 +126,8 @@ impl InteractiveClient {
         loop {
             // Try to get a message
             let msg_result = {
-            let mut transport = self.transport.lock().await;
-            let mut stream = transport.receive_messages();
+                let mut transport = self.transport.lock().await;
+                let mut stream = transport.receive_messages();
                 stream.next().await
             }; // Lock released here
 
@@ -141,7 +141,7 @@ impl InteractiveClient {
                         if is_result {
                             break;
                         }
-                    }
+                    },
                     Err(e) => return Err(e),
                 }
             } else {
@@ -154,16 +154,16 @@ impl InteractiveClient {
     }
 
     /// Receive messages as a stream (streaming output support)
-    /// 
+    ///
     /// Returns a stream of messages that can be iterated over asynchronously.
     /// This is similar to Python SDK's `receive_messages()` method.
-    /// 
+    ///
     /// # Example
-    /// 
+    ///
     /// ```rust,no_run
     /// use nexus_claude::{InteractiveClient, ClaudeCodeOptions};
     /// use futures::StreamExt;
-    /// 
+    ///
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ///     let mut client = InteractiveClient::new(ClaudeCodeOptions::default())?;
@@ -188,12 +188,12 @@ impl InteractiveClient {
         // Create a channel for messages
         let (tx, rx) = tokio::sync::mpsc::channel(100);
         let transport = self.transport.clone();
-        
+
         // Spawn a task to receive messages from transport
         tokio::spawn(async move {
             let mut transport = transport.lock().await;
             let mut stream = transport.receive_messages();
-            
+
             while let Some(result) = stream.next().await {
                 // Send each message through the channel
                 if tx.send(result).await.is_err() {
@@ -202,20 +202,20 @@ impl InteractiveClient {
                 }
             }
         });
-        
+
         // Return the receiver as a stream
         ReceiverStream::new(rx)
     }
 
     /// Receive messages as an async iterator until a Result message
-    /// 
+    ///
     /// This is a convenience method that collects messages until a Result message
     /// is received, similar to Python SDK's `receive_response()`.
     pub async fn receive_response_stream(&mut self) -> impl Stream<Item = Result<Message>> + '_ {
         // Create a stream that stops after Result message
         async_stream::stream! {
             let mut stream = self.receive_messages_stream().await;
-            
+
             while let Some(result) = stream.next().await {
                 match &result {
                     Ok(msg) => {

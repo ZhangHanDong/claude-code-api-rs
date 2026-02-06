@@ -3,8 +3,8 @@
 //! This example demonstrates how to use the interactive client
 //! for operations that require file system access.
 
-use nexus_claude::{ClaudeCodeOptions, ClaudeSDKClient, Message, PermissionMode, Result};
 use futures::StreamExt;
+use nexus_claude::{ClaudeCodeOptions, ClaudeSDKClient, Message, PermissionMode, Result};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -51,9 +51,9 @@ async fn main() -> Result<()> {
                         println!("Claude: {}", text.text);
                     }
                 }
-            }
+            },
             Message::Result { .. } => break,
-            _ => {}
+            _ => {},
         }
     }
 
@@ -79,19 +79,19 @@ async fn main() -> Result<()> {
                     match block {
                         nexus_claude::ContentBlock::Text(text) => {
                             println!("Claude: {}", text.text);
-                        }
+                        },
                         nexus_claude::ContentBlock::ToolUse(tool_use) => {
                             println!("Claude is using tool: {} ({})", tool_use.name, tool_use.id);
-                        }
-                        _ => {}
+                        },
+                        _ => {},
                     }
                 }
-            }
+            },
             Message::Result { duration_ms, .. } => {
                 println!("\nOperation completed in {duration_ms}ms");
                 break;
-            }
-            _ => {}
+            },
+            _ => {},
         }
     }
 
@@ -118,7 +118,7 @@ async fn main() -> Result<()> {
                         println!("Claude: {}", text.text);
                     }
                 }
-            }
+            },
             Message::Result {
                 duration_ms,
                 total_cost_usd,
@@ -129,8 +129,8 @@ async fn main() -> Result<()> {
                     println!("Total cost: ${cost:.4}");
                 }
                 break;
-            }
-            _ => {}
+            },
+            _ => {},
         }
     }
 

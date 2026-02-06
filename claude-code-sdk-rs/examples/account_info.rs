@@ -31,7 +31,9 @@ async fn main() -> Result<()> {
         println!("ℹ️  Using ANTHROPIC_USER_EMAIL: {}\n", email);
     } else {
         println!("⚠️  ANTHROPIC_USER_EMAIL not set");
-        println!("   Run with: ANTHROPIC_USER_EMAIL=\"your@email.com\" cargo run --example account_info\n");
+        println!(
+            "   Run with: ANTHROPIC_USER_EMAIL=\"your@email.com\" cargo run --example account_info\n"
+        );
     }
 
     // Create client with default options
@@ -59,11 +61,11 @@ async fn main() -> Result<()> {
             }
 
             println!("╚═══════════════════════════════════════════╝\n");
-        }
+        },
         Err(e) => {
             eprintln!("   ❌ Failed to retrieve account information: {}", e);
             eprintln!("   Note: Make sure you're logged in to Claude CLI");
-        }
+        },
     }
 
     println!("3. Disconnecting...");

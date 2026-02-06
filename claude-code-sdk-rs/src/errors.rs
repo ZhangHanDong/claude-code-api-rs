@@ -234,12 +234,12 @@ mod tests {
     fn test_cli_json_decode_error() {
         let line = r#"{"invalid": json"#.to_string();
         let original_err = serde_json::from_str::<serde_json::Value>(&line).unwrap_err();
-        
+
         let error = SdkError::CliJsonDecodeError {
             line: line.clone(),
             original_error: original_err,
         };
-        
+
         let error_str = error.to_string();
         assert!(error_str.contains("Failed to decode JSON from CLI output"));
         assert!(error_str.contains(&line));

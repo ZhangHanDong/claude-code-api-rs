@@ -1,13 +1,15 @@
 //! Text chunking utilities for simulating streaming output
-//! 
+//!
 //! Since Claude CLI returns complete messages, we need to chunk them
 //! to provide a better streaming experience.
+
+#![allow(dead_code)] // Public API - may not be used internally
 
 use futures::stream::Stream;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 use std::time::Duration;
-use tokio::time::{interval, Interval};
+use tokio::time::{Interval, interval};
 
 /// Configuration for text chunking
 #[derive(Debug, Clone)]
@@ -23,9 +25,9 @@ pub struct ChunkConfig {
 impl Default for ChunkConfig {
     fn default() -> Self {
         Self {
-            chunk_size: 20,  // ~3-5 words per chunk
+            chunk_size: 20,      // ~3-5 words per chunk
             chunk_delay_ms: 50,  // 50ms between chunks for smooth streaming
-            word_boundary: true,  // Split at word boundaries for natural flow
+            word_boundary: true, // Split at word boundaries for natural flow
         }
     }
 }
@@ -89,7 +91,7 @@ impl Stream for TextChunker {
             Poll::Ready(_) => {
                 // Get next chunk
                 Poll::Ready(self.next_chunk())
-            }
+            },
             Poll::Pending => Poll::Pending,
         }
     }
@@ -138,7 +140,7 @@ mod tests {
             chunk_delay_ms: 0,
             word_boundary: false,
         };
-        
+
         let chunks = split_text_into_chunks(text, &config);
         assert_eq!(chunks[0], "Hello worl");
         assert_eq!(chunks[1], "d, this is");
@@ -152,7 +154,7 @@ mod tests {
             chunk_delay_ms: 0,
             word_boundary: true,
         };
-        
+
         let chunks = split_text_into_chunks(text, &config);
         assert_eq!(chunks[0], "Hello ");
         assert_eq!(chunks[1], "world, ");

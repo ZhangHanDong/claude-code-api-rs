@@ -1,11 +1,11 @@
 use axum::{
+    Json,
     extract::{Path, State},
     response::IntoResponse,
-    Json,
 };
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use chrono::{DateTime, Utc};
 
 use crate::{
     core::conversation::DefaultConversationManager,
@@ -36,17 +36,26 @@ pub async fn create_conversation(
     State(state): State<ConversationState>,
     Json(request): Json<CreateConversationRequest>,
 ) -> ApiResult<impl IntoResponse> {
-    let id = state.manager.create_conversation(request.model.clone()).await
+    let id = state
+        .manager
+        .create_conversation(request.model.clone())
+        .await
         .map_err(|e| ApiError::Internal(e.to_string()))?;
 
     if let Some(project_path) = request.project_path {
-        state.manager.update_metadata(&id, |metadata| {
-            metadata.project_path = Some(project_path);
-        }).await.map_err(|e| ApiError::Internal(e.to_string()))?;
+        state
+            .manager
+            .update_metadata(&id, |metadata| {
+                metadata.project_path = Some(project_path);
+            })
+            .await
+            .map_err(|e| ApiError::Internal(e.to_string()))?;
     }
 
-    let conversation = state.manager.get_conversation(&id).await
-        .ok_or_else(|| ApiError::Internal("Failed to retrieve created conversation".to_string()))?;
+    let conversation =
+        state.manager.get_conversation(&id).await.ok_or_else(|| {
+            ApiError::Internal("Failed to retrieve created conversation".to_string())
+        })?;
 
     let response = ConversationResponse {
         id: conversation.id,
@@ -63,7 +72,10 @@ pub async fn get_conversation(
     State(state): State<ConversationState>,
     Path(conversation_id): Path<String>,
 ) -> ApiResult<impl IntoResponse> {
-    let conversation = state.manager.get_conversation(&conversation_id).await
+    let conversation = state
+        .manager
+        .get_conversation(&conversation_id)
+        .await
         .ok_or_else(|| ApiError::NotFound("Conversation not found".to_string()))?;
 
     let response = ConversationResponse {
@@ -94,7 +106,8 @@ pub async fn list_conversations(
     let conversations = state.manager.list_active_conversations().await;
 
     let response = ConversationListResponse {
-        conversations: conversations.into_iter()
+        conversations: conversations
+            .into_iter()
             .map(|(id, updated_at)| ConversationSummary { id, updated_at })
             .collect(),
     };

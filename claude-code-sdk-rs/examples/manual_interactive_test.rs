@@ -32,7 +32,7 @@ async fn main() -> Result<()> {
         _ => {
             println!("Invalid choice. Using traditional client.");
             test_traditional_interactive(options).await?;
-        }
+        },
     }
 
     Ok(())
@@ -84,10 +84,10 @@ async fn test_traditional_interactive(options: ClaudeCodeOptions) -> Result<()> 
                     }
                 }
                 println!();
-            }
+            },
             Err(e) => {
                 println!("Error: {e}");
-            }
+            },
         }
     }
 
@@ -153,15 +153,15 @@ async fn test_optimized_interactive(options: ClaudeCodeOptions) -> Result<()> {
                             }
                         }
                         println!();
-                    }
+                    },
                     Err(e) => {
                         println!("Error receiving: {e}");
-                    }
+                    },
                 }
-            }
+            },
             Err(e) => {
                 println!("Error sending: {e}");
-            }
+            },
         }
     }
 
@@ -181,7 +181,7 @@ async fn handle_command(client: &OptimizedClient, command: &str) {
             println!("/status  - Show session status");
             println!("/exit    - Exit the program");
             println!();
-        }
+        },
         "/clear" => {
             println!("Clearing conversation...");
             if let Err(e) = client.end_interactive_session().await {
@@ -192,16 +192,16 @@ async fn handle_command(client: &OptimizedClient, command: &str) {
             } else {
                 println!("New session started!");
             }
-        }
+        },
         "/status" => {
             println!("Session is active");
             println!("Using OptimizedClient with connection pooling");
-        }
+        },
         "/exit" => {
             std::process::exit(0);
-        }
+        },
         _ => {
             println!("Unknown command. Type /help for available commands.");
-        }
+        },
     }
 }

@@ -72,7 +72,7 @@ impl RetryConfig {
                         (delay.as_secs_f64() * self.backoff_multiplier)
                             .min(self.max_delay.as_secs_f64()),
                     );
-                }
+                },
                 Err(e) => return Err(e),
             }
         }
@@ -127,20 +127,20 @@ impl MessageBatcher {
                     if self.buffer.len() >= self.max_batch_size {
                         self.emit_batch().await;
                     }
-                }
+                },
                 Ok(None) => {
                     // Channel closed, emit remaining messages and exit
                     if !self.buffer.is_empty() {
                         self.emit_batch().await;
                     }
                     break;
-                }
+                },
                 Err(_) => {
                     // Timeout, emit batch if we have messages
                     if !self.buffer.is_empty() {
                         self.emit_batch().await;
                     }
-                }
+                },
             }
         }
     }

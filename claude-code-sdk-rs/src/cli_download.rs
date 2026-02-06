@@ -25,6 +25,10 @@ use std::path::PathBuf;
 #[allow(unused_imports)]
 use tracing::{debug, info, warn};
 
+/// Progress callback type for download operations.
+/// Called with (bytes_downloaded, total_bytes) where total_bytes may be None if unknown.
+pub type ProgressCallback = Box<dyn Fn(u64, Option<u64>) + Send + Sync>;
+
 /// Minimum CLI version required by this SDK
 pub const MIN_CLI_VERSION: &str = "2.0.0";
 
@@ -50,26 +54,31 @@ pub fn get_cache_dir() -> Option<PathBuf> {
 /// Get the path to the cached CLI binary
 pub fn get_cached_cli_path() -> Option<PathBuf> {
     let cache_dir = get_cache_dir()?;
-    let cli_name = if cfg!(windows) { "claude.exe" } else { "claude" };
+    let cli_name = if cfg!(windows) {
+        "claude.exe"
+    } else {
+        "claude"
+    };
     Some(cache_dir.join(cli_name))
 }
 
 /// Check if the cached CLI exists and is executable
 #[allow(dead_code)]
 pub fn is_cli_cached() -> bool {
-    if let Some(path) = get_cached_cli_path() {
-        if path.exists() && path.is_file() {
-            #[cfg(unix)]
-            {
-                use std::os::unix::fs::PermissionsExt;
-                if let Ok(metadata) = path.metadata() {
-                    return metadata.permissions().mode() & 0o111 != 0;
-                }
+    if let Some(path) = get_cached_cli_path()
+        && path.exists()
+        && path.is_file()
+    {
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            if let Ok(metadata) = path.metadata() {
+                return metadata.permissions().mode() & 0o111 != 0;
             }
-            #[cfg(not(unix))]
-            {
-                return true;
-            }
+        }
+        #[cfg(not(unix))]
+        {
+            return true;
         }
     }
     false
@@ -93,7 +102,7 @@ pub fn is_cli_cached() -> bool {
 #[cfg(feature = "auto-download")]
 pub async fn download_cli(
     version: Option<&str>,
-    on_progress: Option<Box<dyn Fn(u64, Option<u64>) + Send + Sync>>,
+    on_progress: Option<ProgressCallback>,
 ) -> Result<PathBuf> {
     let version = version.unwrap_or(DEFAULT_CLI_VERSION);
     info!("Downloading Claude Code CLI version: {}", version);
@@ -103,13 +112,11 @@ pub async fn download_cli(
     })?;
 
     // Create cache directory if it doesn't exist
-    std::fs::create_dir_all(&cache_dir).map_err(|e| {
-        SdkError::ConfigError(format!("Failed to create cache directory: {}", e))
-    })?;
+    std::fs::create_dir_all(&cache_dir)
+        .map_err(|e| SdkError::ConfigError(format!("Failed to create cache directory: {}", e)))?;
 
-    let cli_path = get_cached_cli_path().ok_or_else(|| {
-        SdkError::ConfigError("Cannot determine CLI path".to_string())
-    })?;
+    let cli_path = get_cached_cli_path()
+        .ok_or_else(|| SdkError::ConfigError("Cannot determine CLI path".to_string()))?;
 
     // Determine platform-specific download URL and installation method
     let install_result = install_cli_for_platform(version, &cli_path, on_progress).await?;
@@ -122,12 +129,13 @@ pub async fn download_cli(
 #[cfg(not(feature = "auto-download"))]
 pub async fn download_cli(
     _version: Option<&str>,
-    _on_progress: Option<Box<dyn Fn(u64, Option<u64>) + Send + Sync>>,
+    _on_progress: Option<ProgressCallback>,
 ) -> Result<PathBuf> {
     Err(SdkError::ConfigError(
         "Auto-download feature is not enabled. \
         Either enable it with `features = [\"auto-download\"]` in Cargo.toml, \
-        or install Claude CLI manually: npm install -g @anthropic-ai/claude-code".to_string()
+        or install Claude CLI manually: npm install -g @anthropic-ai/claude-code"
+            .to_string(),
     ))
 }
 
@@ -136,7 +144,7 @@ pub async fn download_cli(
 async fn install_cli_for_platform(
     version: &str,
     target_path: &PathBuf,
-    on_progress: Option<Box<dyn Fn(u64, Option<u64>) + Send + Sync>>,
+    on_progress: Option<ProgressCallback>,
 ) -> Result<PathBuf> {
     #[cfg(unix)]
     {
@@ -153,7 +161,7 @@ async fn install_cli_for_platform(
 async fn install_cli_unix(
     version: &str,
     target_path: &PathBuf,
-    on_progress: Option<Box<dyn Fn(u64, Option<u64>) + Send + Sync>>,
+    on_progress: Option<ProgressCallback>,
 ) -> Result<PathBuf> {
     use tokio::process::Command;
 
@@ -178,7 +186,12 @@ async fn install_cli_unix(
         })?;
 
         let output = Command::new("npm")
-            .args(["install", "--prefix", temp_dir.to_str().unwrap(), &npm_package])
+            .args([
+                "install",
+                "--prefix",
+                temp_dir.to_str().unwrap(),
+                &npm_package,
+            ])
             .output()
             .await
             .map_err(SdkError::ProcessError)?;
@@ -226,11 +239,9 @@ async fn install_cli_unix(
     let install_script_url = "https://claude.ai/install.sh";
 
     let client = reqwest::Client::new();
-    let response = client
-        .get(install_script_url)
-        .send()
-        .await
-        .map_err(|e| SdkError::ConnectionError(format!("Failed to download install script: {}", e)))?;
+    let response = client.get(install_script_url).send().await.map_err(|e| {
+        SdkError::ConnectionError(format!("Failed to download install script: {}", e))
+    })?;
 
     if !response.status().is_success() {
         return Err(SdkError::ConnectionError(format!(
@@ -244,9 +255,9 @@ async fn install_cli_unix(
         .await
         .map_err(|e| SdkError::ConnectionError(format!("Failed to read install script: {}", e)))?;
 
-    let parent_dir = target_path.parent().ok_or_else(|| {
-        SdkError::ConfigError("Invalid target path".to_string())
-    })?;
+    let parent_dir = target_path
+        .parent()
+        .ok_or_else(|| SdkError::ConfigError("Invalid target path".to_string()))?;
 
     let output = Command::new("bash")
         .arg("-c")
@@ -282,7 +293,7 @@ async fn install_cli_unix(
 async fn install_cli_windows(
     version: &str,
     target_path: &PathBuf,
-    on_progress: Option<Box<dyn Fn(u64, Option<u64>) + Send + Sync>>,
+    on_progress: Option<ProgressCallback>,
 ) -> Result<PathBuf> {
     use tokio::process::Command;
 
@@ -307,7 +318,12 @@ async fn install_cli_windows(
         })?;
 
         let output = Command::new("npm")
-            .args(["install", "--prefix", temp_dir.to_str().unwrap(), &npm_package])
+            .args([
+                "install",
+                "--prefix",
+                temp_dir.to_str().unwrap(),
+                &npm_package,
+            ])
             .output()
             .await
             .map_err(SdkError::ProcessError)?;
@@ -337,14 +353,15 @@ async fn install_cli_windows(
 
     let install_script_url = "https://claude.ai/install.ps1";
 
-    let parent_dir = target_path.parent().ok_or_else(|| {
-        SdkError::ConfigError("Invalid target path".to_string())
-    })?;
+    let parent_dir = target_path
+        .parent()
+        .ok_or_else(|| SdkError::ConfigError("Invalid target path".to_string()))?;
 
     let output = Command::new("powershell")
         .args([
             "-NoProfile",
-            "-ExecutionPolicy", "Bypass",
+            "-ExecutionPolicy",
+            "Bypass",
             "-Command",
             &format!(
                 "$env:CLAUDE_INSTALL_DIR='{}'; iex (iwr -useb {})",
@@ -388,11 +405,11 @@ pub async fn ensure_cli(auto_download: bool) -> Result<PathBuf> {
     }
 
     // Check cached CLI
-    if let Some(cached_path) = get_cached_cli_path() {
-        if cached_path.exists() {
-            debug!("Using cached CLI at: {}", cached_path.display());
-            return Ok(cached_path);
-        }
+    if let Some(cached_path) = get_cached_cli_path()
+        && cached_path.exists()
+    {
+        debug!("Using cached CLI at: {}", cached_path.display());
+        return Ok(cached_path);
     }
 
     // Download if auto_download is enabled
@@ -410,7 +427,8 @@ pub async fn ensure_cli(auto_download: bool) -> Result<PathBuf> {
                 .build();\n\
             ```\n\n\
             Or install manually:\n\
-            npm install -g @anthropic-ai/claude-code".to_string(),
+            npm install -g @anthropic-ai/claude-code"
+            .to_string(),
     })
 }
 
@@ -447,7 +465,11 @@ mod tests {
 
         // Verify MIN_CLI_VERSION is valid semver-ish format
         let parts: Vec<&str> = MIN_CLI_VERSION.split('.').collect();
-        assert_eq!(parts.len(), 3, "MIN_CLI_VERSION should be semver format x.y.z");
+        assert_eq!(
+            parts.len(),
+            3,
+            "MIN_CLI_VERSION should be semver format x.y.z"
+        );
     }
 
     #[test]
@@ -462,7 +484,10 @@ mod tests {
 
         #[cfg(all(unix, not(target_os = "macos")))]
         {
-            assert!(cache_dir.to_string_lossy().contains(".cache") || cache_dir.to_string_lossy().contains("cache"));
+            assert!(
+                cache_dir.to_string_lossy().contains(".cache")
+                    || cache_dir.to_string_lossy().contains("cache")
+            );
             assert!(cache_dir.to_string_lossy().contains("cc-sdk"));
         }
 

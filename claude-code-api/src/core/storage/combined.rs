@@ -6,6 +6,8 @@
 //!
 //! Messages are automatically indexed in Meilisearch when added to conversations.
 
+#![allow(dead_code)] // Public API - may not be used internally
+
 use anyhow::Result;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -41,11 +43,7 @@ impl CombinedConversationStore {
     }
 
     /// Search messages across all conversations
-    pub async fn search_messages(
-        &self,
-        query: &str,
-        limit: usize,
-    ) -> Result<Vec<MessageDocument>> {
+    pub async fn search_messages(&self, query: &str, limit: usize) -> Result<Vec<MessageDocument>> {
         match &self.meilisearch {
             Some(ms) => ms.search_messages(query, None, limit).await,
             None => Ok(vec![]),
@@ -60,7 +58,10 @@ impl CombinedConversationStore {
         limit: usize,
     ) -> Result<Vec<MessageDocument>> {
         match &self.meilisearch {
-            Some(ms) => ms.search_messages(query, Some(conversation_id), limit).await,
+            Some(ms) => {
+                ms.search_messages(query, Some(conversation_id), limit)
+                    .await
+            },
             None => Ok(vec![]),
         }
     }
@@ -78,12 +79,7 @@ impl CombinedConversationStore {
     }
 
     /// Index a message in Meilisearch
-    async fn index_message(
-        &self,
-        conversation_id: &str,
-        message: &ChatMessage,
-        turn_index: usize,
-    ) {
+    async fn index_message(&self, conversation_id: &str, message: &ChatMessage, turn_index: usize) {
         if let Some(ref ms) = self.meilisearch {
             let content = match &message.content {
                 Some(MessageContent::Text(text)) => text.clone(),

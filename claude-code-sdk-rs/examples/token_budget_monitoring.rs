@@ -2,9 +2,9 @@
 //!
 //! Demonstrates comprehensive token usage tracking and budget management.
 
-use nexus_claude::{ClaudeCodeOptions, ClaudeSDKClient, Result};
-use nexus_claude::token_tracker::{BudgetLimit, BudgetWarningCallback};
 use futures::StreamExt;
+use nexus_claude::token_tracker::{BudgetLimit, BudgetWarningCallback};
+use nexus_claude::{ClaudeCodeOptions, ClaudeSDKClient, Result};
 use std::sync::{Arc, Mutex};
 
 #[tokio::main]
@@ -36,9 +36,11 @@ async fn main() -> Result<()> {
         .await;
 
     // Run multiple queries to demonstrate tracking
-    let queries = ["What is 2+2?",
+    let queries = [
+        "What is 2+2?",
         "What is the capital of France?",
-        "Explain quantum computing in one sentence."];
+        "Explain quantum computing in one sentence.",
+    ];
 
     for (i, query) in queries.iter().enumerate() {
         println!("\n--- Query {} ---", i + 1);
@@ -49,17 +51,21 @@ async fn main() -> Result<()> {
         let mut messages = client.receive_messages().await;
         while let Some(msg) = messages.next().await {
             if let Ok(message) = msg
-                && let nexus_claude::Message::Result { .. } = message {
-                    break;
-                }
+                && let nexus_claude::Message::Result { .. } = message
+            {
+                break;
+            }
         }
 
         client.disconnect().await?;
 
         // Check usage after each query
         let usage = client.get_usage_stats().await;
-        println!("Cumulative usage: {} tokens, ${:.4}",
-            usage.total_tokens(), usage.total_cost_usd);
+        println!(
+            "Cumulative usage: {} tokens, ${:.4}",
+            usage.total_tokens(),
+            usage.total_cost_usd
+        );
 
         // Check budget status
         if client.is_budget_exceeded().await {
@@ -76,7 +82,10 @@ async fn main() -> Result<()> {
     println!("  Input:  {} tokens", usage.total_input_tokens);
     println!("  Output: {} tokens", usage.total_output_tokens);
     println!("Total cost: ${:.4}", usage.total_cost_usd);
-    println!("Average per query: {:.0} tokens", usage.avg_tokens_per_session());
+    println!(
+        "Average per query: {:.0} tokens",
+        usage.avg_tokens_per_session()
+    );
 
     let warnings = warnings.lock().unwrap();
     if !warnings.is_empty() {

@@ -32,7 +32,7 @@ async fn main() {
             "5" => {
                 println!("Goodbye!");
                 break;
-            }
+            },
             _ => println!("Invalid choice. Please try again."),
         }
     }
@@ -128,7 +128,7 @@ async fn test_performance() {
         _ => {
             println!("Invalid number. Using 10.");
             10
-        }
+        },
     };
 
     println!("\nRunning {count} queries...");
@@ -177,10 +177,10 @@ async fn mock_query(prompt: &str) -> String {
         s if s.contains("hello") => "Hello! How can I help you today?".to_string(),
         s if s.contains("weather") => {
             "I'm a mock API and don't have access to real weather data.".to_string()
-        }
+        },
         s if s.contains("capital") && s.contains("france") => {
             "The capital of France is Paris.".to_string()
-        }
+        },
         s if s.contains("2 + 2") || s.contains("2+2") => "2 + 2 = 4".to_string(),
         s if s.contains("squared") => {
             if let Some(num) = s.split_whitespace().find_map(|w| w.parse::<i32>().ok()) {
@@ -188,17 +188,16 @@ async fn mock_query(prompt: &str) -> String {
             } else {
                 "Please provide a number to square.".to_string()
             }
-        }
+        },
         _ => format!("Mock response to: {prompt}"),
     }
 }
 
 async fn mock_contextual_response(prompt: &str, context: &[String]) -> String {
     // Simulate contextual understanding
-    if context.len() > 2
-        && prompt.contains("what") && prompt.contains("said") {
-            return "Based on our conversation, we discussed various topics.".to_string();
-        }
+    if context.len() > 2 && prompt.contains("what") && prompt.contains("said") {
+        return "Based on our conversation, we discussed various topics.".to_string();
+    }
 
     mock_query(prompt).await
 }

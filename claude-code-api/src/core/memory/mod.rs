@@ -18,14 +18,20 @@
 //! let results = memory.query("What did we decide about authentication?").await?;
 //! ```
 
-mod traits;
-mod short_term;
-mod medium_term;
 mod long_term;
+mod medium_term;
+mod short_term;
+mod traits;
 mod unified;
 
-pub use traits::{ContextualMemoryProvider, MemoryResult, MemorySource, RelevanceScore};
-pub use short_term::ShortTermMemory;
-pub use medium_term::MediumTermMemory;
+// Re-export for public API
+#[allow(unused_imports)]
 pub use long_term::LongTermMemory;
+#[allow(unused_imports)]
+pub use medium_term::MediumTermMemory;
+#[allow(unused_imports)]
+pub use short_term::ShortTermMemory;
+#[allow(unused_imports)]
+pub use traits::{ContextualMemoryProvider, MemoryResult, MemorySource, RelevanceScore};
+#[allow(unused_imports)]
 pub use unified::UnifiedMemoryProvider;

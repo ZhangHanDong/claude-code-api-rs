@@ -1,11 +1,11 @@
 //! Optimized client implementation with performance improvements
 
+use crate::token_tracker::{BudgetLimit, BudgetManager, BudgetWarningCallback, TokenUsageTracker};
 use crate::{
     errors::{Result, SdkError},
     transport::{InputMessage, SubprocessTransport, Transport},
     types::{ClaudeCodeOptions, ControlRequest, Message},
 };
-use crate::token_tracker::{BudgetLimit, BudgetManager, BudgetWarningCallback, TokenUsageTracker};
 use futures::stream::StreamExt;
 use std::collections::VecDeque;
 use std::sync::Arc;
@@ -79,7 +79,9 @@ impl ConnectionPool {
     }
 
     async fn release(&self, transport: Box<dyn Transport + Send>) {
-        if transport.is_connected() && self.idle_connections.read().await.len() < self.max_connections {
+        if transport.is_connected()
+            && self.idle_connections.read().await.len() < self.max_connections
+        {
             let mut idle = self.idle_connections.write().await;
             idle.push_back(transport);
             debug!("Returned connection to pool");
@@ -151,7 +153,7 @@ impl OptimizedClient {
                     tokio::time::sleep(delay).await;
                     retries += 1;
                     delay *= 2; // Exponential backoff
-                }
+                },
                 Err(e) => return Err(e),
             }
         }
@@ -178,7 +180,10 @@ impl OptimizedClient {
     }
 
     /// Collect messages until Result message
-    async fn collect_messages<T: Transport + Send + ?Sized>(&self, transport: &mut T) -> Result<Vec<Message>> {
+    async fn collect_messages<T: Transport + Send + ?Sized>(
+        &self,
+        transport: &mut T,
+    ) -> Result<Vec<Message>> {
         let mut messages = Vec::new();
         let mut stream = transport.receive_messages();
 
@@ -189,7 +194,12 @@ impl OptimizedClient {
                     let is_result = matches!(msg, Message::Result { .. });
 
                     // Update budget/usage on result messages
-                    if let Message::Result { usage, total_cost_usd, .. } = &msg {
+                    if let Message::Result {
+                        usage,
+                        total_cost_usd,
+                        ..
+                    } = &msg
+                    {
                         let (input_tokens, output_tokens) = if let Some(usage_json) = usage {
                             let input = usage_json
                                 .get("input_tokens")
@@ -212,7 +222,7 @@ impl OptimizedClient {
                     if is_result {
                         break;
                     }
-                }
+                },
                 Err(e) => return Err(e),
             }
         }
@@ -314,11 +324,11 @@ impl OptimizedClient {
                                 error!("Failed to send message to channel");
                                 break;
                             }
-                        }
+                        },
                         Err(e) => {
                             error!("Error receiving message: {}", e);
                             break;
-                        }
+                        },
                     }
                 }
             }
@@ -380,7 +390,7 @@ impl OptimizedClient {
                 return Err(SdkError::InvalidState {
                     message: "Client not in batch mode".into(),
                 });
-            }
+            },
         };
 
         let semaphore = Arc::new(Semaphore::new(max_concurrent));
@@ -404,9 +414,7 @@ impl OptimizedClient {
         for handle in handles {
             match handle.await {
                 Ok(result) => results.push(result),
-                Err(e) => {
-                    results.push(Err(SdkError::TransportError(format!("Task failed: {e}"))))
-                }
+                Err(e) => results.push(Err(SdkError::TransportError(format!("Task failed: {e}")))),
             }
         }
 

@@ -11,5 +11,8 @@
 mod neo4j_hook_callback;
 mod neo4j_permission_provider;
 
+// Re-export for public API
+#[allow(unused_imports)]
 pub use neo4j_hook_callback::{Neo4jHookCallback, Neo4jHookCallbackConfig};
+#[allow(unused_imports)]
 pub use neo4j_permission_provider::{Neo4jPermissionProvider, PermissionRule, PermissionScope};

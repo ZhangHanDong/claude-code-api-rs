@@ -67,25 +67,25 @@ async fn main() -> Result<()> {
                         match block {
                             ContentBlock::Text(text) => {
                                 print!("{}", text.text);
-                            }
+                            },
                             ContentBlock::Thinking(thinking) => {
                                 println!("\n[Thinking: {}]", thinking.thinking);
-                            }
+                            },
                             ContentBlock::ToolUse(tool) => {
                                 println!("\n[Using tool: {} ({})]", tool.name, tool.id);
-                            }
+                            },
                             ContentBlock::ToolResult(result) => {
                                 println!("[Tool result for {}]", result.tool_use_id);
-                            }
+                            },
                         }
                     }
                     println!();
-                }
+                },
                 Message::System { subtype, data: _ } => {
                     if subtype != "thinking" {
                         println!("[System: {subtype}]");
                     }
-                }
+                },
                 Message::Result {
                     duration_ms,
                     total_cost_usd,
@@ -96,8 +96,8 @@ async fn main() -> Result<()> {
                         print!(", cost: ${cost:.6}");
                     }
                     println!("]");
-                }
-                _ => {}
+                },
+                _ => {},
             }
         }
         println!();

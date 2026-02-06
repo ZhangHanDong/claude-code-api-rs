@@ -1,7 +1,6 @@
 use nexus_claude::{
-    Query,
+    CanUseTool, PermissionResult, PermissionResultAllow, Query, ToolPermissionContext,
     transport::mock::MockTransport,
-    CanUseTool, PermissionResult, PermissionResultAllow, ToolPermissionContext,
 };
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::Mutex;
@@ -20,7 +19,11 @@ async fn e2e_initialize_control_handshake() {
     let responder = tokio::spawn(async move {
         if let Some(req) = req_rx.recv().await {
             // Expect a control_request with request_id
-            let req_id = req.get("request_id").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let req_id = req
+                .get("request_id")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
             let resp = serde_json::json!({
                 "type": "control_response",
                 "response": {
@@ -62,7 +65,13 @@ async fn e2e_permission_callback_response_shape() {
     let (transport, mut handle) = MockTransport::pair();
     let transport = Arc::new(Mutex::new(transport));
 
-    let mut q = Query::new(transport.clone(), false, Some(Arc::new(AllowAll)), None, HashMap::new());
+    let mut q = Query::new(
+        transport.clone(),
+        false,
+        Some(Arc::new(AllowAll)),
+        None,
+        HashMap::new(),
+    );
     q.start().await.unwrap();
 
     // Simulate CLI -> SDK permission control request
@@ -80,8 +89,14 @@ async fn e2e_permission_callback_response_shape() {
 
     // Observe SDK -> CLI response
     let resp = handle.outbound_control_rx.recv().await.unwrap();
-    let envelope = resp.get("response").cloned().unwrap_or(serde_json::json!({}));
-    let payload = envelope.get("response").cloned().unwrap_or(serde_json::json!({}));
+    let envelope = resp
+        .get("response")
+        .cloned()
+        .unwrap_or(serde_json::json!({}));
+    let payload = envelope
+        .get("response")
+        .cloned()
+        .unwrap_or(serde_json::json!({}));
     assert_eq!(payload.get("allow").and_then(|v| v.as_bool()), Some(true));
     assert_eq!(
         payload
@@ -103,14 +118,23 @@ async fn e2e_permission_callback_response_shape() {
         ) -> PermissionResult {
             let len = context.suggestions.len();
             *self.0.lock().await = len;
-            PermissionResult::Allow(PermissionResultAllow { updated_input: None, updated_permissions: None })
+            PermissionResult::Allow(PermissionResultAllow {
+                updated_input: None,
+                updated_permissions: None,
+            })
         }
     }
 
     let (transport2, mut handle2) = MockTransport::pair();
     let transport2 = Arc::new(Mutex::new(transport2));
     let count = Arc::new(tokio::sync::Mutex::new(0usize));
-    let mut q2 = Query::new(transport2.clone(), false, Some(Arc::new(CaptureSuggestions(count.clone()))), None, HashMap::new());
+    let mut q2 = Query::new(
+        transport2.clone(),
+        false,
+        Some(Arc::new(CaptureSuggestions(count.clone()))),
+        None,
+        HashMap::new(),
+    );
     q2.start().await.unwrap();
     let control2 = serde_json::json!({
         "type": "control_request",
@@ -149,9 +173,15 @@ async fn e2e_stream_input_converts_json_variants() {
 
     // Expect two InputMessage items sent through transport
     let first = handle.sent_input_rx.recv().await.unwrap();
-    assert_eq!(first.message.get("content").and_then(|v| v.as_str()), Some("Hello"));
+    assert_eq!(
+        first.message.get("content").and_then(|v| v.as_str()),
+        Some("Hello")
+    );
 
     let second = handle.sent_input_rx.recv().await.unwrap();
     assert_eq!(second.session_id, "s1");
-    assert_eq!(second.message.get("content").and_then(|v| v.as_str()), Some("Ping"));
+    assert_eq!(
+        second.message.get("content").and_then(|v| v.as_str()),
+        Some("Ping")
+    );
 }

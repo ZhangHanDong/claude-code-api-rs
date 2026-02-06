@@ -2,11 +2,11 @@
 //!
 //! Demonstrates best practices for minimizing token consumption and costs.
 
-use nexus_claude::{ClaudeCodeOptions, ClaudeSDKClient, PermissionMode, Result};
+use futures::StreamExt;
 use nexus_claude::model_recommendation::ModelRecommendation;
 use nexus_claude::token_tracker::{BudgetLimit, BudgetWarningCallback};
+use nexus_claude::{ClaudeCodeOptions, ClaudeSDKClient, PermissionMode, Result};
 use std::sync::Arc;
-use futures::StreamExt;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -30,7 +30,8 @@ async fn main() -> Result<()> {
 
     // Set budget with warning callback
     println!("💰 Setting budget: $1.00 max\n");
-    let callback: BudgetWarningCallback = Arc::new(|msg: &str| eprintln!("⚠️  Budget Alert: {msg}"));
+    let callback: BudgetWarningCallback =
+        Arc::new(|msg: &str| eprintln!("⚠️  Budget Alert: {msg}"));
     client
         .set_budget_limit(
             BudgetLimit::with_cost(1.0).with_warning_threshold(0.8),
@@ -40,7 +41,9 @@ async fn main() -> Result<()> {
 
     // Simple query
     println!("🔍 Query: What is 2+2?\n");
-    client.connect(Some("What is 2+2? Give a brief answer.".to_string())).await?;
+    client
+        .connect(Some("What is 2+2? Give a brief answer.".to_string()))
+        .await?;
 
     let mut messages = client.receive_messages().await;
     while let Some(msg) = messages.next().await {
@@ -52,9 +55,9 @@ async fn main() -> Result<()> {
                             println!("💬 Response: {}", text.text);
                         }
                     }
-                }
+                },
                 nexus_claude::Message::Result { .. } => break,
-                _ => {}
+                _ => {},
             }
         }
     }
@@ -69,7 +72,10 @@ async fn main() -> Result<()> {
     println!("   Sessions: {}", usage.session_count);
 
     if usage.session_count > 0 {
-        println!("   Avg per session: {:.0} tokens", usage.avg_tokens_per_session());
+        println!(
+            "   Avg per session: {:.0} tokens",
+            usage.avg_tokens_per_session()
+        );
     }
 
     client.disconnect().await?;

@@ -1,23 +1,22 @@
-use axum::{
-    extract::State,
-    response::IntoResponse,
-    Json,
-};
+use axum::{Json, extract::State, response::IntoResponse};
+use chrono::Utc;
 use std::sync::Arc;
 use tokio::sync::mpsc;
-use tracing::{info, error};
+use tracing::{error, info};
 use uuid::Uuid;
-use chrono::Utc;
 
 use crate::{
+    api::streaming_handler::handle_enhanced_streaming_response,
     core::claude_manager::ClaudeManager,
     models::{
-        error::{ApiError, ApiResult},
-        openai::{ChatCompletionRequest, ChatCompletionResponse, ChatChoice, ChatMessage, Usage, MessageContent},
         claude::ClaudeCodeOutput,
+        error::{ApiError, ApiResult},
+        openai::{
+            ChatChoice, ChatCompletionRequest, ChatCompletionResponse, ChatMessage, MessageContent,
+            Usage,
+        },
     },
-    utils::{streaming::create_sse_stream, parser::claude_to_openai_stream},
-    api::streaming_handler::handle_enhanced_streaming_response,
+    utils::{parser::claude_to_openai_stream, streaming::create_sse_stream},
 };
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
@@ -25,15 +24,14 @@ use parking_lot::Mutex;
 type TempFileEntry = (String, std::time::Instant);
 type TempFileStore = Arc<Mutex<Vec<TempFileEntry>>>;
 
-static TEMP_FILES: Lazy<TempFileStore> =
-    Lazy::new(|| {
-        let tracker = Arc::new(Mutex::new(Vec::new()));
-        let tracker_clone = tracker.clone();
-        tokio::spawn(async move {
-            cleanup_temp_files(tracker_clone).await;
-        });
-        tracker
+static TEMP_FILES: Lazy<TempFileStore> = Lazy::new(|| {
+    let tracker = Arc::new(Mutex::new(Vec::new()));
+    let tracker_clone = tracker.clone();
+    tokio::spawn(async move {
+        cleanup_temp_files(tracker_clone).await;
     });
+    tracker
+});
 
 async fn cleanup_temp_files(tracker: Arc<Mutex<Vec<(String, std::time::Instant)>>>) {
     loop {
@@ -61,7 +59,8 @@ async fn cleanup_temp_files(tracker: Arc<Mutex<Vec<(String, std::time::Instant)>
 pub struct ChatState {
     pub claude_manager: Arc<ClaudeManager>,
     pub process_pool: Arc<crate::core::process_pool::ProcessPool>,
-    pub interactive_session_manager: Arc<crate::core::interactive_session::InteractiveSessionManager>,
+    pub interactive_session_manager:
+        Arc<crate::core::interactive_session::InteractiveSessionManager>,
     pub conversation_manager: Arc<crate::core::conversation::DefaultConversationManager>,
     pub cache: Arc<crate::core::cache::ResponseCache>,
     pub use_interactive_sessions: bool,
@@ -72,7 +71,9 @@ impl ChatState {
     pub fn new(
         claude_manager: Arc<ClaudeManager>,
         process_pool: Arc<crate::core::process_pool::ProcessPool>,
-        interactive_session_manager: Arc<crate::core::interactive_session::InteractiveSessionManager>,
+        interactive_session_manager: Arc<
+            crate::core::interactive_session::InteractiveSessionManager,
+        >,
         conversation_manager: Arc<crate::core::conversation::DefaultConversationManager>,
         cache: Arc<crate::core::cache::ResponseCache>,
         use_interactive_sessions: bool,
@@ -96,7 +97,10 @@ pub async fn chat_completions(
 ) -> ApiResult<impl IntoResponse> {
     use crate::core::cache::ResponseCache;
 
-    info!("Received chat completion request for model: {}", request.model);
+    info!(
+        "Received chat completion request for model: {}",
+        request.model
+    );
 
     if request.messages.is_empty() {
         return Err(ApiError::BadRequest("Messages cannot be empty".to_string()));
@@ -105,12 +109,17 @@ pub async fn chat_completions(
     let conversation_id = if let Some(ref conv_id) = request.conversation_id {
         conv_id.clone()
     } else {
-        state.conversation_manager.create_conversation(Some(request.model.clone())).await
+        state
+            .conversation_manager
+            .create_conversation(Some(request.model.clone()))
+            .await
             .map_err(|e| ApiError::Internal(e.to_string()))?
     };
 
-    let context_messages = state.conversation_manager
-        .get_context_messages(&conversation_id, &request.messages).await;
+    let context_messages = state
+        .conversation_manager
+        .get_context_messages(&conversation_id, &request.messages)
+        .await;
 
     if !request.stream.unwrap_or(false) {
         let cache_key = ResponseCache::generate_key(&request.model, &context_messages);
@@ -125,42 +134,53 @@ pub async fn chat_completions(
     // 根据配置选择使用交互式会话管理器或进程池
     let (session_id, rx) = if state.use_interactive_sessions {
         // 使用交互式会话管理器复用进程
-        state.interactive_session_manager
+        state
+            .interactive_session_manager
             .get_or_create_session_and_send(
                 request.conversation_id.clone(),
                 request.model.clone(),
-                formatted_message
+                formatted_message,
             )
             .await
             .map_err(|e| ApiError::ClaudeProcess(e.to_string()))?
     } else {
         // 使用进程池
-        state.process_pool
+        state
+            .process_pool
             .get_or_create(request.model.clone(), formatted_message)
             .await
             .map_err(|e| ApiError::ClaudeProcess(e.to_string()))?
     };
 
     if request.stream.unwrap_or(false) {
-        Ok(handle_streaming_response(request.model, rx).await?.into_response())
+        Ok(handle_streaming_response(request.model, rx)
+            .await?
+            .into_response())
     } else {
         let cache_key = ResponseCache::generate_key(&request.model, &context_messages);
         let response = handle_non_streaming_response(
-            request.model.clone(), 
-            rx, 
-            session_id, 
+            request.model.clone(),
+            rx,
+            session_id,
             state.claude_manager.clone(),
             state.settings.claude.timeout_seconds,
-            request.tools.clone()
-        ).await?;
+            request.tools.clone(),
+        )
+        .await?;
 
         for msg in &request.messages {
-            state.conversation_manager.add_message(&conversation_id, msg.clone()).await
+            state
+                .conversation_manager
+                .add_message(&conversation_id, msg.clone())
+                .await
                 .map_err(|e| ApiError::Internal(e.to_string()))?;
         }
 
         if let Some(choice) = response.0.choices.first() {
-            state.conversation_manager.add_message(&conversation_id, choice.message.clone()).await
+            state
+                .conversation_manager
+                .add_message(&conversation_id, choice.message.clone())
+                .await
                 .map_err(|e| ApiError::Internal(e.to_string()))?;
         }
 
@@ -195,7 +215,7 @@ async fn format_messages_for_claude(messages: &[ChatMessage]) -> ApiResult<Strin
                 "user" => conversation.push_str(&format!("User: {content}\n")),
                 "assistant" => conversation.push_str(&format!("Assistant: {content}\n")),
                 "system" => conversation.push_str(&format!("System: {content}\n")),
-                _ => {}
+                _ => {},
             }
         }
     }
@@ -210,31 +230,31 @@ async fn extract_content_and_images(message: &ChatMessage) -> ApiResult<(String,
     match &message.content {
         Some(MessageContent::Text(text)) => {
             text_parts.push(text.clone());
-        }
+        },
         Some(MessageContent::Array(parts)) => {
             for part in parts {
                 match part {
                     crate::models::openai::ContentPart::Text { text } => {
                         text_parts.push(text.clone());
-                    }
+                    },
                     crate::models::openai::ContentPart::ImageUrl { image_url } => {
                         let path = process_image_url(&image_url.url).await?;
                         image_paths.push(path);
-                    }
+                    },
                 }
             }
-        }
+        },
         None => {
             // No content, which is valid for function calls
-        }
+        },
     }
 
     Ok((text_parts.join(" "), image_paths))
 }
 
 async fn process_image_url(url: &str) -> ApiResult<String> {
-    use std::io::Write;
     use base64::{Engine as _, engine::general_purpose};
+    use std::io::Write;
 
     if url.starts_with("data:image/") {
         let parts: Vec<&str> = url.split(',').collect();
@@ -259,7 +279,9 @@ async fn process_image_url(url: &str) -> ApiResult<String> {
 
         let path_string = file_path.to_string_lossy().to_string();
 
-        TEMP_FILES.lock().push((path_string.clone(), std::time::Instant::now()));
+        TEMP_FILES
+            .lock()
+            .push((path_string.clone(), std::time::Instant::now()));
 
         Ok(path_string)
     } else if url.starts_with("http://") || url.starts_with("https://") {
@@ -278,10 +300,14 @@ async fn download_image(url: &str) -> ApiResult<String> {
         .map_err(|e| ApiError::Internal(format!("Failed to download image: {e}")))?;
 
     if !response.status().is_success() {
-        return Err(ApiError::BadRequest(format!("Failed to download image: HTTP {}", response.status())));
+        return Err(ApiError::BadRequest(format!(
+            "Failed to download image: HTTP {}",
+            response.status()
+        )));
     }
 
-    let bytes = response.bytes()
+    let bytes = response
+        .bytes()
         .await
         .map_err(|e| ApiError::Internal(format!("Failed to read image data: {e}")))?;
 
@@ -297,7 +323,9 @@ async fn download_image(url: &str) -> ApiResult<String> {
 
     let path_string = file_path.to_string_lossy().to_string();
 
-    TEMP_FILES.lock().push((path_string.clone(), std::time::Instant::now()));
+    TEMP_FILES
+        .lock()
+        .push((path_string.clone(), std::time::Instant::now()));
 
     Ok(path_string)
 }
@@ -319,12 +347,15 @@ async fn handle_non_streaming_response(
     timeout_seconds: u64,
     requested_tools: Option<Vec<crate::models::openai::Tool>>,
 ) -> ApiResult<Json<ChatCompletionResponse>> {
-    use tokio::time::{timeout, Duration};
+    use tokio::time::{Duration, timeout};
 
     let mut full_content = String::new();
     let mut token_count = 0;
 
-    info!("Waiting for Claude response (timeout: {}s)...", timeout_seconds);
+    info!(
+        "Waiting for Claude response (timeout: {}s)...",
+        timeout_seconds
+    );
 
     let timeout_duration = Duration::from_secs(timeout_seconds);
     let start = std::time::Instant::now();
@@ -334,35 +365,51 @@ async fn handle_non_streaming_response(
             Ok(Some(output)) => {
                 info!("Received output from Claude");
                 if let Some(response) = claude_to_openai_stream(output, &model)
-                    && let Some(content) = response.choices.first()
-                        .and_then(|c| c.delta.content.as_ref()) {
-                        full_content.push_str(content);
-                        token_count += content.split_whitespace().count() as i32;
-                    }
-            }
+                    && let Some(content) = response
+                        .choices
+                        .first()
+                        .and_then(|c| c.delta.content.as_ref())
+                {
+                    full_content.push_str(content);
+                    token_count += content.split_whitespace().count() as i32;
+                }
+            },
             Ok(None) => {
-                info!("Claude stream ended, total content length: {}", full_content.len());
+                info!(
+                    "Claude stream ended, total content length: {}",
+                    full_content.len()
+                );
                 break;
-            }
+            },
             Err(_) => {
                 if start.elapsed() > timeout_duration {
-                    error!("Timeout waiting for Claude response after {:?}", start.elapsed());
+                    error!(
+                        "Timeout waiting for Claude response after {:?}",
+                        start.elapsed()
+                    );
                     // Close the session to avoid EPIPE error
                     let _ = claude_manager.close_session(&session_id).await;
-                    return Err(ApiError::ClaudeProcess(format!("Timeout waiting for response after {} seconds", timeout_seconds)));
+                    return Err(ApiError::ClaudeProcess(format!(
+                        "Timeout waiting for response after {} seconds",
+                        timeout_seconds
+                    )));
                 }
-                info!("No data received in 5s, but still waiting... (elapsed: {:?})", start.elapsed());
-            }
+                info!(
+                    "No data received in 5s, but still waiting... (elapsed: {:?})",
+                    start.elapsed()
+                );
+            },
         }
     }
 
     let _ = claude_manager.close_session(&session_id).await;
 
     // Check if the response should be formatted as tool calls
-    let message = if let Some(function_call) = crate::utils::function_calling::detect_and_convert_tool_call(
-        &full_content,
-        &requested_tools,
-    ) {
+    let message = if let Some(function_call) =
+        crate::utils::function_calling::detect_and_convert_tool_call(
+            &full_content,
+            &requested_tools,
+        ) {
         // Always use tool_calls format
         let tool_call = crate::models::openai::ToolCall {
             id: format!("call_{}", uuid::Uuid::new_v4()),
@@ -404,9 +451,10 @@ async fn handle_non_streaming_response(
     };
 
     // Log the response for debugging
-    info!("Returning response with message: role={}, has_content={}, has_tool_calls={}", 
-        message.role, 
-        message.content.is_some(), 
+    info!(
+        "Returning response with message: role={}, has_content={}, has_tool_calls={}",
+        message.role,
+        message.content.is_some(),
         message.tool_calls.is_some()
     );
 

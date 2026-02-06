@@ -6,8 +6,8 @@
 //! - Managing index settings
 
 use super::{
-    MessageDocument, ConversationDocument, MemoryConfig,
-    RelevanceScorer, RelevanceScore, RelevanceConfig,
+    ConversationDocument, MemoryConfig, MessageDocument, RelevanceConfig, RelevanceScore,
+    RelevanceScorer,
 };
 use async_trait::async_trait;
 use chrono::Utc;
@@ -126,10 +126,8 @@ impl MeilisearchMemoryProvider {
             return Err(MemoryError::Disabled);
         }
 
-        let client = Client::new(
-            &config.meilisearch_url,
-            config.meilisearch_key.as_deref(),
-        ).map_err(|e| MemoryError::Meilisearch(e.to_string()))?;
+        let client = Client::new(&config.meilisearch_url, config.meilisearch_key.as_deref())
+            .map_err(|e| MemoryError::Meilisearch(e.to_string()))?;
 
         let scorer = RelevanceScorer::new(RelevanceConfig::default());
 
@@ -148,7 +146,8 @@ impl MeilisearchMemoryProvider {
     /// Sets up Meilisearch indexes with proper settings.
     async fn setup_indexes(&self) -> MemoryResult<()> {
         // Messages index
-        let _ = self.client
+        let _ = self
+            .client
             .create_index(&self.config.messages_index, Some("id"))
             .await;
 
@@ -158,12 +157,11 @@ impl MeilisearchMemoryProvider {
             .with_filterable_attributes(["conversation_id", "role", "cwd", "created_at"])
             .with_sortable_attributes(["created_at", "turn_index"]);
 
-        messages_index
-            .set_settings(&messages_settings)
-            .await?;
+        messages_index.set_settings(&messages_settings).await?;
 
         // Conversations index
-        let _ = self.client
+        let _ = self
+            .client
             .create_index(&self.config.conversations_index, Some("id"))
             .await;
 
@@ -233,7 +231,10 @@ impl MeilisearchMemoryProvider {
 
         // Sort by total score descending
         results.sort_by(|a, b| {
-            b.score.total.partial_cmp(&a.score.total).unwrap_or(std::cmp::Ordering::Equal)
+            b.score
+                .total
+                .partial_cmp(&a.score.total)
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
 
         // Filter by minimum relevance score
@@ -277,9 +278,7 @@ impl MemoryProvider for MeilisearchMemoryProvider {
     async fn store_message(&self, message: &MessageDocument) -> MemoryResult<()> {
         let index = self.client.index(&self.config.messages_index);
 
-        index
-            .add_documents(&[message], Some("id"))
-            .await?;
+        index.add_documents(&[message], Some("id")).await?;
 
         Ok(())
     }
@@ -291,9 +290,7 @@ impl MemoryProvider for MeilisearchMemoryProvider {
 
         let index = self.client.index(&self.config.messages_index);
 
-        index
-            .add_documents(messages, Some("id"))
-            .await?;
+        index.add_documents(messages, Some("id")).await?;
 
         Ok(())
     }
@@ -320,12 +317,12 @@ impl MemoryProvider for MeilisearchMemoryProvider {
         }
 
         // Execute search
-        let results: meilisearch_sdk::search::SearchResults<MessageDocument> = search
-            .execute()
-            .await?;
+        let results: meilisearch_sdk::search::SearchResults<MessageDocument> =
+            search.execute().await?;
 
         // Convert to SearchHit format
-        let hits: Vec<SearchHit> = results.hits
+        let hits: Vec<SearchHit> = results
+            .hits
             .into_iter()
             .map(|h| SearchHit {
                 document: h.result,
@@ -351,9 +348,7 @@ impl MemoryProvider for MeilisearchMemoryProvider {
     async fn update_conversation(&self, conversation: &ConversationDocument) -> MemoryResult<()> {
         let index = self.client.index(&self.config.conversations_index);
 
-        index
-            .add_documents(&[conversation], Some("id"))
-            .await?;
+        index.add_documents(&[conversation], Some("id")).await?;
 
         Ok(())
     }
@@ -557,7 +552,10 @@ mod tests {
     #[test]
     fn test_context_formatter_truncate() {
         assert_eq!(ContextFormatter::truncate("short", 100), "short");
-        assert_eq!(ContextFormatter::truncate("this is a long text", 10), "this is a ...");
+        assert_eq!(
+            ContextFormatter::truncate("this is a long text", 10),
+            "this is a ..."
+        );
     }
 
     #[test]

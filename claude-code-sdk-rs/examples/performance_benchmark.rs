@@ -29,14 +29,7 @@ fn benchmark_command_line(queries: &[&str]) -> BenchmarkResult {
         let query_start = Instant::now();
 
         let output = Command::new("claude")
-            .args([
-                "-p",
-                "--max-turns",
-                "5",
-                "--model",
-                "sonnet",
-                query,
-            ])
+            .args(["-p", "--max-turns", "5", "--model", "sonnet", query])
             .output();
 
         match output {
@@ -50,10 +43,10 @@ fn benchmark_command_line(queries: &[&str]) -> BenchmarkResult {
                 } else {
                     println!("    ✗ Failed with status: {}", output.status);
                 }
-            }
+            },
             Err(e) => {
                 println!("    ✗ Error: {e}");
-            }
+            },
         }
 
         // Small delay between queries
@@ -105,10 +98,10 @@ async fn benchmark_sdk(queries: &[&str]) -> Result<BenchmarkResult> {
                     "    ✓ Completed in {:.2}s",
                     query_start.elapsed().as_secs_f64()
                 );
-            }
+            },
             Err(e) => {
                 println!("    ✗ Error: {e:?}");
-            }
+            },
         }
 
         // Small delay between queries

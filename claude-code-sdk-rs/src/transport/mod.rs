@@ -13,8 +13,8 @@ use serde_json::Value as JsonValue;
 use std::pin::Pin;
 use tokio::sync::mpsc::Receiver;
 
-pub mod subprocess;
 pub mod mock;
+pub mod subprocess;
 
 pub use subprocess::SubprocessTransport;
 
@@ -75,7 +75,7 @@ impl InputMessage {
 pub trait Transport: Send + Sync {
     /// Get self as Any for downcasting
     fn as_any_mut(&mut self) -> &mut dyn std::any::Any;
-    
+
     /// Connect to the Claude CLI
     async fn connect(&mut self) -> Result<()>;
 
@@ -83,17 +83,18 @@ pub trait Transport: Send + Sync {
     async fn send_message(&mut self, message: InputMessage) -> Result<()>;
 
     /// Receive messages from Claude as a stream
-    fn receive_messages(&mut self) -> Pin<Box<dyn Stream<Item = Result<Message>> + Send + 'static>>;
+    fn receive_messages(&mut self)
+    -> Pin<Box<dyn Stream<Item = Result<Message>> + Send + 'static>>;
 
     /// Send a control request (e.g., interrupt)
     async fn send_control_request(&mut self, request: ControlRequest) -> Result<()>;
 
     /// Receive control responses
     async fn receive_control_response(&mut self) -> Result<Option<ControlResponse>>;
-    
+
     /// Send an SDK control request (for control protocol)
     async fn send_sdk_control_request(&mut self, request: JsonValue) -> Result<()>;
-    
+
     /// Send an SDK control response
     async fn send_sdk_control_response(&mut self, response: JsonValue) -> Result<()>;
 

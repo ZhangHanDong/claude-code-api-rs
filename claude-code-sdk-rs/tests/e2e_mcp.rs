@@ -7,7 +7,13 @@ async fn e2e_mcp_server_not_found_sends_error() -> Result<()> {
     let (transport, mut handle) = MockTransport::pair();
     let transport = Arc::new(Mutex::new(transport));
 
-    let mut q = Query::new(transport.clone(), false, None, None, std::collections::HashMap::new());
+    let mut q = Query::new(
+        transport.clone(),
+        false,
+        None,
+        None,
+        std::collections::HashMap::new(),
+    );
     q.start().await?;
 
     // Send MCP message for a non-existent server
@@ -27,8 +33,12 @@ async fn e2e_mcp_server_not_found_sends_error() -> Result<()> {
     let resp = &outer["response"];
     assert_eq!(resp["subtype"], "error");
     assert_eq!(resp["request_id"], "req_mcp_1");
-    assert!(resp["error"].as_str().unwrap_or("").contains("no_such_server"));
+    assert!(
+        resp["error"]
+            .as_str()
+            .unwrap_or("")
+            .contains("no_such_server")
+    );
 
     Ok(())
 }
-

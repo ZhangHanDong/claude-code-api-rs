@@ -3,8 +3,8 @@
 //! This example demonstrates how to use the simple `query` function
 //! for one-shot interactions with Claude.
 
-use nexus_claude::{ClaudeCodeOptions, Message, Result, query};
 use futures::StreamExt;
+use nexus_claude::{ClaudeCodeOptions, Message, Result, query};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -27,12 +27,12 @@ async fn main() -> Result<()> {
                 for block in &message.content {
                     println!("Assistant: {block:?}");
                 }
-            }
+            },
             Message::Result { duration_ms, .. } => {
                 println!("Query completed in {duration_ms}ms");
                 break;
-            }
-            _ => {}
+            },
+            _ => {},
         }
     }
 
@@ -56,10 +56,10 @@ async fn main() -> Result<()> {
                 for block in &message.content {
                     println!("Assistant: {block:?}");
                 }
-            }
+            },
             Message::System { subtype, .. } => {
                 println!("System: {subtype}");
-            }
+            },
             Message::Result {
                 duration_ms,
                 total_cost_usd,
@@ -70,8 +70,8 @@ async fn main() -> Result<()> {
                     println!("Cost: ${cost:.4}");
                 }
                 break;
-            }
-            _ => {}
+            },
+            _ => {},
         }
     }
 

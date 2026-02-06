@@ -3,8 +3,8 @@
 //! This example demonstrates how to use query() with BypassPermissions
 //! to allow file operations in --print mode.
 
-use nexus_claude::{ClaudeCodeOptions, Message, PermissionMode, Result, query};
 use futures::StreamExt;
+use nexus_claude::{ClaudeCodeOptions, Message, PermissionMode, Result, query};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -41,17 +41,17 @@ async fn main() -> Result<()> {
                     match block {
                         nexus_claude::ContentBlock::Text(text) => {
                             println!("Claude: {}", text.text);
-                        }
+                        },
                         nexus_claude::ContentBlock::ToolUse(tool_use) => {
                             println!("Claude is using tool: {} ({})", tool_use.name, tool_use.id);
                             if let Some(file_path) = tool_use.input.get("file_path") {
                                 println!("  File path: {file_path}");
                             }
-                        }
-                        _ => {}
+                        },
+                        _ => {},
                     }
                 }
-            }
+            },
             Message::Result {
                 duration_ms,
                 is_error,
@@ -63,8 +63,8 @@ async fn main() -> Result<()> {
                     println!("\nQuery completed successfully in {duration_ms}ms");
                 }
                 break;
-            }
-            _ => {}
+            },
+            _ => {},
         }
     }
 

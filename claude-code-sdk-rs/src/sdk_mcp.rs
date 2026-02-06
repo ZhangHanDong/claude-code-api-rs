@@ -6,7 +6,7 @@
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -139,19 +139,20 @@ impl SdkMcpServer {
                         "tools": tools
                     }
                 }))
-            }
+            },
 
             "tools/call" => {
-                let params = message.get("params").ok_or_else(|| SdkError::InvalidState {
-                    message: "Missing params in tools/call".to_string(),
-                })?;
-
-                let tool_name = params
-                    .get("name")
-                    .and_then(|n| n.as_str())
+                let params = message
+                    .get("params")
                     .ok_or_else(|| SdkError::InvalidState {
-                        message: "Missing tool name in tools/call".to_string(),
+                        message: "Missing params in tools/call".to_string(),
                     })?;
+
+                let tool_name = params.get("name").and_then(|n| n.as_str()).ok_or_else(|| {
+                    SdkError::InvalidState {
+                        message: "Missing tool name in tools/call".to_string(),
+                    }
+                })?;
 
                 let empty_args = json!({});
                 let arguments = params.get("arguments").unwrap_or(&empty_args);
@@ -175,7 +176,7 @@ impl SdkMcpServer {
                         "isError": result.is_error
                     }
                 }))
-            }
+            },
 
             "notifications/initialized" => {
                 // Acknowledge initialization notification
@@ -183,7 +184,7 @@ impl SdkMcpServer {
                     "jsonrpc": "2.0",
                     "result": {}
                 }))
-            }
+            },
 
             _ => Ok(json!({
                 "jsonrpc": "2.0",

@@ -1,6 +1,8 @@
 //! Example demonstrating the optimized client with various performance features
 
-use nexus_claude::{ClaudeCodeOptions, ClientMode, OptimizedClient, PermissionMode, Result, RetryConfig};
+use nexus_claude::{
+    ClaudeCodeOptions, ClientMode, OptimizedClient, PermissionMode, Result, RetryConfig,
+};
 use std::time::{Duration, Instant};
 use tracing::{Level, info};
 
@@ -151,10 +153,10 @@ async fn demo_batch_mode(options: ClaudeCodeOptions) -> Result<()> {
                         );
                     }
                 }
-            }
+            },
             Err(e) => {
                 info!("Query {} failed: {}", i + 1, e);
-            }
+            },
         }
     }
 

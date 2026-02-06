@@ -301,15 +301,29 @@ mod tests {
 
     #[test]
     fn test_display_content_prefers_summary() {
-        let msg = MessageDocument::new("msg-1", "conv-1", "assistant", "Long content...", 0, 1700000000)
-            .with_summary("Short summary");
+        let msg = MessageDocument::new(
+            "msg-1",
+            "conv-1",
+            "assistant",
+            "Long content...",
+            0,
+            1700000000,
+        )
+        .with_summary("Short summary");
 
         assert_eq!(msg.display_content(), "Short summary");
     }
 
     #[test]
     fn test_display_content_falls_back_to_content() {
-        let msg = MessageDocument::new("msg-1", "conv-1", "assistant", "Full content", 0, 1700000000);
+        let msg = MessageDocument::new(
+            "msg-1",
+            "conv-1",
+            "assistant",
+            "Full content",
+            0,
+            1700000000,
+        );
 
         assert_eq!(msg.display_content(), "Full content");
     }
@@ -317,9 +331,23 @@ mod tests {
     #[test]
     fn test_needs_summary() {
         let short_msg = MessageDocument::new("msg-1", "conv-1", "user", "Hi", 0, 1700000000);
-        let long_msg = MessageDocument::new("msg-2", "conv-1", "assistant", "x".repeat(600), 0, 1700000000);
-        let summarized = MessageDocument::new("msg-3", "conv-1", "assistant", "x".repeat(600), 0, 1700000000)
-            .with_summary("Summary");
+        let long_msg = MessageDocument::new(
+            "msg-2",
+            "conv-1",
+            "assistant",
+            "x".repeat(600),
+            0,
+            1700000000,
+        );
+        let summarized = MessageDocument::new(
+            "msg-3",
+            "conv-1",
+            "assistant",
+            "x".repeat(600),
+            0,
+            1700000000,
+        )
+        .with_summary("Summary");
 
         assert!(!short_msg.needs_summary(500));
         assert!(long_msg.needs_summary(500));

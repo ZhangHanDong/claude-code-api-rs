@@ -1,6 +1,8 @@
 //! Interactive real API test
 
-use nexus_claude::{ClaudeCodeOptions, ContentBlock, InteractiveClient, Message, PermissionMode, Result};
+use nexus_claude::{
+    ClaudeCodeOptions, ContentBlock, InteractiveClient, Message, PermissionMode, Result,
+};
 use std::io::{self, Write};
 
 #[tokio::main]
@@ -52,10 +54,10 @@ async fn main() -> Result<()> {
                     }
                 }
                 println!();
-            }
+            },
             Err(e) => {
                 println!("Error: {e}");
-            }
+            },
         }
     }
 

@@ -3,6 +3,8 @@
 //! Wraps ConversationStore to provide access to recent messages
 //! in the current conversation.
 
+#![allow(dead_code)] // Public API - may not be used internally
+
 use anyhow::Result;
 use async_trait::async_trait;
 use std::sync::Arc;
@@ -109,19 +111,22 @@ impl<S: ConversationStore + 'static> ContextualMemoryProvider for ShortTermMemor
 
                 let score = RelevanceScore::new(semantic, recency, 1.0); // Max scope for current conv
 
-                Some(MemoryResult::new(
-                    format!("{}-{}", conv_id, idx),
-                    MemorySource::Conversation {
-                        conversation_id: conv_id.clone(),
-                        message_index: idx,
-                    },
-                    content,
-                    score,
-                    conversation.updated_at,
-                ).with_metadata(serde_json::json!({
-                    "role": msg.role,
-                    "turn_index": idx,
-                })))
+                Some(
+                    MemoryResult::new(
+                        format!("{}-{}", conv_id, idx),
+                        MemorySource::Conversation {
+                            conversation_id: conv_id.clone(),
+                            message_index: idx,
+                        },
+                        content,
+                        score,
+                        conversation.updated_at,
+                    )
+                    .with_metadata(serde_json::json!({
+                        "role": msg.role,
+                        "turn_index": idx,
+                    })),
+                )
             })
             .collect();
 
@@ -146,16 +151,20 @@ impl<S: ConversationStore + 'static> ContextualMemoryProvider for ShortTermMemor
         limit: usize,
     ) -> Result<Vec<MemoryResult>> {
         // Short-term only has conversation source
-        if let Some(filter) = source_filter {
-            if filter != "conversation" {
-                return Ok(vec![]);
-            }
+        if let Some(filter) = source_filter
+            && filter != "conversation"
+        {
+            return Ok(vec![]);
         }
 
         self.query(query, limit).await
     }
 
-    async fn get_relevant_decisions(&self, _topic: &str, _limit: usize) -> Result<Vec<MemoryResult>> {
+    async fn get_relevant_decisions(
+        &self,
+        _topic: &str,
+        _limit: usize,
+    ) -> Result<Vec<MemoryResult>> {
         // Short-term memory doesn't track decisions
         // Decisions come from medium-term (project-orchestrator)
         Ok(vec![])
@@ -215,7 +224,9 @@ mod tests {
 
         let results = memory.query("authentication", 10).await.unwrap();
         assert!(!results.is_empty());
-        assert!(results[0].content.contains("authentication") || results[0].content.contains("JWT"));
+        assert!(
+            results[0].content.contains("authentication") || results[0].content.contains("JWT")
+        );
     }
 
     #[tokio::test]

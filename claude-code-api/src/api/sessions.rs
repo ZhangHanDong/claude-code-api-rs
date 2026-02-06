@@ -1,6 +1,6 @@
+use crate::models::error::ApiResult;
 use axum::{Json, response::IntoResponse};
 use serde::{Deserialize, Serialize};
-use crate::models::error::ApiResult;
 
 #[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize)]

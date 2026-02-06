@@ -60,7 +60,7 @@ async fn test_simple_query(options: ClaudeCodeOptions) -> Result<()> {
                     }
                 }
                 info!("Time: {:?}", start.elapsed());
-            }
+            },
             Err(e) => info!("Error: {}", e),
         }
         info!("---");
@@ -95,7 +95,7 @@ async fn test_interactive(options: ClaudeCodeOptions) -> Result<()> {
                         }
                     }
                 }
-            }
+            },
             Err(e) => info!("Error: {}", e),
         }
         info!("---");
@@ -142,7 +142,7 @@ async fn test_batch(options: ClaudeCodeOptions) -> Result<()> {
                     }
                 }
             }
-        }
+        },
         Err(e) => info!("Batch processing error: {}", e),
     }
 

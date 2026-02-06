@@ -37,16 +37,13 @@ pub struct AuthConfig {
     pub token_expiry_hours: i64,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
-#[derive(Default)]
+#[derive(Debug, Deserialize, Serialize, Clone, Default)]
 pub struct FileAccessConfig {
     pub skip_permissions: bool,
     pub additional_dirs: Vec<String>,
 }
 
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-#[derive(Default)]
+#[derive(Debug, Deserialize, Serialize, Clone, Default)]
 pub struct MCPConfig {
     pub enabled: bool,
     pub config_file: Option<String>,
@@ -71,7 +68,6 @@ impl Default for ProcessPoolConfig {
         }
     }
 }
-
 
 impl Settings {
     pub fn new() -> Result<Self, ConfigError> {

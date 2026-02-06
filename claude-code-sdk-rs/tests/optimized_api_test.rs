@@ -203,7 +203,7 @@ fn test_client_modes() {
     match batch {
         ClientMode::Batch { max_concurrent } => {
             assert_eq!(max_concurrent, 10);
-        }
+        },
         _ => panic!("Expected Batch mode"),
     }
 }

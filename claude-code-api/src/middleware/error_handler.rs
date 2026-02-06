@@ -1,28 +1,25 @@
 use axum::{
+    Json,
     extract::Request,
     http::StatusCode,
     middleware::Next,
     response::{IntoResponse, Response},
-    Json,
 };
 use std::time::Instant;
 use tracing::{error, warn};
 
-use crate::models::error::{ErrorResponse, ErrorDetail};
+use crate::models::error::{ErrorDetail, ErrorResponse};
 
-pub async fn handle_errors(
-    req: Request,
-    next: Next,
-) -> Response {
+pub async fn handle_errors(req: Request, next: Next) -> Response {
     let start = Instant::now();
     let path = req.uri().path().to_string();
     let method = req.method().to_string();
-    
+
     let response = next.run(req).await;
-    
+
     let elapsed = start.elapsed();
     let status = response.status();
-    
+
     if status.is_server_error() {
         error!(
             "Server error: {} {} - Status: {} - Duration: {:?}",
@@ -34,7 +31,7 @@ pub async fn handle_errors(
             method, path, status, elapsed
         );
     }
-    
+
     response
 }
 
@@ -47,9 +44,9 @@ pub async fn handle_panic(err: Box<dyn std::any::Any + Send + 'static>) -> Respo
     } else {
         "Unknown panic".to_string()
     };
-    
+
     error!("Panic occurred: {}", details);
-    
+
     let error_response = ErrorResponse {
         error: ErrorDetail {
             message: "Internal server error".to_string(),
@@ -58,6 +55,6 @@ pub async fn handle_panic(err: Box<dyn std::any::Any + Send + 'static>) -> Respo
             code: Some("panic".to_string()),
         },
     };
-    
+
     (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response)).into_response()
 }

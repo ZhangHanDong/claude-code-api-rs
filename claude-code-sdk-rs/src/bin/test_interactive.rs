@@ -1,7 +1,7 @@
 //! Simple test for interactive client
 
-use nexus_claude::{ClaudeCodeOptions, ClaudeSDKClient, Result};
 use futures::StreamExt;
+use nexus_claude::{ClaudeCodeOptions, ClaudeSDKClient, Result};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -39,11 +39,11 @@ async fn main() -> Result<()> {
                     println!("Got result message, stopping...");
                     break;
                 }
-            }
+            },
             Err(e) => {
                 eprintln!("Error receiving message: {e}");
                 break;
-            }
+            },
         }
     }
 

@@ -81,7 +81,7 @@ fn test_message_serialization() {
             } else {
                 panic!("Expected text content");
             }
-        }
+        },
         _ => panic!("Expected assistant message"),
     }
 }
@@ -126,7 +126,7 @@ async fn test_mock_response_flow() {
             if let ContentBlock::Text(text) = &message.content[0] {
                 assert_eq!(text.text, "The answer is 42");
             }
-        }
+        },
         _ => panic!("Expected assistant message"),
     }
 

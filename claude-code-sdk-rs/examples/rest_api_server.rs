@@ -153,7 +153,7 @@ async fn query_handler(
                         error: None,
                         duration_ms,
                     }))
-                }
+                },
                 Err(e) => {
                     state.metrics.write().await.record_failure();
                     Ok(Json(QueryResponse {
@@ -162,7 +162,7 @@ async fn query_handler(
                         error: Some(e.to_string()),
                         duration_ms: start.elapsed().as_millis() as u64,
                     }))
-                }
+                },
             },
             Err(e) => {
                 state.metrics.write().await.record_failure();
@@ -172,7 +172,7 @@ async fn query_handler(
                     error: Some(format!("Failed to create client: {e}")),
                     duration_ms: start.elapsed().as_millis() as u64,
                 }))
-            }
+            },
         }
     }
 }
@@ -217,7 +217,7 @@ async fn batch_handler(
                                 error: None,
                                 duration_ms: 100,
                             });
-                        }
+                        },
                         Err(e) => {
                             results.push(QueryResponse {
                                 success: false,
@@ -225,17 +225,17 @@ async fn batch_handler(
                                 error: Some(e.to_string()),
                                 duration_ms: 0,
                             });
-                        }
+                        },
                     }
                 }
-            }
+            },
             Err(_e) => {
                 return Ok(Json(BatchResponse {
                     success: false,
                     results: vec![],
                     total_duration_ms: start.elapsed().as_millis() as u64,
                 }));
-            }
+            },
         }
     }
 
@@ -275,7 +275,7 @@ fn generate_mock_response(prompt: &str) -> String {
             } else {
                 "Please provide a number to square.".to_string()
             }
-        }
+        },
         _ => format!("Mock response to: {prompt}"),
     }
 }
@@ -295,7 +295,7 @@ fn extract_response_text(messages: Vec<Message>) -> String {
                     })
                     .collect();
                 Some(texts.join("\n"))
-            }
+            },
             _ => None,
         })
         .collect::<Vec<String>>()

@@ -1,6 +1,8 @@
 //! Neo4j-backed permission provider
 //!
 //! Implements the CanUseTool trait with permission rules stored in Neo4j.
+
+#![allow(dead_code)] // Public API - may not be used internally
 //!
 //! ## Schema
 //!
@@ -32,13 +34,13 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
+use chrono::Utc;
+use dashmap::DashMap;
+use neo4rs::{Graph, query};
 use nexus_claude::{
     CanUseTool, PermissionResult, PermissionResultAllow, PermissionResultDeny,
     ToolPermissionContext,
 };
-use chrono::Utc;
-use dashmap::DashMap;
-use neo4rs::{query, Graph};
 use std::sync::Arc;
 use tracing::{debug, info, warn};
 use uuid::Uuid;
@@ -77,7 +79,7 @@ impl PermissionScope {
 pub struct PermissionRule {
     pub id: String,
     pub tool_pattern: String,
-    pub decision: String,  // "allow", "deny", "ask"
+    pub decision: String, // "allow", "deny", "ask"
     pub reason: Option<String>,
     pub scope: PermissionScope,
     pub priority: i32,
@@ -105,7 +107,7 @@ impl PermissionRule {
         if self.tool_pattern.contains('(') && self.tool_pattern.contains(')') {
             let base_pattern = self.tool_pattern.split('(').next().unwrap_or("");
             if tool_name.starts_with(base_pattern) {
-                return true;  // Simplified - full glob would be more complex
+                return true; // Simplified - full glob would be more complex
             }
         }
 
@@ -198,9 +200,12 @@ impl Neo4jPermissionProvider {
                OR (r.scope = 'workspace' AND r.scope_id = $workspace_id)
                OR (r.scope = 'project' AND r.scope_id = $project_id)
             RETURN r
-            ORDER BY r.priority DESC"
+            ORDER BY r.priority DESC",
         )
-        .param("workspace_id", self.workspace_id.clone().unwrap_or_default())
+        .param(
+            "workspace_id",
+            self.workspace_id.clone().unwrap_or_default(),
+        )
         .param("project_id", self.project_id.clone().unwrap_or_default());
 
         let mut result = self.graph.execute(q).await?;
@@ -229,7 +234,10 @@ impl Neo4jPermissionProvider {
         }
 
         self.rules_cache.insert("all".to_string(), rules);
-        debug!("Loaded {} permission rules", self.rules_cache.get("all").map(|r| r.len()).unwrap_or(0));
+        debug!(
+            "Loaded {} permission rules",
+            self.rules_cache.get("all").map(|r| r.len()).unwrap_or(0)
+        );
 
         Ok(())
     }
@@ -255,7 +263,7 @@ impl Neo4jPermissionProvider {
                 priority: $priority,
                 created_at: datetime($now)
             })
-            RETURN r.id as id"
+            RETURN r.id as id",
         )
         .param("id", rule.id.clone())
         .param("tool_pattern", rule.tool_pattern)
@@ -280,7 +288,7 @@ impl Neo4jPermissionProvider {
         let q = query(
             "MATCH (r:NexusPermissionRule {id: $id})
             DELETE r
-            RETURN count(r) as deleted"
+            RETURN count(r) as deleted",
         )
         .param("id", rule_id);
 
@@ -313,15 +321,15 @@ impl Neo4jPermissionProvider {
                     "MATCH (r:NexusPermissionRule)
                     WHERE r.scope = $scope AND (r.scope_id = $scope_id OR r.scope_id IS NULL)
                     RETURN r
-                    ORDER BY r.priority DESC"
+                    ORDER BY r.priority DESC",
                 )
                 .param("scope", scope_str)
                 .param("scope_id", scope_id)
-            }
+            },
             None => query(
                 "MATCH (r:NexusPermissionRule)
                 RETURN r
-                ORDER BY r.priority DESC"
+                ORDER BY r.priority DESC",
             ),
         };
 
@@ -370,7 +378,7 @@ impl Neo4jPermissionProvider {
                 rule_id: $rule_id,
                 session_id: $session_id,
                 created_at: datetime($now)
-            })"
+            })",
         )
         .param("id", id)
         .param("tool_name", tool_name)
@@ -421,7 +429,7 @@ impl CanUseTool for Neo4jPermissionProvider {
                         updated_input: None,
                         updated_permissions: None,
                     })
-                }
+                },
                 "deny" => {
                     debug!("Denying tool {} (rule: {})", tool_name, rule.id);
                     PermissionResult::Deny(PermissionResultDeny {
@@ -430,14 +438,14 @@ impl CanUseTool for Neo4jPermissionProvider {
                         }),
                         interrupt: false,
                     })
-                }
+                },
                 _ => {
                     // "ask" or unknown - default to allow (let SDK handle asking)
                     PermissionResult::Allow(PermissionResultAllow {
                         updated_input: None,
                         updated_permissions: None,
                     })
-                }
+                },
             }
         } else {
             // No matching rule - default to allow
@@ -505,9 +513,13 @@ mod tests {
 
     #[test]
     fn test_permission_scope_priority() {
-        assert!(PermissionScope::Project("p1".to_string()).priority() >
-                PermissionScope::Workspace("w1".to_string()).priority());
-        assert!(PermissionScope::Workspace("w1".to_string()).priority() >
-                PermissionScope::Global.priority());
+        assert!(
+            PermissionScope::Project("p1".to_string()).priority()
+                > PermissionScope::Workspace("w1".to_string()).priority()
+        );
+        assert!(
+            PermissionScope::Workspace("w1".to_string()).priority()
+                > PermissionScope::Global.priority()
+        );
     }
 }

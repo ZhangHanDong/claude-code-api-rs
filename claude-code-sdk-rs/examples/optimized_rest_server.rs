@@ -166,7 +166,7 @@ async fn query_handler(
                 error: None,
                 duration_ms,
             }))
-        }
+        },
         Err(e) => {
             let duration_ms = start.elapsed().as_millis() as u64;
             state.metrics.write().await.record_failure();
@@ -179,7 +179,7 @@ async fn query_handler(
                 error: Some(e.to_string()),
                 duration_ms,
             }))
-        }
+        },
     }
 }
 
@@ -227,7 +227,7 @@ async fn batch_handler(
                             error: None,
                             duration_ms: 0, // Individual timing not tracked in batch
                         });
-                    }
+                    },
                     Err(e) => {
                         responses.push(QueryResponse {
                             success: false,
@@ -235,7 +235,7 @@ async fn batch_handler(
                             error: Some(e.to_string()),
                             duration_ms: 0,
                         });
-                    }
+                    },
                 }
             }
 
@@ -254,7 +254,7 @@ async fn batch_handler(
                 results: responses,
                 total_duration_ms,
             }))
-        }
+        },
         Err(e) => {
             warn!("Batch processing failed: {}", e);
             Ok(Json(BatchResponse {
@@ -262,7 +262,7 @@ async fn batch_handler(
                 results: vec![],
                 total_duration_ms: start.elapsed().as_millis() as u64,
             }))
-        }
+        },
     }
 }
 
@@ -304,7 +304,7 @@ fn extract_response_text(messages: Vec<Message>) -> String {
                     })
                     .collect();
                 Some(texts.join("\n"))
-            }
+            },
             _ => None,
         })
         .collect::<Vec<String>>()

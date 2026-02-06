@@ -128,14 +128,14 @@ pub async fn query(
         QueryInput::Text(text) => {
             // For simple text queries, use --print mode like Python SDK
             query_print_mode(text, options).await
-        }
+        },
         QueryInput::Stream(_stream) => {
             // For streaming, use the interactive mode
             // TODO: Implement streaming mode
             Err(crate::SdkError::NotSupported {
                 feature: "Streaming input mode not yet implemented".into(),
             })
-        }
+        },
     }
 }
 
@@ -164,22 +164,22 @@ async fn query_print_mode(
         match prompt_v2 {
             crate::types::SystemPrompt::String(s) => {
                 cmd.arg("--system-prompt").arg(s);
-            }
+            },
             crate::types::SystemPrompt::Preset { append, .. } => {
                 if let Some(append_text) = append {
                     cmd.arg("--append-system-prompt").arg(append_text);
                 }
-            }
+            },
         }
     } else {
         #[allow(deprecated)]
         match options.system_prompt.as_deref() {
             Some(prompt) => {
                 cmd.arg("--system-prompt").arg(prompt);
-            }
+            },
             None => {
                 cmd.arg("--system-prompt").arg("");
-            }
+            },
         }
 
         #[allow(deprecated)]
@@ -220,16 +220,16 @@ async fn query_print_mode(
     match options.permission_mode {
         PermissionMode::Default => {
             cmd.arg("--permission-mode").arg("default");
-        }
+        },
         PermissionMode::AcceptEdits => {
             cmd.arg("--permission-mode").arg("acceptEdits");
-        }
+        },
         PermissionMode::Plan => {
             cmd.arg("--permission-mode").arg("plan");
-        }
+        },
         PermissionMode::BypassPermissions => {
             cmd.arg("--permission-mode").arg("bypassPermissions");
-        }
+        },
     }
 
     if options.continue_conversation {
@@ -266,7 +266,7 @@ async fn query_print_mode(
     // Set up process pipes
     cmd.stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped());
-    
+
     // Handle max_output_tokens (priority: option > env var)
     // Maximum safe value is 32000, values above this may cause issues
     if let Some(max_tokens) = options.max_output_tokens {
@@ -279,11 +279,17 @@ async fn query_print_mode(
         if let Ok(current_value) = std::env::var("CLAUDE_CODE_MAX_OUTPUT_TOKENS") {
             if let Ok(tokens) = current_value.parse::<u32>() {
                 if tokens > 32000 {
-                    warn!("CLAUDE_CODE_MAX_OUTPUT_TOKENS={} exceeds maximum safe value of 32000, overriding to 32000", tokens);
+                    warn!(
+                        "CLAUDE_CODE_MAX_OUTPUT_TOKENS={} exceeds maximum safe value of 32000, overriding to 32000",
+                        tokens
+                    );
                     cmd.env("CLAUDE_CODE_MAX_OUTPUT_TOKENS", "32000");
                 }
             } else {
-                warn!("Invalid CLAUDE_CODE_MAX_OUTPUT_TOKENS value: {}, setting to 8192", current_value);
+                warn!(
+                    "Invalid CLAUDE_CODE_MAX_OUTPUT_TOKENS value: {}, setting to 8192",
+                    current_value
+                );
                 cmd.env("CLAUDE_CODE_MAX_OUTPUT_TOKENS", "8192");
             }
         }
@@ -327,7 +333,7 @@ async fn query_print_mode(
 
     // Clone tx for cleanup task
     let tx_cleanup = tx.clone();
-    
+
     // Spawn stdout handler
     tokio::spawn(async move {
         let reader = BufReader::new(stdout);
@@ -348,20 +354,20 @@ async fn query_print_mode(
                             if tx.send(Ok(message)).await.is_err() {
                                 break;
                             }
-                        }
+                        },
                         Ok(None) => {
                             // Ignore non-message JSON
-                        }
+                        },
                         Err(e) => {
                             if tx.send(Err(e)).await.is_err() {
                                 break;
                             }
-                        }
+                        },
                     }
-                }
+                },
                 Err(e) => {
                     debug!("Failed to parse JSON: {} - Line: {}", e, line);
-                }
+                },
             }
         }
 
@@ -376,10 +382,10 @@ async fn query_print_mode(
                         }))
                         .await;
                 }
-            }
+            },
             Err(e) => {
                 let _ = tx.send(Err(crate::SdkError::ProcessError(e))).await;
-            }
+            },
         }
     });
 
@@ -387,14 +393,14 @@ async fn query_print_mode(
     tokio::spawn(async move {
         // Wait for the channel to be closed (all receivers dropped)
         tx_cleanup.closed().await;
-        
+
         // Kill the process if it's still running
         let mut child = child.lock().await;
         match child.try_wait() {
             Ok(Some(_)) => {
                 // Process already exited
                 debug!("Claude CLI process already exited");
-            }
+            },
             Ok(None) => {
                 // Process still running, kill it
                 info!("Killing Claude CLI process on stream drop");
@@ -405,10 +411,10 @@ async fn query_print_mode(
                     let _ = child.wait().await;
                     debug!("Claude CLI process killed and cleaned up");
                 }
-            }
+            },
             Err(e) => {
                 warn!("Failed to check process status: {}", e);
-            }
+            },
         }
     });
 
@@ -441,18 +447,18 @@ mod tests {
     #[test]
     fn test_extra_args_formatting() {
         use std::collections::HashMap;
-        
+
         // Test that extra_args are properly formatted as CLI flags
         let mut extra_args = HashMap::new();
         extra_args.insert("custom-flag".to_string(), Some("value".to_string()));
         extra_args.insert("--already-dashed".to_string(), None);
         extra_args.insert("-s".to_string(), Some("short".to_string()));
-        
+
         let options = ClaudeCodeOptions {
             extra_args,
             ..Default::default()
         };
-        
+
         // Verify the args are properly stored
         assert_eq!(options.extra_args.len(), 3);
         assert!(options.extra_args.contains_key("custom-flag"));

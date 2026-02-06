@@ -4,7 +4,7 @@ use anyhow::Result;
 use std::future::Future;
 use std::time::Duration;
 use tokio::time::sleep;
-use tracing::{warn, info, error};
+use tracing::{error, info, warn};
 
 #[derive(Clone)]
 pub struct RetryConfig {
@@ -33,7 +33,7 @@ impl RetryPolicy {
     pub fn new(config: RetryConfig) -> Self {
         Self { config }
     }
-    
+
     pub async fn execute<F, Fut, T, E>(
         &self,
         operation_name: &str,
@@ -46,58 +46,63 @@ impl RetryPolicy {
     {
         let mut attempt = 0;
         let mut delay_ms = self.config.initial_delay_ms;
-        
+
         loop {
             attempt += 1;
-            
+
             match operation().await {
                 Ok(result) => {
                     if attempt > 1 {
                         info!("{} succeeded after {} attempts", operation_name, attempt);
                     }
                     return Ok(result);
-                }
+                },
                 Err(err) => {
                     if attempt >= self.config.max_retries {
-                        error!("{} failed after {} attempts: {}", operation_name, attempt, err);
+                        error!(
+                            "{} failed after {} attempts: {}",
+                            operation_name, attempt, err
+                        );
                         return Err(err);
                     }
-                    
+
                     warn!(
                         "{} failed (attempt {}/{}): {}. Retrying in {}ms...",
                         operation_name, attempt, self.config.max_retries, err, delay_ms
                     );
-                    
+
                     sleep(Duration::from_millis(delay_ms)).await;
-                    
+
                     // Calculate next delay with exponential backoff
                     delay_ms = ((delay_ms as f64) * self.config.exponential_base) as u64;
                     delay_ms = delay_ms.min(self.config.max_delay_ms);
-                }
+                },
             }
         }
     }
-    
+
     pub fn should_retry<E: std::fmt::Display>(error: &E) -> bool {
         let error_str = error.to_string().to_lowercase();
-        
+
         // Retry on these types of errors
-        if error_str.contains("timeout") ||
-           error_str.contains("connection") ||
-           error_str.contains("temporarily unavailable") ||
-           error_str.contains("too many requests") ||
-           error_str.contains("overloaded") {
+        if error_str.contains("timeout")
+            || error_str.contains("connection")
+            || error_str.contains("temporarily unavailable")
+            || error_str.contains("too many requests")
+            || error_str.contains("overloaded")
+        {
             return true;
         }
-        
+
         // Don't retry on these
-        if error_str.contains("invalid") ||
-           error_str.contains("unauthorized") ||
-           error_str.contains("forbidden") ||
-           error_str.contains("not found") {
+        if error_str.contains("invalid")
+            || error_str.contains("unauthorized")
+            || error_str.contains("forbidden")
+            || error_str.contains("not found")
+        {
             return false;
         }
-        
+
         // Default to retry for unknown errors
         true
     }
@@ -120,32 +125,34 @@ impl CircuitBreaker {
             last_failure: std::sync::Arc::new(parking_lot::Mutex::new(None)),
         }
     }
-    
+
     pub fn is_open(&self) -> bool {
         let failures = self.failures.load(std::sync::atomic::Ordering::Relaxed);
         if failures < self.failure_threshold {
             return false;
         }
-        
+
         // Check if we should reset
         if let Some(last_failure) = *self.last_failure.lock()
-            && last_failure.elapsed() > self.recovery_timeout {
-                self.reset();
-                return false;
-            }
-        
+            && last_failure.elapsed() > self.recovery_timeout
+        {
+            self.reset();
+            return false;
+        }
+
         true
     }
-    
+
     pub fn record_success(&self) {
         self.reset();
     }
-    
+
     pub fn record_failure(&self) {
-        self.failures.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        self.failures
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         *self.last_failure.lock() = Some(std::time::Instant::now());
     }
-    
+
     fn reset(&self) {
         self.failures.store(0, std::sync::atomic::Ordering::Relaxed);
         *self.last_failure.lock() = None;

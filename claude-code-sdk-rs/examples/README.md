@@ -1,12 +1,12 @@
-# Claude Code SDK Examples
+# nexus-claude SDK Examples
 
-This directory contains examples demonstrating various features of the Claude Code SDK for Rust.
+This directory contains examples demonstrating various features of the nexus-claude SDK for Rust.
 
 ## Prerequisites
 
 Before running any examples, ensure you have:
 
-1. **Claude Code CLI installed**:
+1. **Claude Code CLI installed** (or use auto-download):
    ```bash
    npm install -g @anthropic-ai/claude-code
    ```
@@ -15,6 +15,8 @@ Before running any examples, ensure you have:
    ```bash
    export ANTHROPIC_API_KEY="your-api-key"
    ```
+
+> **Note**: The SDK will automatically download the CLI if not found (v0.4.0+). You can disable this with `auto_download_cli(false)`.
 
 ## Running Examples
 
@@ -62,10 +64,10 @@ cargo run --example interactive
    ```
    You: What is the capital of France?
    Claude: The capital of France is Paris.
-   
+
    You: Tell me more about it
    Claude: Paris is the capital and largest city of France...
-   
+
    You: quit
    ```
 
@@ -140,9 +142,12 @@ cargo run --example file_operations
 
 ### "Claude CLI not found"
 
-Ensure Claude CLI is installed and in your PATH:
+The SDK will automatically download the CLI (v0.4.0+). If you want manual control:
+
 ```bash
 which claude
+# Or install manually:
+npm install -g @anthropic-ai/claude-code
 ```
 
 ### "API key not found"
@@ -159,10 +164,15 @@ export ANTHROPIC_API_KEY="your-key-here"
 
 ### Model errors
 
-Ensure you're using a valid model name:
+Ensure you're using a valid model name. Recommended aliases:
+- `"opus"` - Latest Opus (currently claude-opus-4-5-20251101)
+- `"sonnet"` - Latest Sonnet (currently claude-sonnet-4-5-20250929)
+
+Full model names also work:
+- `claude-opus-4-5-20251101`
+- `claude-sonnet-4-5-20250929`
 - `claude-3-5-sonnet-20241022`
 - `claude-3-5-haiku-20241022`
-- Check the Claude documentation for the latest model names
 
 ## New Advanced Examples
 
@@ -210,3 +220,27 @@ cargo run --example batch_processor
 - Comprehensive statistics tracking
 - Efficient client reuse across questions
 - Progress tracking with percentages
+
+### 9. Memory Integration (`memory_integration.rs`)
+
+Demonstrates persistent memory capabilities (requires `memory` feature).
+
+```bash
+cargo run --example memory_integration --features memory
+```
+
+**Features demonstrated:**
+- Conversation storage and retrieval
+- Multi-factor relevance scoring
+- Context injection from past conversations
+- Meilisearch integration
+
+## Support
+
+- [Report Issues](https://github.com/this-rs/nexus/issues)
+- [Discussions](https://github.com/this-rs/nexus/discussions)
+- [Full Documentation](https://docs.rs/nexus-claude)
+
+---
+
+Made with Rust by the Nexus team

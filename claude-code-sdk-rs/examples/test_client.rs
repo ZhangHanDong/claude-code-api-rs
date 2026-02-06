@@ -2,8 +2,8 @@
 //!
 //! This example tests basic client connectivity.
 
-use nexus_claude::{ClaudeCodeOptions, ClaudeSDKClient, Message, Result};
 use futures::StreamExt;
+use nexus_claude::{ClaudeCodeOptions, ClaudeSDKClient, Message, Result};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -47,11 +47,11 @@ async fn main() -> Result<()> {
                 if let Message::Result { .. } = message {
                     break;
                 }
-            }
+            },
             Err(e) => {
                 println!("Error receiving message: {e}");
                 break;
-            }
+            },
         }
 
         // Safety: break after 10 messages to avoid infinite loop

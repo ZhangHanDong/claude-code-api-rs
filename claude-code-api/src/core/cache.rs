@@ -1,11 +1,11 @@
 use dashmap::DashMap;
 use serde::Serialize;
-use sha2::{Sha256, Digest};
+use sha2::{Digest, Sha256};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use tracing::{info, debug};
+use tracing::{debug, info};
 
-use crate::models::openai::{ChatMessage, ChatCompletionResponse};
+use crate::models::openai::{ChatCompletionResponse, ChatMessage};
 
 #[derive(Clone)]
 pub struct ResponseCache {
@@ -68,22 +68,22 @@ impl ResponseCache {
             match &msg.content {
                 Some(crate::models::openai::MessageContent::Text(text)) => {
                     hasher.update(text.as_bytes());
-                }
+                },
                 Some(crate::models::openai::MessageContent::Array(parts)) => {
                     for part in parts {
                         match part {
                             crate::models::openai::ContentPart::Text { text } => {
                                 hasher.update(text.as_bytes());
-                            }
+                            },
                             crate::models::openai::ContentPart::ImageUrl { image_url } => {
                                 hasher.update(image_url.url.as_bytes());
-                            }
+                            },
                         }
                     }
-                }
+                },
                 None => {
                     // Function calls don't affect cache key
-                }
+                },
             }
         }
 
@@ -168,7 +168,10 @@ impl ResponseCache {
                 debug!("Removed expired cache entry: {}", key);
             }
 
-            info!("Cache cleanup: {} entries remaining", self.inner.cache.len());
+            info!(
+                "Cache cleanup: {} entries remaining",
+                self.inner.cache.len()
+            );
         }
     }
 

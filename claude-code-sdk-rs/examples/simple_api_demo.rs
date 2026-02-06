@@ -35,7 +35,7 @@ impl MockClient {
                 } else {
                     "Please provide a number to square.".to_string()
                 }
-            }
+            },
             _ => format!("Mock response to: {prompt}"),
         };
 
@@ -57,7 +57,7 @@ impl MockClient {
             total_cost_usd: Some(0.0001),
             usage: None,
             result: Some("Success".to_string()),
-                    structured_output: None,
+            structured_output: None,
         };
 
         Ok(vec![assistant_msg, result_msg])
@@ -82,13 +82,13 @@ impl MockClient {
                     }
                     results.push(self.query(prompt).await);
                 }
-            }
+            },
             _ => {
                 info!("Sequential processing (not in batch mode)");
                 for prompt in prompts {
                     results.push(self.query(prompt).await);
                 }
-            }
+            },
         }
 
         results
@@ -153,9 +153,7 @@ async fn demo_batch_mode() -> Result<()> {
 
     let client = MockClient::new(ClientMode::Batch { max_concurrent: 3 });
 
-    let queries: Vec<String> = (1..=10)
-        .map(|i| format!("What is {i} squared?"))
-        .collect();
+    let queries: Vec<String> = (1..=10).map(|i| format!("What is {i} squared?")).collect();
 
     info!(
         "Processing {} queries with max concurrency 3",

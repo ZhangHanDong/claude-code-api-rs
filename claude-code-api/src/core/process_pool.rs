@@ -1,14 +1,14 @@
 // 移除 dead_code，激活进程池
 
 use anyhow::{Result, anyhow};
-use std::sync::Arc;
 use parking_lot::Mutex;
-use tokio::sync::mpsc;
 use std::collections::VecDeque;
-use tracing::{info, error};
+use std::sync::Arc;
+use tokio::sync::mpsc;
+use tracing::{error, info};
 
-use crate::models::claude::ClaudeCodeOutput;
 use super::claude_manager::ClaudeManager;
+use crate::models::claude::ClaudeCodeOutput;
 
 #[derive(Clone)]
 pub struct ProcessPool {
@@ -91,17 +91,25 @@ impl ProcessPool {
 
         pool
     }
-    
-    pub async fn get_or_create(&self, model: String, message: String) -> Result<(String, mpsc::Receiver<ClaudeCodeOutput>)> {
+
+    pub async fn get_or_create(
+        &self,
+        model: String,
+        message: String,
+    ) -> Result<(String, mpsc::Receiver<ClaudeCodeOutput>)> {
         // 直接创建新会话，暂时不使用池化（需要更复杂的实现）
         info!("Creating new Claude session for model: {}", model);
-        self.inner.manager
+        self.inner
+            .manager
             .create_session_with_message(None, None, Some(model), &message)
             .await
     }
 
     #[allow(dead_code)]
-    pub async fn acquire(&self, model: Option<String>) -> Result<(String, mpsc::Receiver<ClaudeCodeOutput>)> {
+    pub async fn acquire(
+        &self,
+        model: Option<String>,
+    ) -> Result<(String, mpsc::Receiver<ClaudeCodeOutput>)> {
         let model = model.unwrap_or_else(|| self.inner.config.default_model.clone());
 
         // 尝试从池中获取空闲进程
@@ -143,7 +151,11 @@ impl ProcessPool {
 
             // 创建新进程
             info!("Creating new process for model: {}", model);
-            let result = self.inner.manager.create_interactive_session(None, None, Some(model.clone())).await?;
+            let result = self
+                .inner
+                .manager
+                .create_interactive_session(None, None, Some(model.clone()))
+                .await?;
 
             // 记录为活跃进程
             {
@@ -197,11 +209,16 @@ impl ProcessPool {
             };
 
             for _ in 0..needed {
-                match self.inner.manager.create_interactive_session(
-                    None,
-                    None,
-                    Some(self.inner.config.default_model.clone())
-                ).await {
+                match self
+                    .inner
+                    .manager
+                    .create_interactive_session(
+                        None,
+                        None,
+                        Some(self.inner.config.default_model.clone()),
+                    )
+                    .await
+                {
                     Ok((session_id, _)) => {
                         let mut pool = self.inner.pool.lock();
                         pool.idle.push_back(PooledProcess {
@@ -210,10 +227,10 @@ impl ProcessPool {
                             created_at: std::time::Instant::now(),
                         });
                         info!("Pre-warmed process added to pool");
-                    }
+                    },
                     Err(e) => {
                         error!("Failed to create pre-warmed process: {}", e);
-                    }
+                    },
                 }
             }
 

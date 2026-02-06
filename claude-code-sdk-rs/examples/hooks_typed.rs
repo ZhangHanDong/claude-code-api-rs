@@ -5,11 +5,11 @@
 //! for better type safety and IDE support.
 
 use async_trait::async_trait;
-use nexus_claude::{
-    query, ClaudeCodeOptions, HookCallback, HookContext, HookInput, HookJSONOutput,
-    HookMatcher, PermissionMode, SdkError, SyncHookJSONOutput,
-};
 use futures::StreamExt;
+use nexus_claude::{
+    ClaudeCodeOptions, HookCallback, HookContext, HookInput, HookJSONOutput, HookMatcher,
+    PermissionMode, SdkError, SyncHookJSONOutput, query,
+};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -28,7 +28,10 @@ impl HookCallback for ToolUseLogger {
             HookInput::PreToolUse(pre_tool_use) => {
                 // Strongly-typed access to hook input
                 println!("🔧 About to use tool: {}", pre_tool_use.tool_name);
-                println!("   Input: {}", serde_json::to_string_pretty(&pre_tool_use.tool_input).unwrap_or_default());
+                println!(
+                    "   Input: {}",
+                    serde_json::to_string_pretty(&pre_tool_use.tool_input).unwrap_or_default()
+                );
                 println!("   CWD: {}", pre_tool_use.cwd);
                 println!("   Session ID: {}", pre_tool_use.session_id);
 
@@ -38,10 +41,11 @@ impl HookCallback for ToolUseLogger {
                     reason: Some("Tool use logged".to_string()),
                     ..Default::default()
                 }))
-            }
+            },
             HookInput::PostToolUse(post_tool_use) => {
                 println!("✅ Tool completed: {}", post_tool_use.tool_name);
-                println!("   Response: {}",
+                println!(
+                    "   Response: {}",
                     serde_json::to_string_pretty(&post_tool_use.tool_response)
                         .unwrap_or_default()
                         .chars()
@@ -51,11 +55,11 @@ impl HookCallback for ToolUseLogger {
 
                 // Return success with no modifications
                 Ok(HookJSONOutput::Sync(SyncHookJSONOutput::default()))
-            }
+            },
             _ => {
                 // For other hook types, just continue
                 Ok(HookJSONOutput::Sync(SyncHookJSONOutput::default()))
-            }
+            },
         }
     }
 }
@@ -117,8 +121,8 @@ impl HookCallback for PromptEnhancer {
             println!("   Adding helpful context...");
 
             // Return hook output with additional context
-            use nexus_claude::UserPromptSubmitHookSpecificOutput;
             use nexus_claude::HookSpecificOutput;
+            use nexus_claude::UserPromptSubmitHookSpecificOutput;
 
             return Ok(HookJSONOutput::Sync(SyncHookJSONOutput {
                 hook_specific_output: Some(HookSpecificOutput::UserPromptSubmit(
@@ -153,12 +157,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // PreToolUse hooks: log and optionally block tools
     hooks.insert(
         "PreToolUse".to_string(),
-        vec![
-            HookMatcher {
-                matcher: Some(serde_json::json!("*")), // Match all tools
-                hooks: vec![logger.clone(), blocker],
-            },
-        ],
+        vec![HookMatcher {
+            matcher: Some(serde_json::json!("*")), // Match all tools
+            hooks: vec![logger.clone(), blocker],
+        }],
     );
 
     // PostToolUse hooks: log tool completion
@@ -200,10 +202,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         match msg {
             Ok(message) => {
                 println!("📨 Message: {message:?}");
-            }
+            },
             Err(e) => {
                 eprintln!("❌ Error: {e}");
-            }
+            },
         }
     }
 

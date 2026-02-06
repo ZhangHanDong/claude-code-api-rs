@@ -29,7 +29,7 @@ pub fn parse_message(json: Value) -> Result<Option<Message>> {
         _ => {
             debug!("Ignoring message type: {}", msg_type);
             Ok(None)
-        }
+        },
     }
 }
 
@@ -100,19 +100,31 @@ fn parse_content_block(json: &Value) -> Result<Option<ContentBlock>> {
                 Ok(Some(ContentBlock::Text(TextContent {
                     text: text.to_string(),
                 })))
-            }
+            },
             "thinking" => {
-                let thinking = json.get("thinking").and_then(|v| v.as_str()).ok_or_else(|| {
-                    SdkError::parse_error("Missing 'thinking' field in thinking block", json.to_string())
-                })?;
-                let signature = json.get("signature").and_then(|v| v.as_str()).ok_or_else(|| {
-                    SdkError::parse_error("Missing 'signature' field in thinking block", json.to_string())
-                })?;
+                let thinking = json
+                    .get("thinking")
+                    .and_then(|v| v.as_str())
+                    .ok_or_else(|| {
+                        SdkError::parse_error(
+                            "Missing 'thinking' field in thinking block",
+                            json.to_string(),
+                        )
+                    })?;
+                let signature =
+                    json.get("signature")
+                        .and_then(|v| v.as_str())
+                        .ok_or_else(|| {
+                            SdkError::parse_error(
+                                "Missing 'signature' field in thinking block",
+                                json.to_string(),
+                            )
+                        })?;
                 Ok(Some(ContentBlock::Thinking(ThinkingContent {
                     thinking: thinking.to_string(),
                     signature: signature.to_string(),
                 })))
-            }
+            },
             "tool_use" => {
                 let id = json.get("id").and_then(|v| v.as_str()).ok_or_else(|| {
                     SdkError::parse_error("Missing 'id' field in tool_use block", json.to_string())
@@ -133,7 +145,7 @@ fn parse_content_block(json: &Value) -> Result<Option<ContentBlock>> {
                     name: name.to_string(),
                     input,
                 })))
-            }
+            },
             "tool_result" => {
                 let tool_use_id = json
                     .get("tool_use_id")
@@ -149,7 +161,9 @@ fn parse_content_block(json: &Value) -> Result<Option<ContentBlock>> {
                     if let Some(text) = content_val.as_str() {
                         Some(ContentValue::Text(text.to_string()))
                     } else {
-                        content_val.as_array().map(|array| ContentValue::Structured(array.clone()))
+                        content_val
+                            .as_array()
+                            .map(|array| ContentValue::Structured(array.clone()))
                     }
                 } else {
                     None
@@ -162,11 +176,11 @@ fn parse_content_block(json: &Value) -> Result<Option<ContentBlock>> {
                     content,
                     is_error,
                 })))
-            }
+            },
             _ => {
                 debug!("Unknown content block type: {}", block_type);
                 Ok(None)
-            }
+            },
         }
     } else {
         // Try to parse as a simple text block (backward compatibility)
@@ -245,7 +259,7 @@ fn parse_result_message(json: Value) -> Result<Option<Message>> {
                     .or_else(|| json.get("structuredOutput"))
                     .and_then(|v| (!v.is_null()).then(|| v.clone())),
             }))
-        }
+        },
     }
 }
 
@@ -416,7 +430,10 @@ mod tests {
         let result = parse_message(json).unwrap();
         assert!(result.is_some());
 
-        if let Some(Message::Result { structured_output, .. }) = result {
+        if let Some(Message::Result {
+            structured_output, ..
+        }) = result
+        {
             assert_eq!(structured_output, Some(json!({"answer": 42})));
         } else {
             panic!("Expected Result message");

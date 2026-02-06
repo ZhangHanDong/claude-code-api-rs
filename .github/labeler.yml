@@ -1,0 +1,52 @@
+# Labeler configuration
+# https://github.com/actions/labeler
+
+# SDK changes
+sdk:
+  - changed-files:
+    - any-glob-to-any-file: 'claude-code-sdk-rs/**'
+
+# API server changes
+api:
+  - changed-files:
+    - any-glob-to-any-file: 'claude-code-api/**'
+
+# Memory system
+memory:
+  - changed-files:
+    - any-glob-to-any-file: 'claude-code-sdk-rs/src/memory/**'
+
+# Documentation
+documentation:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/*.md'
+      - 'docs/**'
+
+# CI/CD
+ci:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '.github/**'
+      - 'deny.toml'
+      - 'cliff.toml'
+      - 'codecov.yml'
+
+# Dependencies
+dependencies:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/Cargo.toml'
+      - '**/Cargo.lock'
+
+# Tests
+tests:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/tests/**'
+      - '**/*_test.rs'
+
+# Examples
+examples:
+  - changed-files:
+    - any-glob-to-any-file: '**/examples/**'

@@ -6,8 +6,8 @@
 //! - Annotations directory structure
 //! - Start from specific question number
 
-use nexus_claude::{ClaudeCodeOptions, ContentBlock, InteractiveClient, PermissionMode, Result};
 use chrono::{DateTime, Utc};
+use nexus_claude::{ClaudeCodeOptions, ContentBlock, InteractiveClient, PermissionMode, Result};
 use regex::Regex;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -89,10 +89,11 @@ impl QuestionSetProcessor {
         }
         println!("================================================");
 
-        let content =
-            fs::read_to_string(question_set_file).map_err(|e| nexus_claude::SdkError::InvalidState {
+        let content = fs::read_to_string(question_set_file).map_err(|e| {
+            nexus_claude::SdkError::InvalidState {
                 message: format!("Failed to read question set file: {e}"),
-            })?;
+            }
+        })?;
 
         let question_regex = Regex::new(r"^(\d+)\.\s*(.+)$").expect("Failed to compile regex");
 
@@ -111,9 +112,10 @@ impl QuestionSetProcessor {
 
                 // Skip questions before start_from if specified
                 if let Some(start) = start_from
-                    && question_num < start {
-                        continue;
-                    }
+                    && question_num < start
+                {
+                    continue;
+                }
 
                 let question_text = &captures[2];
 
@@ -139,7 +141,7 @@ impl QuestionSetProcessor {
                             question_num,
                             duration.as_secs()
                         );
-                    }
+                    },
                     Err(e) => {
                         let duration = question_start.elapsed();
                         failed_questions.push((question_num, format!("{e:?}")));
@@ -149,7 +151,7 @@ impl QuestionSetProcessor {
                             duration.as_secs(),
                             e
                         );
-                    }
+                    },
                 }
             }
         }
@@ -330,11 +332,11 @@ async fn process_all_question_sets(annotations_dir: PathBuf) -> Result<()> {
             Ok(_) => {
                 stats.1 += 1;
                 println!("✓ Successfully processed: {}", path.display());
-            }
+            },
             Err(e) => {
                 stats.2 += 1;
                 println!("✗ Failed to process {}: {:?}", path.display(), e);
-            }
+            },
         }
     }
 

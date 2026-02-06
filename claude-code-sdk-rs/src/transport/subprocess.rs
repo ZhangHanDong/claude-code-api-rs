@@ -117,7 +117,7 @@ impl SubprocessTransport {
             Err(_) if options.auto_download_cli => {
                 info!("Claude CLI not found, attempting automatic download...");
                 crate::cli_download::download_cli(None, None).await?
-            }
+            },
             Err(e) => return Err(e),
         };
 
@@ -156,31 +156,33 @@ impl SubprocessTransport {
 
             let load_as_json_string =
                 |s: &str| -> Option<serde_json::Map<String, serde_json::Value>> {
-                match serde_json::from_str::<serde_json::Value>(s) {
-                    Ok(serde_json::Value::Object(map)) => Some(map),
-                    Ok(_) => {
-                        warn!("Settings JSON must be an object; ignoring provided JSON settings");
-                        None
+                    match serde_json::from_str::<serde_json::Value>(s) {
+                        Ok(serde_json::Value::Object(map)) => Some(map),
+                        Ok(_) => {
+                            warn!(
+                                "Settings JSON must be an object; ignoring provided JSON settings"
+                            );
+                            None
+                        },
+                        Err(_) => None,
                     }
-                    Err(_) => None,
-                }
-            };
+                };
 
             let load_from_file =
                 |path: &Path| -> Option<serde_json::Map<String, serde_json::Value>> {
-                let content = std::fs::read_to_string(path).ok()?;
-                match serde_json::from_str::<serde_json::Value>(&content) {
-                    Ok(serde_json::Value::Object(map)) => Some(map),
-                    Ok(_) => {
-                        warn!("Settings file JSON must be an object: {}", path.display());
-                        None
+                    let content = std::fs::read_to_string(path).ok()?;
+                    match serde_json::from_str::<serde_json::Value>(&content) {
+                        Ok(serde_json::Value::Object(map)) => Some(map),
+                        Ok(_) => {
+                            warn!("Settings file JSON must be an object: {}", path.display());
+                            None
+                        },
+                        Err(e) => {
+                            warn!("Failed to parse settings file {}: {}", path.display(), e);
+                            None
+                        },
                     }
-                    Err(e) => {
-                        warn!("Failed to parse settings file {}: {}", path.display(), e);
-                        None
-                    }
-                }
-            };
+                };
 
             if settings_str.starts_with('{') && settings_str.ends_with('}') {
                 if let Some(map) = load_as_json_string(settings_str) {
@@ -215,28 +217,32 @@ impl SubprocessTransport {
             match serde_json::to_value(sandbox) {
                 Ok(value) => {
                     settings_obj.insert("sandbox".to_string(), value);
-                }
+                },
                 Err(e) => {
                     warn!("Failed to serialize sandbox settings: {}", e);
-                }
+                },
             }
         }
 
         Some(serde_json::Value::Object(settings_obj).to_string())
     }
-    
+
     /// Subscribe to messages without borrowing self (for lock-free consumption)
-    pub fn subscribe_messages(&self) -> Option<Pin<Box<dyn Stream<Item = Result<Message>> + Send + 'static>>> {
+    pub fn subscribe_messages(
+        &self,
+    ) -> Option<Pin<Box<dyn Stream<Item = Result<Message>> + Send + 'static>>> {
         self.message_broadcast_tx.as_ref().map(|tx| {
             let rx = tx.subscribe();
             Box::pin(tokio_stream::wrappers::BroadcastStream::new(rx).filter_map(
                 |result| async move {
                     match result {
                         Ok(msg) => Some(Ok(msg)),
-                        Err(tokio_stream::wrappers::errors::BroadcastStreamRecvError::Lagged(n)) => {
+                        Err(tokio_stream::wrappers::errors::BroadcastStreamRecvError::Lagged(
+                            n,
+                        )) => {
                             warn!("Receiver lagged by {} messages", n);
                             None
-                        }
+                        },
                     }
                 },
             )) as Pin<Box<dyn Stream<Item = Result<Message>> + Send + 'static>>
@@ -252,7 +258,7 @@ impl SubprocessTransport {
             None
         }
     }
-    
+
     /// Take the SDK control receiver (can only be called once)
     pub fn take_sdk_control_receiver(&mut self) -> Option<mpsc::Receiver<serde_json::Value>> {
         self.sdk_control_rx.take()
@@ -308,17 +314,17 @@ impl SubprocessTransport {
 
         // For streaming/interactive mode, also add input-format stream-json
         cmd.arg("--input-format").arg("stream-json");
-        
+
         // Include partial messages if requested
         if self.options.include_partial_messages {
             cmd.arg("--include-partial-messages");
         }
-        
+
         // Add debug-to-stderr flag if debug_stderr is set
         if self.options.debug_stderr.is_some() {
             cmd.arg("--debug-to-stderr");
         }
-        
+
         // Handle max_output_tokens (priority: option > env var)
         // Maximum safe value is 32000, values above this may cause issues
         if let Some(max_tokens) = self.options.max_output_tokens {
@@ -331,13 +337,19 @@ impl SubprocessTransport {
             if let Ok(current_value) = std::env::var("CLAUDE_CODE_MAX_OUTPUT_TOKENS") {
                 if let Ok(tokens) = current_value.parse::<u32>() {
                     if tokens > 32000 {
-                        warn!("CLAUDE_CODE_MAX_OUTPUT_TOKENS={} exceeds maximum safe value of 32000, overriding to 32000", tokens);
+                        warn!(
+                            "CLAUDE_CODE_MAX_OUTPUT_TOKENS={} exceeds maximum safe value of 32000, overriding to 32000",
+                            tokens
+                        );
                         cmd.env("CLAUDE_CODE_MAX_OUTPUT_TOKENS", "32000");
                     }
                     // If it's <= 32000, leave it as is
                 } else {
                     // Invalid value, set to safe default
-                    warn!("Invalid CLAUDE_CODE_MAX_OUTPUT_TOKENS value: {}, setting to 8192", current_value);
+                    warn!(
+                        "Invalid CLAUDE_CODE_MAX_OUTPUT_TOKENS value: {}, setting to 8192",
+                        current_value
+                    );
                     cmd.env("CLAUDE_CODE_MAX_OUTPUT_TOKENS", "8192");
                 }
             }
@@ -350,14 +362,14 @@ impl SubprocessTransport {
             match prompt_v2 {
                 crate::types::SystemPrompt::String(s) => {
                     cmd.arg("--system-prompt").arg(s);
-                }
+                },
                 crate::types::SystemPrompt::Preset { append, .. } => {
                     // Python only uses preset prompts to optionally append to the default preset.
                     // It does not pass a preset selector flag to the CLI.
                     if let Some(append_text) = append {
                         cmd.arg("--append-system-prompt").arg(append_text);
                     }
-                }
+                },
             }
         } else {
             // Fallback to deprecated fields for backward compatibility
@@ -365,10 +377,10 @@ impl SubprocessTransport {
             match self.options.system_prompt.as_deref() {
                 Some(prompt) => {
                     cmd.arg("--system-prompt").arg(prompt);
-                }
+                },
                 None => {
                     cmd.arg("--system-prompt").arg("");
-                }
+                },
             }
             #[allow(deprecated)]
             if let Some(ref prompt) = self.options.append_system_prompt {
@@ -390,16 +402,16 @@ impl SubprocessTransport {
         match self.options.permission_mode {
             PermissionMode::Default => {
                 cmd.arg("--permission-mode").arg("default");
-            }
+            },
             PermissionMode::AcceptEdits => {
                 cmd.arg("--permission-mode").arg("acceptEdits");
-            }
+            },
             PermissionMode::Plan => {
                 cmd.arg("--permission-mode").arg("plan");
-            }
+            },
             PermissionMode::BypassPermissions => {
                 cmd.arg("--permission-mode").arg("bypassPermissions");
-            }
+            },
         }
 
         // Model
@@ -428,7 +440,7 @@ impl SubprocessTransport {
         if let Some(ref cwd) = self.options.cwd {
             cmd.current_dir(cwd);
         }
-        
+
         // Add environment variables
         for (key, value) in &self.options.env {
             cmd.env(key, value);
@@ -476,11 +488,11 @@ impl SubprocessTransport {
                     } else {
                         cmd.arg("--tools").arg(list.join(","));
                     }
-                }
+                },
                 crate::types::ToolsConfig::Preset(_preset) => {
                     // Preset object - 'claude_code' preset maps to 'default'
                     cmd.arg("--tools").arg("default");
-                }
+                },
             }
         }
 
@@ -519,16 +531,17 @@ impl SubprocessTransport {
             match plugin {
                 crate::types::SdkPluginConfig::Local { path } => {
                     cmd.arg("--plugin-dir").arg(path);
-                }
+                },
             }
         }
 
         // Programmatic agents
         if let Some(ref agents) = self.options.agents
             && !agents.is_empty()
-                && let Ok(json_str) = serde_json::to_string(agents) {
-                    cmd.arg("--agents").arg(json_str);
-                }
+            && let Ok(json_str) = serde_json::to_string(agents)
+        {
+            cmd.arg("--agents").arg(json_str);
+        }
 
         // Setting sources (comma-separated). Always pass a value for SDK parity with Python.
         let sources_value = self
@@ -597,11 +610,11 @@ impl SubprocessTransport {
             Ok(Err(e)) => {
                 warn!("Failed to check CLI version: {}", e);
                 return Ok(()); // Don't fail connection, just warn
-            }
+            },
             Err(_) => {
                 warn!("CLI version check timed out after 5 seconds");
                 return Ok(());
-            }
+            },
         };
 
         let version_str = String::from_utf8_lossy(&output.stdout);
@@ -624,7 +637,10 @@ impl SubprocessTransport {
                     "   Some features may not work correctly. Please upgrade with: npm install -g @anthropic-ai/claude-code@latest"
                 );
             } else {
-                info!("Claude CLI version: {}.{}.{}", semver.major, semver.minor, semver.patch);
+                info!(
+                    "Claude CLI version: {}.{}.{}",
+                    semver.major, semver.minor, semver.patch
+                );
             }
         } else {
             debug!("Could not parse CLI version: {}", version_str);
@@ -664,13 +680,15 @@ impl SubprocessTransport {
             .ok_or_else(|| SdkError::ConnectionError("Failed to get stderr".into()))?;
 
         // Determine buffer size from options or use default
-        let buffer_size = self.options.cli_channel_buffer_size.unwrap_or(CHANNEL_BUFFER_SIZE);
+        let buffer_size = self
+            .options
+            .cli_channel_buffer_size
+            .unwrap_or(CHANNEL_BUFFER_SIZE);
 
         // Create channels
         let (stdin_tx, mut stdin_rx) = mpsc::channel::<String>(buffer_size);
         // Use broadcast channel for messages to support multiple receivers
-        let (message_broadcast_tx, _) =
-            tokio::sync::broadcast::channel::<Message>(buffer_size);
+        let (message_broadcast_tx, _) = tokio::sync::broadcast::channel::<Message>(buffer_size);
         let (control_tx, control_rx) = mpsc::channel::<ControlResponse>(buffer_size);
 
         // Spawn stdin handler
@@ -698,7 +716,7 @@ impl SubprocessTransport {
 
         // Create channel for SDK control requests
         let (sdk_control_tx, sdk_control_rx) = mpsc::channel::<serde_json::Value>(buffer_size);
-        
+
         // Spawn stdout handler
         let message_broadcast_tx_clone = message_broadcast_tx.clone();
         let control_tx_clone = control_tx.clone();
@@ -732,20 +750,22 @@ impl SubprocessTransport {
                                 // CLI returns: {"type":"control_response","response":{"subtype":"success","request_id":"..."}}
                                 // or: {"type":"control_response","response":{"subtype":"error","request_id":"...","error":"..."}}
                                 if let Some(response_obj) = json.get("response")
-                                    && let Some(request_id) = response_obj.get("request_id")
+                                    && let Some(request_id) = response_obj
+                                        .get("request_id")
                                         .or_else(|| response_obj.get("requestId"))
                                         .and_then(|v| v.as_str())
-                                    {
-                                        // Determine success from subtype
-                                        let subtype = response_obj.get("subtype").and_then(|v| v.as_str());
-                                        let success = subtype == Some("success");
+                                {
+                                    // Determine success from subtype
+                                    let subtype =
+                                        response_obj.get("subtype").and_then(|v| v.as_str());
+                                    let success = subtype == Some("success");
 
-                                        let control_resp = ControlResponse::InterruptAck {
-                                            request_id: request_id.to_string(),
-                                            success,
-                                        };
-                                        let _ = control_tx_clone.send(control_resp).await;
-                                    }
+                                    let control_resp = ControlResponse::InterruptAck {
+                                        request_id: request_id.to_string(),
+                                        success,
+                                    };
+                                    let _ = control_tx_clone.send(control_resp).await;
+                                }
                                 continue;
                             }
 
@@ -759,11 +779,12 @@ impl SubprocessTransport {
 
                             // Handle control messages (new format)
                             if msg_type == "control"
-                                && let Some(control) = json.get("control") {
-                                    debug!("Received control message: {:?}", control);
-                                    let _ = sdk_control_tx_clone.send(control.clone()).await;
-                                    continue;
-                                }
+                                && let Some(control) = json.get("control")
+                            {
+                                debug!("Received control message: {:?}", control);
+                                let _ = sdk_control_tx_clone.send(control.clone()).await;
+                                continue;
+                            }
 
                             // Handle SDK control requests FROM CLI (legacy format)
                             if msg_type == "sdk_control_request" {
@@ -772,16 +793,17 @@ impl SubprocessTransport {
                                 let _ = sdk_control_tx_clone.send(json.clone()).await;
                                 continue;
                             }
-                            
+
                             // Check for system messages with SDK control subtypes
                             if msg_type == "system"
                                 && let Some(subtype) = json.get("subtype").and_then(|v| v.as_str())
-                                    && subtype.starts_with("sdk_control:") {
-                                        // This is an SDK control message
-                                        debug!("Received SDK control message: {}", subtype);
-                                        let _ = sdk_control_tx_clone.send(json.clone()).await;
-                                        // Still parse as regular message for now
-                                    }
+                                && subtype.starts_with("sdk_control:")
+                            {
+                                // This is an SDK control message
+                                debug!("Received SDK control message: {}", subtype);
+                                let _ = sdk_control_tx_clone.send(json.clone()).await;
+                                // Still parse as regular message for now
+                            }
                         }
 
                         // Try to parse as a regular message
@@ -789,18 +811,18 @@ impl SubprocessTransport {
                             Ok(Some(message)) => {
                                 // Use broadcast send which doesn't fail if no receivers
                                 let _ = message_broadcast_tx_clone.send(message);
-                            }
+                            },
                             Ok(None) => {
                                 // Ignore non-message JSON
-                            }
+                            },
                             Err(e) => {
                                 warn!("Failed to parse message: {}", e);
-                            }
+                            },
                         }
-                    }
+                    },
                     Err(e) => {
                         warn!("Failed to parse JSON: {} - Line: {}", e, line);
-                    }
+                    },
                 }
             }
             info!("Stdout reader ended");
@@ -814,7 +836,7 @@ impl SubprocessTransport {
             let reader = BufReader::new(stderr);
             let mut lines = reader.lines();
             let mut error_buffer = Vec::new();
-            
+
             while let Ok(Some(line)) = lines.next_line().await {
                 if !line.trim().is_empty() {
                     // If debug_stderr is set, write to it
@@ -827,30 +849,37 @@ impl SubprocessTransport {
                     if let Some(ref callback) = stderr_callback {
                         callback.as_ref()(line.as_str());
                     }
-                    
+
                     error!("Claude CLI stderr: {}", line);
                     error_buffer.push(line.clone());
-                    
+
                     // Check for common error patterns
                     if line.contains("command not found") || line.contains("No such file") {
                         error!("Claude CLI binary not found or not executable");
                     } else if line.contains("ENOENT") || line.contains("spawn") {
                         error!("Failed to spawn Claude CLI process - binary may not be installed");
-                    } else if line.contains("authentication") || line.contains("API key") || line.contains("Unauthorized") {
-                        error!("Claude CLI authentication error - please run 'claude-code api login'");
-                    } else if line.contains("model") && (line.contains("not available") || line.contains("not found")) {
+                    } else if line.contains("authentication")
+                        || line.contains("API key")
+                        || line.contains("Unauthorized")
+                    {
+                        error!(
+                            "Claude CLI authentication error - please run 'claude-code api login'"
+                        );
+                    } else if line.contains("model")
+                        && (line.contains("not available") || line.contains("not found"))
+                    {
                         error!("Model not available for your account: {}", line);
                     } else if line.contains("Error:") || line.contains("error:") {
                         error!("Claude CLI error detected: {}", line);
                     }
                 }
             }
-            
+
             // If we collected any errors, log them
             if !error_buffer.is_empty() {
                 let error_msg = error_buffer.join("\n");
                 error!("Claude CLI stderr output collected:\n{}", error_msg);
-                
+
                 // Try to send an error message through the broadcast channel
                 let _ = message_broadcast_tx_for_error.send(Message::System {
                     subtype: "error".to_string(),
@@ -880,7 +909,7 @@ impl Transport for SubprocessTransport {
     fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
         self
     }
-    
+
     async fn connect(&mut self) -> Result<()> {
         if self.state == TransportState::Connected {
             return Ok(());
@@ -918,7 +947,9 @@ impl Transport for SubprocessTransport {
         }
     }
 
-    fn receive_messages(&mut self) -> Pin<Box<dyn Stream<Item = Result<Message>> + Send + 'static>> {
+    fn receive_messages(
+        &mut self,
+    ) -> Pin<Box<dyn Stream<Item = Result<Message>> + Send + 'static>> {
         if let Some(ref tx) = self.message_broadcast_tx {
             // Create a new receiver from the broadcast sender
             let rx = tx.subscribe();
@@ -932,7 +963,7 @@ impl Transport for SubprocessTransport {
                         )) => {
                             warn!("Receiver lagged by {} messages", n);
                             None
-                        }
+                        },
                     }
                 },
             ))
@@ -958,7 +989,7 @@ impl Transport for SubprocessTransport {
                         "request_id": request_id
                     }
                 })
-            }
+            },
         };
 
         let json = serde_json::to_string(&control_msg)?;
@@ -980,7 +1011,7 @@ impl Transport for SubprocessTransport {
             Ok(None)
         }
     }
-    
+
     async fn send_sdk_control_request(&mut self, request: serde_json::Value) -> Result<()> {
         // The request is already properly formatted as {"type": "control_request", ...}
         // Just send it directly without wrapping
@@ -995,7 +1026,7 @@ impl Transport for SubprocessTransport {
             })
         }
     }
-    
+
     async fn send_sdk_control_response(&mut self, response: serde_json::Value) -> Result<()> {
         // Wrap the response in control_response format expected by CLI
         // The response should have: {"type": "control_response", "response": {...}}
@@ -1042,7 +1073,9 @@ impl Transport for SubprocessTransport {
         Ok(())
     }
 
-    fn take_sdk_control_receiver(&mut self) -> Option<tokio::sync::mpsc::Receiver<serde_json::Value>> {
+    fn take_sdk_control_receiver(
+        &mut self,
+    ) -> Option<tokio::sync::mpsc::Receiver<serde_json::Value>> {
         self.sdk_control_rx.take()
     }
 
@@ -1078,11 +1111,12 @@ pub fn find_claude_cli() -> Result<PathBuf> {
     }
 
     // Check SDK cache directory (for auto-downloaded CLI)
-    if let Some(cached_path) = crate::cli_download::get_cached_cli_path() {
-        if cached_path.exists() && cached_path.is_file() {
-            debug!("Found cached Claude CLI at: {}", cached_path.display());
-            return Ok(cached_path);
-        }
+    if let Some(cached_path) = crate::cli_download::get_cached_cli_path()
+        && cached_path.exists()
+        && cached_path.is_file()
+    {
+        debug!("Found cached Claude CLI at: {}", cached_path.display());
+        return Ok(cached_path);
     }
 
     // Check common installation locations
@@ -1187,9 +1221,8 @@ fn apply_process_user_inner(cmd: &mut Command, user: &str) -> Result<()> {
     }
 
     fn lookup_by_name(name: &str) -> Result<(u32, u32)> {
-        let name = CString::new(name).map_err(|_| {
-            SdkError::ConfigError("options.user must not contain NUL bytes".into())
-        })?;
+        let name = CString::new(name)
+            .map_err(|_| SdkError::ConfigError("options.user must not contain NUL bytes".into()))?;
 
         let mut pwd = MaybeUninit::<libc::passwd>::zeroed();
         let mut result: *mut libc::passwd = ptr::null_mut();
@@ -1219,6 +1252,7 @@ fn apply_process_user_inner(cmd: &mut Command, user: &str) -> Result<()> {
         }
 
         let pwd = unsafe { pwd.assume_init() };
+        #[allow(clippy::unnecessary_cast)]
         Ok((pwd.pw_uid as u32, pwd.pw_gid as u32))
     }
 
@@ -1243,10 +1277,14 @@ fn apply_process_user_inner(cmd: &mut Command, user: &str) -> Result<()> {
             )));
         }
         if result.is_null() {
-            return Err(SdkError::ConfigError(format!("User not found for uid: {}", uid)));
+            return Err(SdkError::ConfigError(format!(
+                "User not found for uid: {}",
+                uid
+            )));
         }
 
         let pwd = unsafe { pwd.assume_init() };
+        #[allow(clippy::unnecessary_cast)]
         Ok((pwd.pw_uid as u32, pwd.pw_gid as u32))
     }
 

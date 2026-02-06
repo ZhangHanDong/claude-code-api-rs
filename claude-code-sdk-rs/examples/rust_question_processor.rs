@@ -3,8 +3,8 @@
 //! This example demonstrates how to use the Claude Code SDK to process Rust programming
 //! questions and generate annotated code solutions with comprehensive unit tests.
 
-use nexus_claude::{ClaudeCodeOptions, ContentBlock, InteractiveClient, PermissionMode, Result};
 use chrono::{DateTime, Utc};
+use nexus_claude::{ClaudeCodeOptions, ContentBlock, InteractiveClient, PermissionMode, Result};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
@@ -152,10 +152,11 @@ async fn process_question_set(question_set_file: &Path, start_from: Option<u32>)
         });
     }
 
-    let content =
-        fs::read_to_string(question_set_file).map_err(|e| nexus_claude::SdkError::InvalidState {
+    let content = fs::read_to_string(question_set_file).map_err(|e| {
+        nexus_claude::SdkError::InvalidState {
             message: format!("Failed to read question set file: {e}"),
-        })?;
+        }
+    })?;
 
     // Extract question set number from filename
     let basename = question_set_file
@@ -165,11 +166,12 @@ async fn process_question_set(question_set_file: &Path, start_from: Option<u32>)
             message: "Invalid filename".to_string(),
         })?;
 
-    let qs_number = basename
-        .strip_prefix("qs")
-        .ok_or_else(|| nexus_claude::SdkError::InvalidState {
-            message: "Filename should start with 'qs'".to_string(),
-        })?;
+    let qs_number =
+        basename
+            .strip_prefix("qs")
+            .ok_or_else(|| nexus_claude::SdkError::InvalidState {
+                message: "Filename should start with 'qs'".to_string(),
+            })?;
 
     println!("Processing question set: {}", question_set_file.display());
     println!("Question set number: {qs_number}");
@@ -193,9 +195,10 @@ async fn process_question_set(question_set_file: &Path, start_from: Option<u32>)
             let question_num: u32 = captures[1].parse().unwrap_or(0);
 
             if let Some(start) = start_from
-                && question_num < start {
-                    continue;
-                }
+                && question_num < start
+            {
+                continue;
+            }
 
             let question_text = &captures[2];
             let formatted_question_num = format!("{question_num:05}");
@@ -216,13 +219,11 @@ async fn process_question_set(question_set_file: &Path, start_from: Option<u32>)
                         question_num,
                         question_duration.as_secs()
                     );
-                }
+                },
                 Err(e) => {
-                    println!(
-                        "ERROR: Failed to process question {question_num}: {e:?}"
-                    );
+                    println!("ERROR: Failed to process question {question_num}: {e:?}");
                     // Continue with next question instead of stopping
-                }
+                },
             }
             println!("----------------------------------------");
         }
@@ -251,13 +252,13 @@ fn print_response(messages: &[nexus_claude::Message]) {
                         println!("{}", text.text);
                     }
                 }
-            }
+            },
             nexus_claude::Message::System { subtype, .. } => {
                 if subtype != "thinking" {
                     println!("[System: {subtype}]");
                 }
-            }
-            _ => {}
+            },
+            _ => {},
         }
     }
 }

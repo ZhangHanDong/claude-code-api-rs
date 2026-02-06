@@ -3,14 +3,16 @@
 //! These traits define the interface for storage backends.
 //! Implementations can be in-memory, Neo4j-backed, or any other storage system.
 
+#![allow(dead_code)] // Public API - may not be used internally
+
 use anyhow::Result;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 
+use crate::core::cache::CacheStats;
 use crate::core::conversation::{Conversation, ConversationMetadata};
 use crate::core::session_manager::Session;
-use crate::core::cache::CacheStats;
-use crate::models::openai::{ChatMessage, ChatCompletionResponse};
+use crate::models::openai::{ChatCompletionResponse, ChatMessage};
 
 /// Trait for conversation storage backends
 ///

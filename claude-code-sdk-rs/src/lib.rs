@@ -72,33 +72,79 @@ pub use token_tracker::{BudgetLimit, BudgetManager, BudgetStatus, TokenUsageTrac
 /// Default interactive client - the recommended client for interactive use
 pub type ClaudeSDKClientDefault = InteractiveClient;
 pub use types::{
-    AssistantContent, AssistantMessage, ClaudeCodeOptions, ContentBlock, ContentValue,
-    ControlProtocolFormat, ControlRequest, ControlResponse, McpServerConfig, Message,
-    PermissionMode, ResultMessage, SystemMessage, TextContent, ThinkingContent,
-    ToolResultContent, ToolUseContent, UserContent, UserMessage,
-    // Permission types
-    PermissionBehavior, PermissionResult, PermissionResultAllow, PermissionResultDeny,
-    PermissionRuleValue, PermissionUpdate, PermissionUpdateDestination, PermissionUpdateType,
-    ToolPermissionContext, CanUseTool,
-    // Hook types (v0.3.0 - strongly-typed hooks)
-    HookCallback, HookContext, HookMatcher,
+    AgentDefinition,
+    AssistantContent,
+    AssistantMessage,
+    AsyncHookJSONOutput,
     // Hook Input types (strongly-typed)
-    BaseHookInput, HookInput, PreToolUseHookInput, PostToolUseHookInput,
-    UserPromptSubmitHookInput, StopHookInput, SubagentStopHookInput, PreCompactHookInput,
+    BaseHookInput,
+    CanUseTool,
+    ClaudeCodeOptions,
+    ContentBlock,
+    ContentValue,
+    ControlProtocolFormat,
+    ControlRequest,
+    ControlResponse,
+    // Hook types (v0.3.0 - strongly-typed hooks)
+    HookCallback,
+    HookContext,
+    HookInput,
     // Hook Output types (strongly-typed)
-    HookJSONOutput, AsyncHookJSONOutput, SyncHookJSONOutput,
-    HookSpecificOutput, PreToolUseHookSpecificOutput, PostToolUseHookSpecificOutput,
-    UserPromptSubmitHookSpecificOutput, SessionStartHookSpecificOutput,
+    HookJSONOutput,
+    HookMatcher,
+    HookSpecificOutput,
+    McpServerConfig,
+    Message,
+    // Permission types
+    PermissionBehavior,
+    PermissionMode,
+    PermissionResult,
+    PermissionResultAllow,
+    PermissionResultDeny,
+    PermissionRuleValue,
+    PermissionUpdate,
+    PermissionUpdateDestination,
+    PermissionUpdateType,
+    PostToolUseHookInput,
+    PostToolUseHookSpecificOutput,
+    PreCompactHookInput,
+    PreToolUseHookInput,
+    PreToolUseHookSpecificOutput,
+    ResultMessage,
     // SDK Control Protocol types
-    SDKControlInitializeRequest, SDKControlInterruptRequest, SDKControlMcpMessageRequest,
-    SDKControlPermissionRequest, SDKControlRequest, SDKControlSetPermissionModeRequest,
-    SDKHookCallbackRequest, SDKControlRewindFilesRequest,
-    // Phase 2 enhancements
-    SettingSource, AgentDefinition, SystemPrompt,
-    // Phase 3 enhancements (Python SDK v0.1.12+ sync)
-    ToolsConfig, ToolsPreset, SdkBeta,
-    SandboxSettings, SandboxNetworkConfig, SandboxIgnoreViolations,
+    SDKControlInitializeRequest,
+    SDKControlInterruptRequest,
+    SDKControlMcpMessageRequest,
+    SDKControlPermissionRequest,
+    SDKControlRequest,
+    SDKControlRewindFilesRequest,
+    SDKControlSetPermissionModeRequest,
+    SDKHookCallbackRequest,
+    SandboxIgnoreViolations,
+    SandboxNetworkConfig,
+    SandboxSettings,
+    SdkBeta,
     SdkPluginConfig,
+    SessionStartHookSpecificOutput,
+    // Phase 2 enhancements
+    SettingSource,
+    StopHookInput,
+    SubagentStopHookInput,
+    SyncHookJSONOutput,
+    SystemMessage,
+    SystemPrompt,
+    TextContent,
+    ThinkingContent,
+    ToolPermissionContext,
+    ToolResultContent,
+    ToolUseContent,
+    // Phase 3 enhancements (Python SDK v0.1.12+ sync)
+    ToolsConfig,
+    ToolsPreset,
+    UserContent,
+    UserMessage,
+    UserPromptSubmitHookInput,
+    UserPromptSubmitHookSpecificOutput,
 };
 
 // Phase 3: Type aliases for naming consistency
@@ -115,9 +161,8 @@ pub use transport::SubprocessTransport;
 
 // Re-export SDK MCP types
 pub use sdk_mcp::{
-    SdkMcpServer, SdkMcpServerBuilder, ToolDefinition, ToolHandler, ToolInputSchema,
-    ToolResult, create_simple_tool,
-    ToolResultContent as SdkToolResultContent,
+    SdkMcpServer, SdkMcpServerBuilder, ToolDefinition, ToolHandler, ToolInputSchema, ToolResult,
+    ToolResultContent as SdkToolResultContent, create_simple_tool,
 };
 
 /// Prelude module for convenient imports

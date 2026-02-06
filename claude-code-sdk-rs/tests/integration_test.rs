@@ -36,7 +36,7 @@ fn test_message_types() {
     match user_msg {
         Message::User { message } => {
             assert_eq!(message.content, "Hello");
-        }
+        },
         _ => panic!("Expected User message"),
     }
 
@@ -47,7 +47,7 @@ fn test_message_types() {
     match text_block {
         ContentBlock::Text(text) => {
             assert_eq!(text.text, "Response text");
-        }
+        },
         _ => panic!("Expected Text block"),
     }
 }

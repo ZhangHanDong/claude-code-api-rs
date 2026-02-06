@@ -35,17 +35,35 @@ impl ModelRecommendation {
         let mut map = HashMap::new();
 
         // Simple/fast tasks - use Haiku (cheapest, fastest)
-        map.insert("simple".to_string(), "claude-3-5-haiku-20241022".to_string());
+        map.insert(
+            "simple".to_string(),
+            "claude-3-5-haiku-20241022".to_string(),
+        );
         map.insert("fast".to_string(), "claude-3-5-haiku-20241022".to_string());
         map.insert("cheap".to_string(), "claude-3-5-haiku-20241022".to_string());
         map.insert("quick".to_string(), "claude-3-5-haiku-20241022".to_string());
 
         // Balanced tasks - use Sonnet 4.5 (good balance, latest)
-        map.insert("balanced".to_string(), "claude-sonnet-4-5-20250929".to_string());
-        map.insert("general".to_string(), "claude-sonnet-4-5-20250929".to_string());
-        map.insert("normal".to_string(), "claude-sonnet-4-5-20250929".to_string());
-        map.insert("standard".to_string(), "claude-sonnet-4-5-20250929".to_string());
-        map.insert("latest".to_string(), "claude-sonnet-4-5-20250929".to_string());
+        map.insert(
+            "balanced".to_string(),
+            "claude-sonnet-4-5-20250929".to_string(),
+        );
+        map.insert(
+            "general".to_string(),
+            "claude-sonnet-4-5-20250929".to_string(),
+        );
+        map.insert(
+            "normal".to_string(),
+            "claude-sonnet-4-5-20250929".to_string(),
+        );
+        map.insert(
+            "standard".to_string(),
+            "claude-sonnet-4-5-20250929".to_string(),
+        );
+        map.insert(
+            "latest".to_string(),
+            "claude-sonnet-4-5-20250929".to_string(),
+        );
 
         // Complex/critical tasks - use Opus (most capable)
         map.insert("complex".to_string(), "opus".to_string());
@@ -54,7 +72,9 @@ impl ModelRecommendation {
         map.insert("critical".to_string(), "opus".to_string());
         map.insert("advanced".to_string(), "opus".to_string());
 
-        Self { recommendations: map }
+        Self {
+            recommendations: map,
+        }
     }
 
     /// Create with custom recommendations
@@ -202,10 +222,22 @@ mod tests {
     fn test_default_recommendations() {
         let recommender = ModelRecommendation::default();
 
-        assert_eq!(recommender.suggest("simple"), Some("claude-3-5-haiku-20241022"));
-        assert_eq!(recommender.suggest("fast"), Some("claude-3-5-haiku-20241022"));
-        assert_eq!(recommender.suggest("balanced"), Some("claude-sonnet-4-5-20250929"));
-        assert_eq!(recommender.suggest("latest"), Some("claude-sonnet-4-5-20250929"));
+        assert_eq!(
+            recommender.suggest("simple"),
+            Some("claude-3-5-haiku-20241022")
+        );
+        assert_eq!(
+            recommender.suggest("fast"),
+            Some("claude-3-5-haiku-20241022")
+        );
+        assert_eq!(
+            recommender.suggest("balanced"),
+            Some("claude-sonnet-4-5-20250929")
+        );
+        assert_eq!(
+            recommender.suggest("latest"),
+            Some("claude-sonnet-4-5-20250929")
+        );
         assert_eq!(recommender.suggest("complex"), Some("opus"));
         assert_eq!(recommender.suggest("unknown"), None);
     }

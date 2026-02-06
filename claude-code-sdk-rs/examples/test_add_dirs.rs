@@ -2,8 +2,8 @@
 //!
 //! This example shows how to add multiple directories as working directories
 
-use nexus_claude::{ClaudeCodeOptions, Result, query};
 use futures::StreamExt;
+use nexus_claude::{ClaudeCodeOptions, Result, query};
 use std::path::PathBuf;
 
 #[tokio::main]
@@ -60,7 +60,7 @@ async fn main() -> Result<()> {
                         println!("Claude: {}", text.text);
                     }
                 }
-            }
+            },
             nexus_claude::Message::Result {
                 duration_ms,
                 total_cost_usd,
@@ -71,8 +71,8 @@ async fn main() -> Result<()> {
                 if let Some(cost) = total_cost_usd {
                     println!("Cost: ${cost:.6}");
                 }
-            }
-            _ => {}
+            },
+            _ => {},
         }
     }
 

@@ -73,7 +73,7 @@ async fn test_single_query_latency(options: ClaudeCodeOptions) -> TestResult {
                 success: true,
                 error: None,
             }
-        }
+        },
         Err(e) => {
             info!("  Single query failed: {}", e);
             TestResult {
@@ -82,7 +82,7 @@ async fn test_single_query_latency(options: ClaudeCodeOptions) -> TestResult {
                 success: false,
                 error: Some(e.to_string()),
             }
-        }
+        },
     }
 }
 
@@ -100,7 +100,7 @@ async fn test_connection_pooling(options: ClaudeCodeOptions) -> TestResult {
                 let query_duration = query_start.elapsed();
                 durations.push(query_duration);
                 info!("  Query {} completed in {:?}", i + 1, query_duration);
-            }
+            },
             Err(e) => {
                 info!("  Query {} failed: {}", i + 1, e);
                 return TestResult {
@@ -109,7 +109,7 @@ async fn test_connection_pooling(options: ClaudeCodeOptions) -> TestResult {
                     success: false,
                     error: Some(e.to_string()),
                 };
-            }
+            },
         }
     }
 
@@ -150,7 +150,8 @@ async fn test_concurrent_throughput(options: ClaudeCodeOptions) -> TestResult {
     let client =
         Arc::new(OptimizedClient::new(options, ClientMode::Batch { max_concurrent: 5 }).unwrap());
 
-    let queries = ["What is 1 + 1?",
+    let queries = [
+        "What is 1 + 1?",
         "What is 2 + 2?",
         "What is 3 + 3?",
         "What is 4 + 4?",
@@ -159,7 +160,8 @@ async fn test_concurrent_throughput(options: ClaudeCodeOptions) -> TestResult {
         "What is 7 + 7?",
         "What is 8 + 8?",
         "What is 9 + 9?",
-        "What is 10 + 10?"];
+        "What is 10 + 10?",
+    ];
 
     let start = Instant::now();
     let results = client
@@ -214,7 +216,7 @@ async fn test_interactive_latency(options: ClaudeCodeOptions) -> TestResult {
                         let round_trip = msg_start.elapsed();
                         round_trip_times.push(round_trip);
                         info!("  Round trip {}: {:?}", i + 1, round_trip);
-                    }
+                    },
                     Err(e) => {
                         return TestResult {
                             name: "Interactive Session".to_string(),
@@ -222,7 +224,7 @@ async fn test_interactive_latency(options: ClaudeCodeOptions) -> TestResult {
                             success: false,
                             error: Some(format!("Receive failed: {e}")),
                         };
-                    }
+                    },
                 }
             }
 
@@ -239,7 +241,7 @@ async fn test_interactive_latency(options: ClaudeCodeOptions) -> TestResult {
                 success: true,
                 error: None,
             }
-        }
+        },
         Err(e) => TestResult {
             name: "Interactive Session".to_string(),
             duration: start.elapsed(),
@@ -257,9 +259,7 @@ async fn test_large_batch(options: ClaudeCodeOptions) -> TestResult {
     let metrics = Arc::new(RwLock::new(PerformanceMetrics::default()));
 
     // Generate 20 queries
-    let queries: Vec<String> = (1..=20)
-        .map(|i| format!("What is {i} squared?"))
-        .collect();
+    let queries: Vec<String> = (1..=20).map(|i| format!("What is {i} squared?")).collect();
 
     info!(
         "  Processing {} queries with max concurrency 10",
@@ -277,10 +277,10 @@ async fn test_large_batch(options: ClaudeCodeOptions) -> TestResult {
                     Ok(_) => {
                         let latency = (duration.as_millis() / results.len() as u128) as u64;
                         metrics.write().await.record_success(latency);
-                    }
+                    },
                     Err(_) => {
                         metrics.write().await.record_failure();
-                    }
+                    },
                 }
             }
 
@@ -312,7 +312,7 @@ async fn test_large_batch(options: ClaudeCodeOptions) -> TestResult {
                     None
                 },
             }
-        }
+        },
         Err(e) => TestResult {
             name: "Large Batch Processing".to_string(),
             duration: start.elapsed(),

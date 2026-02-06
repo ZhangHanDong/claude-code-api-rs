@@ -1,0 +1,49 @@
+# Codecov configuration for Nexus
+# https://docs.codecov.io/docs/codecov-yaml
+
+coverage:
+  precision: 2
+  round: down
+  range: "60...100"
+
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 2%
+        informational: true  # Don't fail CI on coverage decrease
+    patch:
+      default:
+        target: 80%
+        informational: true
+
+parsers:
+  gcov:
+    branch_detection:
+      conditional: yes
+      loop: yes
+      method: no
+      macro: no
+
+comment:
+  layout: "reach,diff,flags,files"
+  behavior: default
+  require_changes: false
+  require_base: no
+  require_head: yes
+
+ignore:
+  - "examples/**"
+  - "tests/**"
+  - "**/test*.rs"
+  - "**/mod.rs"  # Module files typically don't have logic
+
+flags:
+  sdk:
+    paths:
+      - claude-code-sdk-rs/src/**
+    carryforward: true
+  api:
+    paths:
+      - claude-code-api/src/**
+    carryforward: true

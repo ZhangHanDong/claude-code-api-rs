@@ -1,16 +1,16 @@
-use nexus_claude::Query;
-use nexus_claude::transport::Transport;
-use nexus_claude::{
-    CanUseTool, HookMatcher, PermissionResult, PermissionResultAllow,
-    ToolPermissionContext, Message,
-};
-use nexus_claude::Result;
 use async_trait::async_trait;
 use futures::stream::{self, Stream};
+use nexus_claude::Query;
+use nexus_claude::Result;
+use nexus_claude::transport::Transport;
+use nexus_claude::{
+    CanUseTool, HookMatcher, Message, PermissionResult, PermissionResultAllow,
+    ToolPermissionContext,
+};
 use serde_json::json;
 use std::pin::Pin;
 use std::sync::Arc;
-use tokio::sync::{mpsc, Mutex};
+use tokio::sync::{Mutex, mpsc};
 
 struct MockTransport {
     inbound_ctrl_rx: Option<mpsc::Receiver<serde_json::Value>>,
@@ -36,11 +36,16 @@ impl Transport for MockTransport {
         Ok(())
     }
 
-    async fn send_message(&mut self, _message: nexus_claude::transport::InputMessage) -> Result<()> {
+    async fn send_message(
+        &mut self,
+        _message: nexus_claude::transport::InputMessage,
+    ) -> Result<()> {
         Ok(())
     }
 
-    fn receive_messages(&mut self) -> Pin<Box<dyn Stream<Item = Result<Message>> + Send + 'static>> {
+    fn receive_messages(
+        &mut self,
+    ) -> Pin<Box<dyn Stream<Item = Result<Message>> + Send + 'static>> {
         Box::pin(stream::empty())
     }
 
@@ -48,9 +53,7 @@ impl Transport for MockTransport {
         Ok(())
     }
 
-    async fn receive_control_response(
-        &mut self,
-    ) -> Result<Option<nexus_claude::ControlResponse>> {
+    async fn receive_control_response(&mut self) -> Result<Option<nexus_claude::ControlResponse>> {
         Ok(None)
     }
 
@@ -76,9 +79,7 @@ impl Transport for MockTransport {
         Ok(())
     }
 
-    fn take_sdk_control_receiver(
-        &mut self,
-    ) -> Option<mpsc::Receiver<serde_json::Value>> {
+    fn take_sdk_control_receiver(&mut self) -> Option<mpsc::Receiver<serde_json::Value>> {
         self.inbound_ctrl_rx.take()
     }
 }
@@ -119,20 +120,13 @@ async fn e2e_can_use_tool_allow() -> Result<()> {
     // Build transport and query
     let mock = MockTransport::new(rx);
     let sent_responses = mock.sent_ctrl_responses.clone();
-    let transport: Arc<Mutex<Box<dyn Transport + Send>>> =
-        Arc::new(Mutex::new(Box::new(mock)));
+    let transport: Arc<Mutex<Box<dyn Transport + Send>>> = Arc::new(Mutex::new(Box::new(mock)));
 
     let can_use = Some(Arc::new(AllowAll) as Arc<dyn CanUseTool>);
     let hooks: Option<std::collections::HashMap<String, Vec<HookMatcher>>> = None;
     let sdk_mcp_servers = std::collections::HashMap::new();
 
-    let mut query = Query::new(
-        transport.clone(),
-        true,
-        can_use,
-        hooks,
-        sdk_mcp_servers,
-    );
+    let mut query = Query::new(transport.clone(), true, can_use, hooks, sdk_mcp_servers);
 
     // Start and allow background control handling
     query.start().await?;

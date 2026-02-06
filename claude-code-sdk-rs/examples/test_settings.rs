@@ -2,8 +2,8 @@
 //!
 //! This example shows how to use a custom settings file with Claude Code
 
-use nexus_claude::{ClaudeCodeOptions, Result, query};
 use futures::StreamExt;
+use nexus_claude::{ClaudeCodeOptions, Result, query};
 use std::env;
 
 #[tokio::main]
@@ -47,7 +47,7 @@ async fn main() -> Result<()> {
                         println!("Claude: {}", text.text);
                     }
                 }
-            }
+            },
             nexus_claude::Message::Result {
                 duration_ms,
                 total_cost_usd,
@@ -58,8 +58,8 @@ async fn main() -> Result<()> {
                 if let Some(cost) = total_cost_usd {
                     println!("Cost: ${cost:.6}");
                 }
-            }
-            _ => {}
+            },
+            _ => {},
         }
     }
 

@@ -2,8 +2,8 @@
 //!
 //! This example demonstrates different permission modes for file operations
 
-use nexus_claude::{ClaudeCodeOptions, Message, PermissionMode, Result, query};
 use futures::StreamExt;
+use nexus_claude::{ClaudeCodeOptions, Message, PermissionMode, Result, query};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -89,17 +89,17 @@ async fn run_query(prompt: &str, options: ClaudeCodeOptions) -> Result<()> {
                     match block {
                         nexus_claude::ContentBlock::Text(text) => {
                             println!("Claude: {}", text.text);
-                        }
+                        },
                         nexus_claude::ContentBlock::ToolUse(tool_use) => {
                             println!(
                                 "Claude wants to use tool: {} ({})",
                                 tool_use.name, tool_use.id
                             );
-                        }
-                        _ => {}
+                        },
+                        _ => {},
                     }
                 }
-            }
+            },
             Message::Result {
                 duration_ms,
                 is_error,
@@ -111,8 +111,8 @@ async fn run_query(prompt: &str, options: ClaudeCodeOptions) -> Result<()> {
                     println!("Query completed successfully in {duration_ms}ms");
                 }
                 break;
-            }
-            _ => {}
+            },
+            _ => {},
         }
     }
 

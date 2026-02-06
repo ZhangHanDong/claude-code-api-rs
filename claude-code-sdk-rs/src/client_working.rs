@@ -107,13 +107,13 @@ impl ClaudeSDKClientWorking {
                             if tx_clone.send(msg).await.is_err() {
                                 break;
                             }
-                        }
+                        },
                         Err(e) => {
                             error!("Error receiving message: {}", e);
                             let mut state = state_clone.write().await;
                             *state = ClientState::Error;
                             break;
-                        }
+                        },
                     }
                 } else {
                     // No message available, wait a bit

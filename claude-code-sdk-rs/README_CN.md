@@ -1,12 +1,14 @@
-# Claude Code SDK for Rust
+# nexus-claude - Claude Code SDK for Rust
 
-[![Crates.io](https://img.shields.io/crates/v/cc-sdk.svg)](https://crates.io/crates/cc-sdk)
-[![Documentation](https://docs.rs/cc-sdk/badge.svg)](https://docs.rs/cc-sdk)
-[![License](https://img.shields.io/crates/l/cc-sdk.svg)](LICENSE)
+[![Crates.io](https://img.shields.io/crates/v/nexus-claude.svg)](https://crates.io/crates/nexus-claude)
+[![Documentation](https://docs.rs/nexus-claude/badge.svg)](https://docs.rs/nexus-claude)
+[![License](https://img.shields.io/crates/l/nexus-claude.svg)](LICENSE)
 
 一个用于与 Claude Code CLI 交互的 Rust SDK，提供简单查询接口和完整的交互式客户端功能。
 
-> **v0.4.0**: 🎉 **与 Python SDK v0.1.14 实现 100% 功能对等** - 包括自动下载 CLI！
+> **v0.5.0**: 🎉 **与 Python SDK v0.1.14 实现 100% 功能对等** - 包括自动下载 CLI 和持久记忆！
+
+> **Fork 声明**：本项目是 [ZhangHanDong/claude-code-api-rs](https://github.com/ZhangHanDong/claude-code-api-rs)（`cc-sdk`）的 fork，增加了持久记忆功能。
 
 ## 功能特性
 
@@ -22,6 +24,7 @@
 - 📥 **自动下载 CLI** - 未找到时自动下载 Claude Code CLI（v0.4.0+）
 - 📁 **文件检查点** - 将文件更改回退到对话中的任意点（v0.4.0+）
 - 📊 **结构化输出** - 响应的 JSON Schema 验证（v0.4.0+）
+- 🧠 **持久记忆** - 对话存储和索引以供将来检索（v0.5.0+）
 
 ## Python SDK 功能对等（v0.4.0）
 
@@ -116,9 +119,16 @@ println!("Tokens: {}, 成本: ${:.2}", usage.total_tokens(), usage.total_cost_us
 
 ```toml
 [dependencies]
-cc-sdk = "0.4.0"
+nexus-claude = "0.5.0"
 tokio = { version = "1.0", features = ["full"] }
 futures = "0.3"
+```
+
+### 带持久记忆
+
+```toml
+[dependencies]
+nexus-claude = { version = "0.5.0", features = ["memory"] }
 ```
 
 ### 自动下载 CLI（默认启用）
@@ -132,15 +142,15 @@ let options = ClaudeCodeOptions::builder()
 ```
 
 CLI 缓存在平台特定位置：
-- **macOS**: `~/Library/Caches/cc-sdk/cli/`
-- **Linux**: `~/.cache/cc-sdk/cli/`
-- **Windows**: `%LOCALAPPDATA%\cc-sdk\cli\`
+- **macOS**: `~/Library/Caches/nexus-claude/cli/`
+- **Linux**: `~/.cache/nexus-claude/cli/`
+- **Windows**: `%LOCALAPPDATA%\nexus-claude\cli\`
 
 禁用自动下载：
 
 ```toml
 [dependencies]
-cc-sdk = { version = "0.4.0", default-features = false }
+nexus-claude = { version = "0.5.0", default-features = false }
 ```
 
 ## 前置要求
@@ -158,12 +168,12 @@ npm install -g @anthropic-ai/claude-code
 SDK 支持 2025 年最新的 Claude 模型：
 
 ### 最新模型
-- **Opus 4.1** - 最强大的模型
-  - 完整名称：`"claude-opus-4-1-20250805"`
+- **Opus 4.5** - 最强大的模型
+  - 完整名称：`"claude-opus-4-5-20251101"`
   - 别名：`"opus"`（推荐 - 使用最新 Opus）
-  
-- **Sonnet 4** - 平衡的性能
-  - 完整名称：`"claude-sonnet-4-20250514"`
+
+- **Sonnet 4.5** - 平衡的性能
+  - 完整名称：`"claude-sonnet-4-5-20250929"`
   - 别名：`"sonnet"`（推荐 - 使用最新 Sonnet）
 
 ### 上一代模型
@@ -175,14 +185,14 @@ SDK 支持 2025 年最新的 Claude 模型：
 ```rust
 use nexus_claude::{query, ClaudeCodeOptions, Result};
 
-// 使用 Opus 4.1（推荐使用别名）
+// 使用 Opus 4.5（推荐使用别名）
 let options = ClaudeCodeOptions::builder()
-    .model("opus")  // 或 "claude-opus-4-1-20250805" 指定版本
+    .model("opus")  // 或 "claude-opus-4-5-20251101" 指定版本
     .build();
 
-// 使用 Sonnet 4（推荐使用别名）
+// 使用 Sonnet 4.5（推荐使用别名）
 let options = ClaudeCodeOptions::builder()
-    .model("sonnet")  // 或 "claude-sonnet-4-20250514" 指定版本
+    .model("sonnet")  // 或 "claude-sonnet-4-5-20250929" 指定版本
     .build();
 
 let mut messages = query("你的提示", Some(options)).await?;
@@ -243,32 +253,26 @@ async fn main() -> Result<()> {
 }
 ```
 
-### 高级用法
+### 带持久记忆
 
 ```rust
-use nexus_claude::{InteractiveClient, ClaudeCodeOptions, Result};
+use nexus_claude::memory::{MemoryIntegrationBuilder, ContextInjector, MemoryConfig};
 
-#[tokio::main]
-async fn main() -> Result<()> {
-    let mut client = InteractiveClient::new(ClaudeCodeOptions::default())?;
-    client.connect().await?;
+// 创建用于对话跟踪的记忆管理器
+let mut manager = MemoryIntegrationBuilder::new()
+    .enabled(true)
+    .cwd("/projects/my-app")
+    .url("http://localhost:7700")  // Meilisearch URL
+    .min_relevance_score(0.3)
+    .max_context_items(5)
+    .build();
 
-    // 发送消息但不等待响应
-    client.send_message("计算圆周率到100位".to_string()).await?;
-
-    // 做其他工作...
-
-    // 准备好时接收响应（在 Result 消息处停止）
-    let messages = client.receive_response().await?;
-
-    // 取消长时间运行的操作
-    client.send_message("写一篇10000字的文章".to_string()).await?;
-    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-    client.interrupt().await?;
-
-    client.disconnect().await?;
-    Ok(())
-}
+// 记录对话中的消息和工具调用
+manager.record_user_message("如何实现 JWT 认证？");
+manager.process_tool_call("Read", &serde_json::json!({
+    "file_path": "/projects/my-app/src/auth.rs"
+}));
+manager.record_assistant_message("我已经分析了您的认证模块...");
 ```
 
 ## 配置选项
@@ -422,3 +426,12 @@ SDK 提供全面的错误类型：
 ## 贡献
 
 欢迎贡献！请随时提交 Pull Request。
+
+## 支持
+
+- [报告问题](https://github.com/this-rs/nexus/issues)
+- [讨论](https://github.com/this-rs/nexus/discussions)
+
+---
+
+由 Nexus 团队用 Rust 制作

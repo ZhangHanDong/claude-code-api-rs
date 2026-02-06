@@ -1,12 +1,14 @@
-# Claude Code SDK for Rust
+# nexus-claude - Claude Code SDK for Rust
 
-[![Crates.io](https://img.shields.io/crates/v/cc-sdk.svg)](https://crates.io/crates/cc-sdk)
-[![Documentation](https://docs.rs/cc-sdk/badge.svg)](https://docs.rs/cc-sdk)
-[![License](https://img.shields.io/crates/l/cc-sdk.svg)](LICENSE)
+[![Crates.io](https://img.shields.io/crates/v/nexus-claude.svg)](https://crates.io/crates/nexus-claude)
+[![Documentation](https://docs.rs/nexus-claude/badge.svg)](https://docs.rs/nexus-claude)
+[![License](https://img.shields.io/crates/l/nexus-claude.svg)](LICENSE)
 
 Claude Code CLIと対話するためのRust SDKです。シンプルなクエリインターフェースと完全なインタラクティブクライアント機能を提供しています。
 
-> **v0.4.0**: 🎉 **Python SDK v0.1.14と100%機能同等** - CLI自動ダウンロード対応！
+> **v0.5.0**: 🎉 **Python SDK v0.1.14と100%機能同等** - CLI自動ダウンロードと永続メモリ対応！
+
+> **Fork 通知**：このプロジェクトは [ZhangHanDong/claude-code-api-rs](https://github.com/ZhangHanDong/claude-code-api-rs)（`cc-sdk`）のフォークで、永続メモリ機能を追加しています。
 
 ## 機能
 
@@ -22,6 +24,7 @@ Claude Code CLIと対話するためのRust SDKです。シンプルなクエリ
 - 📥 **CLI自動ダウンロード** - 見つからない場合に自動ダウンロード（v0.4.0+）
 - 📁 **ファイルチェックポイント** - 会話の任意の時点にファイル変更を巻き戻し（v0.4.0+）
 - 📊 **構造化出力** - レスポンスのJSONスキーマ検証（v0.4.0+）
+- 🧠 **永続メモリ** - 会話を保存してインデックス化し、将来の取得に使用（v0.5.0+）
 
 ## Python SDK機能同等（v0.4.0）
 
@@ -55,9 +58,16 @@ Claude Code CLIと対話するためのRust SDKです。シンプルなクエリ
 
 ```toml
 [dependencies]
-cc-sdk = "0.4.0"
+nexus-claude = "0.5.0"
 tokio = { version = "1.0", features = ["full"] }
 futures = "0.3"
+```
+
+### 永続メモリ付き
+
+```toml
+[dependencies]
+nexus-claude = { version = "0.5.0", features = ["memory"] }
 ```
 
 ### CLI自動ダウンロード（デフォルト有効）
@@ -71,15 +81,15 @@ let options = ClaudeCodeOptions::builder()
 ```
 
 CLIはプラットフォーム固有の場所にキャッシュされます：
-- **macOS**: `~/Library/Caches/cc-sdk/cli/`
-- **Linux**: `~/.cache/cc-sdk/cli/`
-- **Windows**: `%LOCALAPPDATA%\cc-sdk\cli\`
+- **macOS**: `~/Library/Caches/nexus-claude/cli/`
+- **Linux**: `~/.cache/nexus-claude/cli/`
+- **Windows**: `%LOCALAPPDATA%\nexus-claude\cli\`
 
 自動ダウンロードを無効にする場合：
 
 ```toml
 [dependencies]
-cc-sdk = { version = "0.4.0", default-features = false }
+nexus-claude = { version = "0.5.0", default-features = false }
 ```
 
 ## 前提条件
@@ -90,6 +100,41 @@ Claude Code CLIはSDKにより**自動ダウンロード**されます（v0.4.0+
 
 ```bash
 npm install -g @anthropic-ai/claude-code
+```
+
+## サポートされるモデル（2025年）
+
+SDKは2025年最新のClaudeモデルをサポート：
+
+### 最新モデル
+- **Opus 4.5** - 最も高性能なモデル
+  - 完全名：`"claude-opus-4-5-20251101"`
+  - 別名：`"opus"`（推奨 - 最新Opusを使用）
+
+- **Sonnet 4.5** - バランスの取れたパフォーマンス
+  - 完全名：`"claude-sonnet-4-5-20250929"`
+  - 別名：`"sonnet"`（推奨 - 最新Sonnetを使用）
+
+### 前世代モデル
+- **Claude 3.5 Sonnet** - `"claude-3-5-sonnet-20241022"`
+- **Claude 3.5 Haiku** - `"claude-3-5-haiku-20241022"`（最速）
+
+### コードでのモデル使用
+
+```rust
+use nexus_claude::{query, ClaudeCodeOptions, Result};
+
+// Opus 4.5を使用（別名推奨）
+let options = ClaudeCodeOptions::builder()
+    .model("opus")  // または "claude-opus-4-5-20251101" で指定
+    .build();
+
+// Sonnet 4.5を使用（別名推奨）
+let options = ClaudeCodeOptions::builder()
+    .model("sonnet")  // または "claude-sonnet-4-5-20250929" で指定
+    .build();
+
+let mut messages = query("プロンプト", Some(options)).await?;
 ```
 
 ## クイックスタート
@@ -145,6 +190,28 @@ async fn main() -> Result<()> {
     client.disconnect().await?;
     Ok(())
 }
+```
+
+### 永続メモリ付き
+
+```rust
+use nexus_claude::memory::{MemoryIntegrationBuilder, ContextInjector, MemoryConfig};
+
+// 会話追跡用のメモリマネージャを作成
+let mut manager = MemoryIntegrationBuilder::new()
+    .enabled(true)
+    .cwd("/projects/my-app")
+    .url("http://localhost:7700")  // Meilisearch URL
+    .min_relevance_score(0.3)
+    .max_context_items(5)
+    .build();
+
+// 会話中のメッセージとツール呼び出しを記録
+manager.record_user_message("JWT 認証を実装するには？");
+manager.process_tool_call("Read", &serde_json::json!({
+    "file_path": "/projects/my-app/src/auth.rs"
+}));
+manager.record_assistant_message("認証モジュールを分析しました...");
 ```
 
 ### 高度な使用方法
@@ -265,3 +332,12 @@ SDKは包括的なエラー型を提供：
 ## 貢献
 
 貢献を歓迎します！お気軽にPull Requestを提出してください。
+
+## サポート
+
+- [問題を報告](https://github.com/this-rs/nexus/issues)
+- [ディスカッション](https://github.com/this-rs/nexus/discussions)
+
+---
+
+Nexus チームが Rust で作成

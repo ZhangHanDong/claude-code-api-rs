@@ -32,6 +32,8 @@ thiserror.workspace = true
 tracing.workspace = true
 futures.workspace = true
 async-trait.workspace = true
+neo4rs.workspace = true
+meilisearch-sdk.workspace = true
 
 # Local dependencies
 axum = { version = "0.7", features = ["http2", "json", "macros"] }

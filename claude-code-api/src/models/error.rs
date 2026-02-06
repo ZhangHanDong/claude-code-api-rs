@@ -24,7 +24,7 @@ pub enum ApiError {
     ClaudeProcess(String),
     
     #[error("Database error: {0}")]
-    Database(#[from] sqlx::Error),
+    Database(String),
     
     #[error("Configuration error: {0}")]
     Config(#[from] config::ConfigError),

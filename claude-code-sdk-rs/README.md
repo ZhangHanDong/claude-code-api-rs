@@ -1,8 +1,11 @@
 # Nexus - Claude Code SDK for Rust
 
+[![CI](https://github.com/this-rs/nexus/actions/workflows/ci.yml/badge.svg)](https://github.com/this-rs/nexus/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/this-rs/nexus/branch/main/graph/badge.svg)](https://codecov.io/gh/this-rs/nexus)
 [![Crates.io](https://img.shields.io/crates/v/nexus-claude.svg)](https://crates.io/crates/nexus-claude)
 [![Documentation](https://docs.rs/nexus-claude/badge.svg)](https://docs.rs/nexus-claude)
 [![License](https://img.shields.io/crates/l/nexus-claude.svg)](LICENSE)
+[![MSRV](https://img.shields.io/badge/MSRV-1.88-orange.svg)](https://www.rust-lang.org)
 
 **Nexus** is a Rust SDK for Claude Code CLI with **persistent memory** and **autonomous context retrieval**. It provides both simple query interfaces and full interactive client capabilities, enhanced with cross-session memory that automatically retrieves relevant context.
 

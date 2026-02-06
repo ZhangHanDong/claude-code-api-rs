@@ -1,8 +1,10 @@
 # Nexus - Claude Code SDK & API
 
+[![CI](https://github.com/this-rs/nexus/actions/workflows/ci.yml/badge.svg)](https://github.com/this-rs/nexus/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/this-rs/nexus/branch/main/graph/badge.svg)](https://codecov.io/gh/this-rs/nexus)
 [![Version](https://img.shields.io/badge/version-0.5.0-blue.svg)](https://github.com/this-rs/nexus)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Rust](https://img.shields.io/badge/rust-1.75+-orange.svg)](https://www.rust-lang.org)
+[![Rust](https://img.shields.io/badge/rust-1.88+-orange.svg)](https://www.rust-lang.org)
 
 ---
 

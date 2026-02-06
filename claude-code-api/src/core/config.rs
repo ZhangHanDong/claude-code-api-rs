@@ -6,7 +6,6 @@ use std::env;
 pub struct Settings {
     pub server: ServerConfig,
     pub claude: ClaudeConfig,
-    pub database: DatabaseConfig,
     pub auth: AuthConfig,
     #[serde(default)]
     pub file_access: FileAccessConfig,
@@ -29,12 +28,6 @@ pub struct ClaudeConfig {
     pub max_concurrent_sessions: usize,
     #[serde(default)]
     pub use_interactive_sessions: bool,
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct DatabaseConfig {
-    pub url: String,
-    pub max_connections: u32,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -91,8 +84,6 @@ impl Settings {
             .set_default("claude.timeout_seconds", 300)?
             .set_default("claude.max_concurrent_sessions", 10)?
             .set_default("claude.use_interactive_sessions", false)?
-            .set_default("database.url", "sqlite://./claude_code.db")?
-            .set_default("database.max_connections", 5)?
             .set_default("auth.enabled", false)?
             .set_default("auth.secret_key", "change-me-in-production")?
             .set_default("auth.token_expiry_hours", 24)?

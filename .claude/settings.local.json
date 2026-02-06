@@ -19,7 +19,13 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(cargo check:*)",
-      "Bash(cargo test:*)"
+      "Bash(cargo test:*)",
+      "mcp__project-orchestrator__get_plan",
+      "Bash(docker ps:*)",
+      "Bash(lsof:*)",
+      "mcp__project-orchestrator__get_meilisearch_stats",
+      "mcp__project-orchestrator__get_architecture",
+      "Bash(curl:*)"
     ]
   }
 }

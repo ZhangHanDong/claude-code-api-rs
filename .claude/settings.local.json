@@ -18,7 +18,8 @@
       "mcp__project-orchestrator__update_step",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(cargo check:*)"
+      "Bash(cargo check:*)",
+      "Bash(cargo test:*)"
     ]
   }
 }

@@ -182,7 +182,6 @@ mod tests {
             content: Some(crate::models::openai::MessageContent::Text("Hello".to_string())),
             name: None,
             tool_calls: None,
-            tool_call_id: None,
         };
 
         store.add_message(&id, message).await.unwrap();
@@ -201,7 +200,6 @@ mod tests {
             content: Some(crate::models::openai::MessageContent::Text("Hello".to_string())),
             name: None,
             tool_calls: None,
-            tool_call_id: None,
         };
 
         let result = store.add_message("nonexistent", message).await;

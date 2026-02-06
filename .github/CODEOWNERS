@@ -1,0 +1,21 @@
+# CODEOWNERS for Nexus
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owners for everything in the repo
+* @triviere
+
+# SDK core
+/claude-code-sdk-rs/src/ @triviere
+
+# Memory system
+/claude-code-sdk-rs/src/memory/ @triviere
+
+# API server
+/claude-code-api/src/ @triviere
+
+# CI/CD workflows
+/.github/ @triviere
+
+# Documentation
+*.md @triviere
+/docs/ @triviere

@@ -1,7 +1,6 @@
 pub mod config;
 pub mod claude_manager;
 pub mod session_manager;
-pub mod database;
 pub mod auth;
 pub mod process_pool;
 pub mod conversation;

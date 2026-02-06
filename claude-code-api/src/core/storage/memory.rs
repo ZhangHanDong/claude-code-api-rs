@@ -450,4 +450,128 @@ mod tests {
         assert!(ids.contains(&id1));
         assert!(ids.contains(&id2));
     }
+
+    // ========================================================================
+    // SessionStore tests
+    // ========================================================================
+
+    #[tokio::test]
+    async fn test_session_create_and_get() {
+        let store = InMemorySessionStore::default();
+        let id = store.create(Some("/path/to/project".to_string())).await.unwrap();
+
+        assert!(!id.is_empty());
+
+        let session = store.get(&id).await.unwrap();
+        assert!(session.is_some());
+
+        let session = session.unwrap();
+        assert_eq!(session.project_path, Some("/path/to/project".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_session_list() {
+        let store = InMemorySessionStore::default();
+
+        store.create(None).await.unwrap();
+        store.create(Some("/path".to_string())).await.unwrap();
+
+        let sessions = store.list().await.unwrap();
+        assert_eq!(sessions.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn test_session_remove() {
+        let store = InMemorySessionStore::default();
+        let id = store.create(None).await.unwrap();
+
+        let removed = store.remove(&id).await.unwrap();
+        assert!(removed.is_some());
+
+        let session = store.get(&id).await.unwrap();
+        assert!(session.is_none());
+    }
+
+    // ========================================================================
+    // CacheStore tests
+    // ========================================================================
+
+    #[tokio::test]
+    async fn test_cache_put_and_get() {
+        let store = InMemoryCacheStore::default();
+
+        let response = crate::models::openai::ChatCompletionResponse {
+            id: "test-id".to_string(),
+            object: "chat.completion".to_string(),
+            created: 0,
+            model: "test-model".to_string(),
+            choices: vec![],
+            usage: crate::models::openai::Usage {
+                prompt_tokens: 0,
+                completion_tokens: 0,
+                total_tokens: 0,
+            },
+            conversation_id: None,
+        };
+
+        store.put("test-key".to_string(), response.clone()).await;
+
+        let cached = store.get("test-key").await;
+        assert!(cached.is_some());
+        assert_eq!(cached.unwrap().id, "test-id");
+    }
+
+    #[tokio::test]
+    async fn test_cache_stats() {
+        let store = InMemoryCacheStore::default();
+
+        let response = crate::models::openai::ChatCompletionResponse {
+            id: "test".to_string(),
+            object: "chat.completion".to_string(),
+            created: 0,
+            model: "test".to_string(),
+            choices: vec![],
+            usage: crate::models::openai::Usage {
+                prompt_tokens: 0,
+                completion_tokens: 0,
+                total_tokens: 0,
+            },
+            conversation_id: None,
+        };
+
+        store.put("key1".to_string(), response.clone()).await;
+        store.put("key2".to_string(), response).await;
+
+        let stats = store.stats().await;
+        assert_eq!(stats.total_entries, 2);
+        assert!(stats.enabled);
+    }
+
+    #[tokio::test]
+    async fn test_cache_disabled() {
+        let config = InMemoryCacheConfig {
+            enabled: false,
+            ..Default::default()
+        };
+        let store = InMemoryCacheStore::new(config);
+
+        let response = crate::models::openai::ChatCompletionResponse {
+            id: "test".to_string(),
+            object: "chat.completion".to_string(),
+            created: 0,
+            model: "test".to_string(),
+            choices: vec![],
+            usage: crate::models::openai::Usage {
+                prompt_tokens: 0,
+                completion_tokens: 0,
+                total_tokens: 0,
+            },
+            conversation_id: None,
+        };
+
+        store.put("key".to_string(), response).await;
+
+        let cached = store.get("key").await;
+        assert!(cached.is_none());
+    }
 }

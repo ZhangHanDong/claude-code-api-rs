@@ -62,7 +62,7 @@ pub struct ChatState {
     pub claude_manager: Arc<ClaudeManager>,
     pub process_pool: Arc<crate::core::process_pool::ProcessPool>,
     pub interactive_session_manager: Arc<crate::core::interactive_session::InteractiveSessionManager>,
-    pub conversation_manager: Arc<crate::core::conversation::ConversationManager>,
+    pub conversation_manager: Arc<crate::core::conversation::DefaultConversationManager>,
     pub cache: Arc<crate::core::cache::ResponseCache>,
     pub use_interactive_sessions: bool,
     pub settings: Arc<crate::core::config::Settings>,
@@ -73,7 +73,7 @@ impl ChatState {
         claude_manager: Arc<ClaudeManager>,
         process_pool: Arc<crate::core::process_pool::ProcessPool>,
         interactive_session_manager: Arc<crate::core::interactive_session::InteractiveSessionManager>,
-        conversation_manager: Arc<crate::core::conversation::ConversationManager>,
+        conversation_manager: Arc<crate::core::conversation::DefaultConversationManager>,
         cache: Arc<crate::core::cache::ResponseCache>,
         use_interactive_sessions: bool,
         settings: Arc<crate::core::config::Settings>,
@@ -105,11 +105,12 @@ pub async fn chat_completions(
     let conversation_id = if let Some(ref conv_id) = request.conversation_id {
         conv_id.clone()
     } else {
-        state.conversation_manager.create_conversation(Some(request.model.clone()))
+        state.conversation_manager.create_conversation(Some(request.model.clone())).await
+            .map_err(|e| ApiError::Internal(e.to_string()))?
     };
 
     let context_messages = state.conversation_manager
-        .get_context_messages(&conversation_id, &request.messages);
+        .get_context_messages(&conversation_id, &request.messages).await;
 
     if !request.stream.unwrap_or(false) {
         let cache_key = ResponseCache::generate_key(&request.model, &context_messages);
@@ -154,12 +155,12 @@ pub async fn chat_completions(
         ).await?;
 
         for msg in &request.messages {
-            state.conversation_manager.add_message(&conversation_id, msg.clone())
+            state.conversation_manager.add_message(&conversation_id, msg.clone()).await
                 .map_err(|e| ApiError::Internal(e.to_string()))?;
         }
 
         if let Some(choice) = response.0.choices.first() {
-            state.conversation_manager.add_message(&conversation_id, choice.message.clone())
+            state.conversation_manager.add_message(&conversation_id, choice.message.clone()).await
                 .map_err(|e| ApiError::Internal(e.to_string()))?;
         }
 

@@ -1,6 +1,6 @@
 //! Test interactive mode and batch requests
 
-use cc_sdk::{
+use nexus_claude::{
     ClaudeCodeOptions, ClientMode, ContentBlock, InteractiveClient, Message, OptimizedClient,
     PermissionMode, Result,
 };

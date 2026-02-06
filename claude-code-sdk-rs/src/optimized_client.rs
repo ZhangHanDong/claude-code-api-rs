@@ -229,10 +229,10 @@ impl OptimizedClient {
     ///
     /// Example:
     /// ```rust,no_run
-    /// use cc_sdk::{OptimizedClient, ClaudeCodeOptions, ClientMode};
-    /// use cc_sdk::token_tracker::{BudgetLimit, BudgetWarningCallback};
+    /// use nexus_claude::{OptimizedClient, ClaudeCodeOptions, ClientMode};
+    /// use nexus_claude::token_tracker::{BudgetLimit, BudgetWarningCallback};
     /// use std::sync::Arc;
-    /// # async fn demo() -> cc_sdk::Result<()> {
+    /// # async fn demo() -> nexus_claude::Result<()> {
     /// let client = OptimizedClient::new(ClaudeCodeOptions::default(), ClientMode::OneShot)?;
     /// let cb: BudgetWarningCallback = Arc::new(|msg: &str| println!("Warn: {}", msg));
     /// client.set_budget_limit(BudgetLimit::with_cost(1.0), Some(cb)).await;

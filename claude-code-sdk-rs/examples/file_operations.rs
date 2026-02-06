@@ -3,14 +3,14 @@
 //! This example demonstrates how to use the interactive client
 //! for operations that require file system access.
 
-use cc_sdk::{ClaudeCodeOptions, ClaudeSDKClient, Message, PermissionMode, Result};
+use nexus_claude::{ClaudeCodeOptions, ClaudeSDKClient, Message, PermissionMode, Result};
 use futures::StreamExt;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize logging
     tracing_subscriber::fmt()
-        .with_env_filter("cc_sdk=info")
+        .with_env_filter("nexus_claude=info")
         .init();
 
     println!("Claude Code SDK - File Operations Example\n");
@@ -47,7 +47,7 @@ async fn main() -> Result<()> {
         match msg? {
             Message::Assistant { message } => {
                 for block in &message.content {
-                    if let cc_sdk::ContentBlock::Text(text) = block {
+                    if let nexus_claude::ContentBlock::Text(text) = block {
                         println!("Claude: {}", text.text);
                     }
                 }
@@ -77,10 +77,10 @@ async fn main() -> Result<()> {
             Message::Assistant { message } => {
                 for block in &message.content {
                     match block {
-                        cc_sdk::ContentBlock::Text(text) => {
+                        nexus_claude::ContentBlock::Text(text) => {
                             println!("Claude: {}", text.text);
                         }
-                        cc_sdk::ContentBlock::ToolUse(tool_use) => {
+                        nexus_claude::ContentBlock::ToolUse(tool_use) => {
                             println!("Claude is using tool: {} ({})", tool_use.name, tool_use.id);
                         }
                         _ => {}
@@ -114,7 +114,7 @@ async fn main() -> Result<()> {
         match msg? {
             Message::Assistant { message } => {
                 for block in &message.content {
-                    if let cc_sdk::ContentBlock::Text(text) = block {
+                    if let nexus_claude::ContentBlock::Text(text) = block {
                         println!("Claude: {}", text.text);
                     }
                 }

@@ -3,7 +3,7 @@
 //! This example shows how to use the SDK to generate Rust code solutions
 //! with tests and documentation.
 
-use cc_sdk::{ClaudeCodeOptions, InteractiveClient, PermissionMode, Result};
+use nexus_claude::{ClaudeCodeOptions, InteractiveClient, PermissionMode, Result};
 use std::time::Instant;
 
 async fn generate_rust_solution(question: &str, project_name: &str) -> Result<()> {
@@ -76,11 +76,11 @@ async fn generate_rust_solution(question: &str, project_name: &str) -> Result<()
     Ok(())
 }
 
-fn print_claude_response(messages: &[cc_sdk::Message]) {
+fn print_claude_response(messages: &[nexus_claude::Message]) {
     for msg in messages {
-        if let cc_sdk::Message::Assistant { message } = msg {
+        if let nexus_claude::Message::Assistant { message } = msg {
             for content in &message.content {
-                if let cc_sdk::ContentBlock::Text(text) = content {
+                if let nexus_claude::ContentBlock::Text(text) = content {
                     // Only print first 500 chars to keep output readable
                     let preview = if text.text.len() > 500 {
                         format!("{}...", &text.text[..500])

@@ -1,6 +1,6 @@
 //! Example demonstrating the optimized client with various performance features
 
-use cc_sdk::{ClaudeCodeOptions, ClientMode, OptimizedClient, PermissionMode, Result, RetryConfig};
+use nexus_claude::{ClaudeCodeOptions, ClientMode, OptimizedClient, PermissionMode, Result, RetryConfig};
 use std::time::{Duration, Instant};
 use tracing::{Level, info};
 
@@ -50,7 +50,7 @@ async fn demo_oneshot_mode(options: ClaudeCodeOptions) -> Result<()> {
         info!("Response time: {:?}", elapsed);
 
         for msg in messages {
-            if let cc_sdk::Message::Assistant {
+            if let nexus_claude::Message::Assistant {
                 message: assistant_msg,
             } = msg
             {
@@ -88,7 +88,7 @@ async fn demo_interactive_mode(options: ClaudeCodeOptions) -> Result<()> {
         info!("Response time: {:?}", elapsed);
 
         for msg in messages {
-            if let cc_sdk::Message::Assistant {
+            if let nexus_claude::Message::Assistant {
                 message: assistant_msg,
             } = msg
             {
@@ -138,7 +138,7 @@ async fn demo_batch_mode(options: ClaudeCodeOptions) -> Result<()> {
             Ok(messages) => {
                 info!("Query {} completed successfully", i + 1);
                 for msg in messages {
-                    if let cc_sdk::Message::Assistant {
+                    if let nexus_claude::Message::Assistant {
                         message: assistant_msg,
                     } = msg
                     {
@@ -190,7 +190,7 @@ async fn demo_retry_logic(options: ClaudeCodeOptions) -> Result<()> {
     info!("Query completed in {:?}", elapsed);
 
     for msg in result {
-        if let cc_sdk::Message::Assistant {
+        if let nexus_claude::Message::Assistant {
             message: assistant_msg,
         } = msg
         {

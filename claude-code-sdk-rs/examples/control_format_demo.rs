@@ -3,7 +3,7 @@
 //! This example shows how to configure the SDK to use different control protocol
 //! formats for compatibility with various CLI versions.
 
-use cc_sdk::{ClaudeCodeOptions, ControlProtocolFormat, ClaudeSDKClient, Result};
+use nexus_claude::{ClaudeCodeOptions, ControlProtocolFormat, ClaudeSDKClient, Result};
 use futures::StreamExt;
 
 #[tokio::main]
@@ -66,7 +66,7 @@ async fn main() -> Result<()> {
                         }
                         
                         // Stop after Result message
-                        if matches!(msg, cc_sdk::Message::Result { .. }) {
+                        if matches!(msg, nexus_claude::Message::Result { .. }) {
                             break;
                         }
                     }

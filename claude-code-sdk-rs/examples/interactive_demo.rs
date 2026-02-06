@@ -1,6 +1,6 @@
 //! Interactive demo showing stateful conversation
 
-use cc_sdk::{ClaudeCodeOptions, ContentBlock, Result, SimpleInteractiveClient};
+use nexus_claude::{ClaudeCodeOptions, ContentBlock, Result, SimpleInteractiveClient};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -19,7 +19,7 @@ async fn main() -> Result<()> {
 
     print!("Claude: ");
     for msg in &messages {
-        if let cc_sdk::Message::Assistant { message } = msg {
+        if let nexus_claude::Message::Assistant { message } = msg {
             for content in &message.content {
                 if let ContentBlock::Text(text) = content {
                     print!("{}", text.text);
@@ -37,7 +37,7 @@ async fn main() -> Result<()> {
 
     print!("Claude: ");
     for msg in &messages {
-        if let cc_sdk::Message::Assistant { message } = msg {
+        if let nexus_claude::Message::Assistant { message } = msg {
             for content in &message.content {
                 if let ContentBlock::Text(text) = content {
                     print!("{}", text.text);
@@ -55,7 +55,7 @@ async fn main() -> Result<()> {
 
     print!("Claude: ");
     for msg in &messages {
-        if let cc_sdk::Message::Assistant { message } = msg {
+        if let nexus_claude::Message::Assistant { message } = msg {
             for content in &message.content {
                 if let ContentBlock::Text(text) = content {
                     print!("{}", text.text);

@@ -1,4 +1,4 @@
-use cc_sdk::{
+use nexus_claude::{
     Query, HookCallback, HookContext, HookInput, HookJSONOutput,
     SyncHookJSONOutput, Result, SdkError,
     transport::mock::MockTransport,

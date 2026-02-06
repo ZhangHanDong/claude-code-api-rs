@@ -7,26 +7,26 @@
 //! cargo run --example test_auto_download
 //! ```
 
-use cc_sdk::ClaudeCodeOptions;
+use nexus_claude::ClaudeCodeOptions;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logging
     tracing_subscriber::fmt()
-        .with_env_filter("cc_sdk=debug,info")
+        .with_env_filter("nexus_claude=debug,info")
         .init();
 
     println!("=== Claude Code CLI Auto-Download Test ===\n");
 
     // Test 1: Check cache directory location
     println!("1. Cache Directory Information:");
-    if let Some(cache_dir) = cc_sdk::cli_download::get_cache_dir() {
+    if let Some(cache_dir) = nexus_claude::cli_download::get_cache_dir() {
         println!("   Cache directory: {}", cache_dir.display());
     } else {
         println!("   ❌ Could not determine cache directory");
     }
 
-    if let Some(cli_path) = cc_sdk::cli_download::get_cached_cli_path() {
+    if let Some(cli_path) = nexus_claude::cli_download::get_cached_cli_path() {
         println!("   Expected CLI path: {}", cli_path.display());
         if cli_path.exists() {
             println!("   ✅ CLI is already cached!");
@@ -38,7 +38,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Test 2: Try to find existing CLI
     println!("2. Searching for Existing CLI:");
-    match cc_sdk::transport::subprocess::find_claude_cli() {
+    match nexus_claude::transport::subprocess::find_claude_cli() {
         Ok(path) => {
             println!("   ✅ Found CLI at: {}", path.display());
             println!("   No download needed!");
@@ -58,7 +58,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Uncomment this block to test actual download:
     /*
     println!("   Attempting to download CLI...");
-    match cc_sdk::cli_download::download_cli(None, Some(Box::new(|downloaded, total| {
+    match nexus_claude::cli_download::download_cli(None, Some(Box::new(|downloaded, total| {
         if let Some(total) = total {
             println!("   Progress: {}/{} bytes", downloaded, total);
         } else {
@@ -94,7 +94,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .auto_download_cli(true)
         .build();
 
-    match cc_sdk::transport::SubprocessTransport::new_async(options_for_transport).await {
+    match nexus_claude::transport::SubprocessTransport::new_async(options_for_transport).await {
         Ok(transport) => {
             println!("   ✅ Transport created successfully!");
             println!("   CLI is ready to use.");

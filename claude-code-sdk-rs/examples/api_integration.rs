@@ -1,6 +1,6 @@
 //! Example showing how to integrate the optimized client with existing API patterns
 
-use cc_sdk::{
+use nexus_claude::{
     ClaudeCodeOptions, ClientMode, OptimizedClient, PerformanceMetrics, PermissionMode, Result,
 };
 use std::sync::Arc;
@@ -35,12 +35,12 @@ impl ClaudeAPI {
                 // Extract text content from assistant messages
                 let mut response = String::new();
                 for msg in messages {
-                    if let cc_sdk::Message::Assistant {
+                    if let nexus_claude::Message::Assistant {
                         message: assistant_msg,
                     } = msg
                     {
                         for content in &assistant_msg.content {
-                            if let cc_sdk::ContentBlock::Text(text) = content {
+                            if let nexus_claude::ContentBlock::Text(text) = content {
                                 response.push_str(&text.text);
                                 response.push('\n');
                             }

@@ -1,6 +1,6 @@
 //! Unit tests for API components (no Claude CLI required)
 
-use cc_sdk::{ClaudeCodeOptions, ClientMode, PerformanceMetrics, PermissionMode, RetryConfig};
+use nexus_claude::{ClaudeCodeOptions, ClientMode, PerformanceMetrics, PermissionMode, RetryConfig};
 use std::time::Duration;
 
 /// Test ClientMode variants

@@ -1,6 +1,6 @@
 //! Performance comparison between normal and optimized clients
 
-use cc_sdk::{
+use nexus_claude::{
     ClaudeCodeOptions, ClientMode, InteractiveClient, OptimizedClient, PermissionMode, Result,
 };
 use std::time::Instant;

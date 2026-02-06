@@ -3,7 +3,7 @@
 //! These tests verify that the new Hook Input and Output types
 //! serialize and deserialize correctly for communication with the CLI.
 
-use cc_sdk::{
+use nexus_claude::{
     AsyncHookJSONOutput, HookInput, HookJSONOutput, HookSpecificOutput, PostToolUseHookSpecificOutput, PreToolUseHookSpecificOutput, SyncHookJSONOutput,
     UserPromptSubmitHookSpecificOutput,
 };
@@ -268,7 +268,7 @@ fn test_hook_specific_output_discriminated_union() {
 
 #[test]
 fn test_sync_hook_output_with_hook_specific() {
-    use cc_sdk::HookSpecificOutput;
+    use nexus_claude::HookSpecificOutput;
 
     let output = SyncHookJSONOutput {
         continue_: Some(true),

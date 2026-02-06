@@ -7,7 +7,7 @@ use axum::{
     response::Json,
     routing::{get, post},
 };
-use cc_sdk::{ClaudeCodeOptions, ClientMode, OptimizedClient, PermissionMode};
+use nexus_claude::{ClaudeCodeOptions, ClientMode, OptimizedClient, PermissionMode};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -247,16 +247,16 @@ async fn health_check() -> &'static str {
     "OK"
 }
 
-fn extract_response_text(messages: Vec<cc_sdk::Message>) -> String {
+fn extract_response_text(messages: Vec<nexus_claude::Message>) -> String {
     messages
         .into_iter()
         .filter_map(|msg| {
-            if let cc_sdk::Message::Assistant { message } = msg {
+            if let nexus_claude::Message::Assistant { message } = msg {
                 let text = message
                     .content
                     .into_iter()
                     .filter_map(|content| {
-                        if let cc_sdk::ContentBlock::Text(text_block) = content {
+                        if let nexus_claude::ContentBlock::Text(text_block) = content {
                             Some(text_block.text)
                         } else {
                             None

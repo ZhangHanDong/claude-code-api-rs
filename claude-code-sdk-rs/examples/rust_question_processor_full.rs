@@ -6,7 +6,7 @@
 //! - Annotations directory structure
 //! - Start from specific question number
 
-use cc_sdk::{ClaudeCodeOptions, ContentBlock, InteractiveClient, PermissionMode, Result};
+use nexus_claude::{ClaudeCodeOptions, ContentBlock, InteractiveClient, PermissionMode, Result};
 use chrono::{DateTime, Utc};
 use regex::Regex;
 use std::fs;
@@ -22,7 +22,7 @@ struct QuestionSetProcessor {
 
 impl QuestionSetProcessor {
     async fn new(annotations_dir: PathBuf) -> Result<Self> {
-        fs::create_dir_all(&annotations_dir).map_err(|e| cc_sdk::SdkError::InvalidState {
+        fs::create_dir_all(&annotations_dir).map_err(|e| nexus_claude::SdkError::InvalidState {
             message: format!("Failed to create annotations directory: {e}"),
         })?;
 
@@ -71,13 +71,13 @@ impl QuestionSetProcessor {
         let basename = question_set_file
             .file_stem()
             .and_then(|s| s.to_str())
-            .ok_or_else(|| cc_sdk::SdkError::InvalidState {
+            .ok_or_else(|| nexus_claude::SdkError::InvalidState {
                 message: "Invalid filename".to_string(),
             })?;
 
         self.qs_number = basename
             .strip_prefix("qs")
-            .ok_or_else(|| cc_sdk::SdkError::InvalidState {
+            .ok_or_else(|| nexus_claude::SdkError::InvalidState {
                 message: "Filename should start with 'qs'".to_string(),
             })?
             .to_string();
@@ -90,7 +90,7 @@ impl QuestionSetProcessor {
         println!("================================================");
 
         let content =
-            fs::read_to_string(question_set_file).map_err(|e| cc_sdk::SdkError::InvalidState {
+            fs::read_to_string(question_set_file).map_err(|e| nexus_claude::SdkError::InvalidState {
                 message: format!("Failed to read question set file: {e}"),
             })?;
 
@@ -265,9 +265,9 @@ impl QuestionSetProcessor {
     }
 }
 
-fn print_response_summary(messages: &[cc_sdk::Message]) {
+fn print_response_summary(messages: &[nexus_claude::Message]) {
     for msg in messages {
-        if let cc_sdk::Message::Assistant { message } = msg {
+        if let nexus_claude::Message::Assistant { message } = msg {
             for content in &message.content {
                 if let ContentBlock::Text(text) = content {
                     // Print first 200 chars or look for completion indicators
@@ -290,7 +290,7 @@ async fn process_all_question_sets(annotations_dir: PathBuf) -> Result<()> {
     let qs_dir = Path::new("qs");
 
     if !qs_dir.exists() {
-        return Err(cc_sdk::SdkError::InvalidState {
+        return Err(nexus_claude::SdkError::InvalidState {
             message: "Question sets directory 'qs/' not found!".to_string(),
         });
     }
@@ -302,7 +302,7 @@ async fn process_all_question_sets(annotations_dir: PathBuf) -> Result<()> {
     let batch_start = Instant::now();
 
     let mut entries: Vec<_> = fs::read_dir(qs_dir)
-        .map_err(|e| cc_sdk::SdkError::InvalidState {
+        .map_err(|e| nexus_claude::SdkError::InvalidState {
             message: format!("Failed to read qs directory: {e}"),
         })?
         .filter_map(|e| e.ok())

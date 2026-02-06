@@ -18,7 +18,7 @@
 //! ANTHROPIC_USER_EMAIL="your-email@example.com" cargo run --example account_info
 //! ```
 
-use cc_sdk::{ClaudeCodeOptions, ClaudeSDKClient, Result};
+use nexus_claude::{ClaudeCodeOptions, ClaudeSDKClient, Result};
 
 #[tokio::main]
 async fn main() -> Result<()> {

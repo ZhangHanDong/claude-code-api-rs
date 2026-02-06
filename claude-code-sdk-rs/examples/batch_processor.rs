@@ -3,7 +3,7 @@
 //! This example demonstrates batch processing of multiple programming questions
 //! with retry logic and progress tracking.
 
-use cc_sdk::{ClaudeCodeOptions, ContentBlock, InteractiveClient, PermissionMode, Result};
+use nexus_claude::{ClaudeCodeOptions, ContentBlock, InteractiveClient, PermissionMode, Result};
 use std::fs;
 use std::path::Path;
 use std::time::{Duration, Instant};
@@ -19,7 +19,7 @@ struct ProcessingStats {
 
 /// Process a batch of questions from a file
 async fn process_question_batch(file_path: &Path) -> Result<ProcessingStats> {
-    let content = fs::read_to_string(file_path).map_err(|e| cc_sdk::SdkError::InvalidState {
+    let content = fs::read_to_string(file_path).map_err(|e| nexus_claude::SdkError::InvalidState {
         message: format!("Failed to read file: {e}"),
     })?;
 
@@ -111,7 +111,7 @@ async fn process_single_question(
 
     // Check if Claude successfully created the project
     let success = messages.iter().any(|msg| {
-        if let cc_sdk::Message::Assistant { message } = msg {
+        if let nexus_claude::Message::Assistant { message } = msg {
             message.content.iter().any(|content| {
                 if let ContentBlock::Text(text) = content {
                     text.text.contains("created") || text.text.contains("successfully")
@@ -125,7 +125,7 @@ async fn process_single_question(
     });
 
     if !success {
-        return Err(cc_sdk::SdkError::InvalidState {
+        return Err(nexus_claude::SdkError::InvalidState {
             message: "Failed to create project".to_string(),
         });
     }
@@ -153,7 +153,7 @@ fn create_claude_options() -> ClaudeCodeOptions {
 }
 
 /// Check if error is rate limit related
-fn is_rate_limit_error(error: &cc_sdk::SdkError) -> bool {
+fn is_rate_limit_error(error: &nexus_claude::SdkError) -> bool {
     let error_str = format!("{error:?}").to_lowercase();
     error_str.contains("rate") || error_str.contains("limit") || error_str.contains("quota")
 }

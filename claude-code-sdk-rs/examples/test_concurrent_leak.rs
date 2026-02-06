@@ -1,4 +1,4 @@
-use cc_sdk::{query, Result};
+use nexus_claude::{query, Result};
 use futures::StreamExt;
 use std::process::Command;
 
@@ -33,7 +33,7 @@ async fn main() -> Result<()> {
             drop(messages);
             
             println!("Query {i} completed");
-            Ok::<(), cc_sdk::SdkError>(())
+            Ok::<(), nexus_claude::SdkError>(())
         });
         handles.push(handle);
     }

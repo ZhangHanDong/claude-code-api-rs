@@ -161,7 +161,7 @@ impl InteractiveClient {
     /// # Example
     /// 
     /// ```rust,no_run
-    /// use cc_sdk::{InteractiveClient, ClaudeCodeOptions};
+    /// use nexus_claude::{InteractiveClient, ClaudeCodeOptions};
     /// use futures::StreamExt;
     /// 
     /// #[tokio::main]

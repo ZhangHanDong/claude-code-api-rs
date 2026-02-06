@@ -1,4 +1,4 @@
-use cc_sdk::{query, Result};
+use nexus_claude::{query, Result};
 use futures::StreamExt;
 use std::process::Command;
 

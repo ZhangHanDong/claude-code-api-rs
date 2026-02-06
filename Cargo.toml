@@ -3,11 +3,11 @@ members = ["claude-code-api", "claude-code-sdk-rs"]
 resolver = "2"
 
 [workspace.package]
-version = "0.2.0"
+version = "0.5.0"
 edition = "2024"
-authors = ["blackanger"]
+authors = ["Théotime Rivière"]
 license = "MIT"
-repository = "https://github.com/ZhangHanDong/claude-code-api-rs"
+repository = "https://github.com/this-rs/nexus"
 
 [workspace.dependencies]
 tokio = { version = "1", features = ["full"] }

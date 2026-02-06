@@ -1,4 +1,4 @@
-use cc_sdk::{
+use nexus_claude::{
     Query,
     transport::mock::MockTransport,
     CanUseTool, PermissionResult, PermissionResultAllow, ToolPermissionContext,

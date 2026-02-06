@@ -3,7 +3,7 @@
 //! This example demonstrates how to use the Claude Code SDK to process Rust programming
 //! questions and generate annotated code solutions with comprehensive unit tests.
 
-use cc_sdk::{ClaudeCodeOptions, ContentBlock, InteractiveClient, PermissionMode, Result};
+use nexus_claude::{ClaudeCodeOptions, ContentBlock, InteractiveClient, PermissionMode, Result};
 use chrono::{DateTime, Utc};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -144,7 +144,7 @@ async fn process_single_question(question: &str, target_dir: &str) -> Result<()>
 /// Process a question set file
 async fn process_question_set(question_set_file: &Path, start_from: Option<u32>) -> Result<()> {
     if !question_set_file.exists() {
-        return Err(cc_sdk::SdkError::InvalidState {
+        return Err(nexus_claude::SdkError::InvalidState {
             message: format!(
                 "Question set file '{}' not found!",
                 question_set_file.display()
@@ -153,7 +153,7 @@ async fn process_question_set(question_set_file: &Path, start_from: Option<u32>)
     }
 
     let content =
-        fs::read_to_string(question_set_file).map_err(|e| cc_sdk::SdkError::InvalidState {
+        fs::read_to_string(question_set_file).map_err(|e| nexus_claude::SdkError::InvalidState {
             message: format!("Failed to read question set file: {e}"),
         })?;
 
@@ -161,13 +161,13 @@ async fn process_question_set(question_set_file: &Path, start_from: Option<u32>)
     let basename = question_set_file
         .file_stem()
         .and_then(|s| s.to_str())
-        .ok_or_else(|| cc_sdk::SdkError::InvalidState {
+        .ok_or_else(|| nexus_claude::SdkError::InvalidState {
             message: "Invalid filename".to_string(),
         })?;
 
     let qs_number = basename
         .strip_prefix("qs")
-        .ok_or_else(|| cc_sdk::SdkError::InvalidState {
+        .ok_or_else(|| nexus_claude::SdkError::InvalidState {
             message: "Filename should start with 'qs'".to_string(),
         })?;
 
@@ -242,17 +242,17 @@ async fn process_question_set(question_set_file: &Path, start_from: Option<u32>)
 }
 
 /// Print response from Claude
-fn print_response(messages: &[cc_sdk::Message]) {
+fn print_response(messages: &[nexus_claude::Message]) {
     for msg in messages {
         match msg {
-            cc_sdk::Message::Assistant { message } => {
+            nexus_claude::Message::Assistant { message } => {
                 for content in &message.content {
                     if let ContentBlock::Text(text) = content {
                         println!("{}", text.text);
                     }
                 }
             }
-            cc_sdk::Message::System { subtype, .. } => {
+            nexus_claude::Message::System { subtype, .. } => {
                 if subtype != "thinking" {
                     println!("[System: {subtype}]");
                 }

@@ -1,6 +1,6 @@
 //! Simple API demonstration without requiring Claude CLI connection
 
-use cc_sdk::{AssistantMessage, ClientMode, ContentBlock, Message, Result, TextContent};
+use nexus_claude::{AssistantMessage, ClientMode, ContentBlock, Message, Result, TextContent};
 use std::time::Instant;
 use tracing::{Level, info};
 

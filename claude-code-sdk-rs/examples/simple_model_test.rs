@@ -1,7 +1,7 @@
 //! Simple test for model availability
 //! Run with: cargo run --example simple_model_test
 
-use cc_sdk::{query, ClaudeCodeOptions, PermissionMode, Result};
+use nexus_claude::{query, ClaudeCodeOptions, PermissionMode, Result};
 use futures::StreamExt;
 
 #[tokio::main]
@@ -20,9 +20,9 @@ async fn main() -> Result<()> {
         Ok(mut stream) => {
             let mut success = false;
             while let Some(msg) = stream.next().await {
-                if let Ok(cc_sdk::Message::Assistant { message }) = msg {
+                if let Ok(nexus_claude::Message::Assistant { message }) = msg {
                     for block in message.content {
-                        if let cc_sdk::ContentBlock::Text(text) = block {
+                        if let nexus_claude::ContentBlock::Text(text) = block {
                             println!("Response: {}", text.text);
                             success = true;
                         }
@@ -47,9 +47,9 @@ async fn main() -> Result<()> {
         Ok(mut stream) => {
             let mut success = false;
             while let Some(msg) = stream.next().await {
-                if let Ok(cc_sdk::Message::Assistant { message }) = msg {
+                if let Ok(nexus_claude::Message::Assistant { message }) = msg {
                     for block in message.content {
-                        if let cc_sdk::ContentBlock::Text(text) = block {
+                        if let nexus_claude::ContentBlock::Text(text) = block {
                             let preview = if text.text.len() > 100 {
                                 format!("{}...", &text.text[..100])
                             } else {

@@ -1,10 +1,10 @@
-use cc_sdk::Query;
-use cc_sdk::transport::Transport;
-use cc_sdk::{
+use nexus_claude::Query;
+use nexus_claude::transport::Transport;
+use nexus_claude::{
     CanUseTool, HookMatcher, PermissionResult, PermissionResultAllow,
     ToolPermissionContext, Message,
 };
-use cc_sdk::Result;
+use nexus_claude::Result;
 use async_trait::async_trait;
 use futures::stream::{self, Stream};
 use serde_json::json;
@@ -36,7 +36,7 @@ impl Transport for MockTransport {
         Ok(())
     }
 
-    async fn send_message(&mut self, _message: cc_sdk::transport::InputMessage) -> Result<()> {
+    async fn send_message(&mut self, _message: nexus_claude::transport::InputMessage) -> Result<()> {
         Ok(())
     }
 
@@ -44,13 +44,13 @@ impl Transport for MockTransport {
         Box::pin(stream::empty())
     }
 
-    async fn send_control_request(&mut self, _request: cc_sdk::ControlRequest) -> Result<()> {
+    async fn send_control_request(&mut self, _request: nexus_claude::ControlRequest) -> Result<()> {
         Ok(())
     }
 
     async fn receive_control_response(
         &mut self,
-    ) -> Result<Option<cc_sdk::ControlResponse>> {
+    ) -> Result<Option<nexus_claude::ControlResponse>> {
         Ok(None)
     }
 

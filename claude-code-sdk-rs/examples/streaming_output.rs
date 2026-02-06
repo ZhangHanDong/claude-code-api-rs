@@ -3,7 +3,7 @@
 //! This example shows how to use the new streaming output methods
 //! similar to Python SDK's streaming capabilities.
 
-use cc_sdk::{InteractiveClient, ClaudeCodeOptions, Message, Result};
+use nexus_claude::{InteractiveClient, ClaudeCodeOptions, Message, Result};
 use futures::StreamExt;
 use tokio::pin;
 
@@ -11,7 +11,7 @@ use tokio::pin;
 async fn main() -> Result<()> {
     // Initialize tracing for debug output
     tracing_subscriber::fmt()
-        .with_env_filter("cc_sdk=debug")
+        .with_env_filter("nexus_claude=debug")
         .init();
 
     println!("=== Rust SDK Streaming Output Example ===\n");
@@ -147,7 +147,7 @@ fn display_message(msg: &Message) {
         }
         Message::Assistant { message } => {
             for block in &message.content {
-                if let cc_sdk::ContentBlock::Text(text_content) = block {
+                if let nexus_claude::ContentBlock::Text(text_content) = block {
                     println!("Claude: {}", text_content.text);
                 }
             }

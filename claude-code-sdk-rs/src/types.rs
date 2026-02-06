@@ -944,7 +944,7 @@ pub struct ClaudeCodeOptions {
     ///
     /// # Examples
     /// ```rust
-    /// use cc_sdk::{ClaudeCodeOptions, ToolsConfig};
+    /// use nexus_claude::{ClaudeCodeOptions, ToolsConfig};
     ///
     /// // Enable specific tools only
     /// let options = ClaudeCodeOptions::builder()
@@ -1006,12 +1006,43 @@ pub struct ClaudeCodeOptions {
     /// # Example
     ///
     /// ```rust
-    /// # use cc_sdk::ClaudeCodeOptions;
+    /// # use nexus_claude::ClaudeCodeOptions;
     /// let options = ClaudeCodeOptions::builder()
     ///     .auto_download_cli(true)
     ///     .build();
     /// ```
     pub auto_download_cli: bool,
+
+    // ========== Memory System Options ==========
+    /// Enable persistent memory for cross-conversation context
+    ///
+    /// When enabled, the SDK will:
+    /// 1. Store messages in Meilisearch for later retrieval
+    /// 2. Retrieve relevant context before each request
+    /// 3. Inject context into the system prompt
+    ///
+    /// Requires the `memory` feature and a running Meilisearch instance.
+    /// Default: false
+    pub memory_enabled: bool,
+
+    /// Minimum relevance score for context injection (0.0-1.0)
+    ///
+    /// Messages with scores below this threshold are not included in context.
+    /// Higher values = more selective, fewer irrelevant results.
+    /// Default: 0.3
+    pub memory_threshold: Option<f64>,
+
+    /// Maximum number of context items to inject per request
+    ///
+    /// Limits how many previous messages are included in context.
+    /// Default: 5
+    pub max_context_items: Option<usize>,
+
+    /// Token budget for injected context (~4 chars per token)
+    ///
+    /// Limits the total size of injected context to avoid overwhelming the prompt.
+    /// Default: 2000
+    pub memory_token_budget: Option<usize>,
 }
 
 impl std::fmt::Debug for ClaudeCodeOptions {
@@ -1259,7 +1290,7 @@ impl ClaudeCodeOptionsBuilder {
     /// # Example
     ///
     /// ```rust
-    /// # use cc_sdk::ClaudeCodeOptions;
+    /// # use nexus_claude::ClaudeCodeOptions;
     /// let options = ClaudeCodeOptions::builder()
     ///     .cli_channel_buffer_size(500)
     ///     .build();
@@ -1279,7 +1310,7 @@ impl ClaudeCodeOptionsBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// # use cc_sdk::{ClaudeCodeOptions, ToolsConfig};
+    /// # use nexus_claude::{ClaudeCodeOptions, ToolsConfig};
     /// // Enable specific tools only
     /// let options = ClaudeCodeOptions::builder()
     ///     .tools(ToolsConfig::list(vec!["Read".into(), "Edit".into()]))
@@ -1327,7 +1358,7 @@ impl ClaudeCodeOptionsBuilder {
     /// # Example
     ///
     /// ```rust
-    /// # use cc_sdk::ClaudeCodeOptions;
+    /// # use nexus_claude::ClaudeCodeOptions;
     /// let options = ClaudeCodeOptions::builder()
     ///     .output_format(serde_json::json!({
     ///         "type": "json_schema",
@@ -1396,13 +1427,44 @@ impl ClaudeCodeOptionsBuilder {
     /// # Example
     ///
     /// ```rust
-    /// # use cc_sdk::ClaudeCodeOptions;
+    /// # use nexus_claude::ClaudeCodeOptions;
     /// let options = ClaudeCodeOptions::builder()
     ///     .auto_download_cli(true)
     ///     .build();
     /// ```
     pub fn auto_download_cli(mut self, enable: bool) -> Self {
         self.options.auto_download_cli = enable;
+        self
+    }
+
+    // ========== Memory System Options ==========
+
+    /// Enable persistent memory for cross-conversation context
+    ///
+    /// When enabled, the SDK will store and retrieve context across sessions.
+    /// Requires the `memory` feature and a running Meilisearch instance.
+    pub fn memory_enabled(mut self, enabled: bool) -> Self {
+        self.options.memory_enabled = enabled;
+        self
+    }
+
+    /// Set the minimum relevance score for context injection (0.0-1.0)
+    ///
+    /// Messages with scores below this threshold are not included.
+    pub fn memory_threshold(mut self, threshold: f64) -> Self {
+        self.options.memory_threshold = Some(threshold.clamp(0.0, 1.0));
+        self
+    }
+
+    /// Set the maximum number of context items to inject per request
+    pub fn max_context_items(mut self, max: usize) -> Self {
+        self.options.max_context_items = Some(max);
+        self
+    }
+
+    /// Set the token budget for injected context (~4 chars per token)
+    pub fn memory_token_budget(mut self, budget: usize) -> Self {
+        self.options.memory_token_budget = Some(budget);
         self
     }
 

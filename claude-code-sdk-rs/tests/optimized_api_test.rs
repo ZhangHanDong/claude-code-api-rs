@@ -1,6 +1,6 @@
 //! Integration tests for the optimized API
 
-use cc_sdk::{
+use nexus_claude::{
     ClaudeCodeOptions, ClientMode, Message, OptimizedClient, PerformanceMetrics, PermissionMode,
     Result, RetryConfig,
 };

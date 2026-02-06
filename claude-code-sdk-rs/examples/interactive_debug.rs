@@ -2,7 +2,7 @@
 //!
 //! This example includes more debugging output to diagnose issues.
 
-use cc_sdk::{ClaudeCodeOptions, ClaudeSDKClient, Message, PermissionMode, Result};
+use nexus_claude::{ClaudeCodeOptions, ClaudeSDKClient, Message, PermissionMode, Result};
 use futures::StreamExt;
 use std::io::{self, Write};
 
@@ -10,7 +10,7 @@ use std::io::{self, Write};
 async fn main() -> Result<()> {
     // Initialize logging with trace level
     tracing_subscriber::fmt()
-        .with_env_filter("cc_sdk=trace")
+        .with_env_filter("nexus_claude=trace")
         .with_max_level(tracing::Level::TRACE)
         .init();
 
@@ -57,7 +57,7 @@ async fn main() -> Result<()> {
                             got_response = true;
                             print!("Claude: ");
                             for block in &message.content {
-                                if let cc_sdk::ContentBlock::Text(text) = block {
+                                if let nexus_claude::ContentBlock::Text(text) = block {
                                     print!("{}", text.text);
                                 }
                             }
@@ -146,7 +146,7 @@ async fn main() -> Result<()> {
                     }
 
                     for block in &message.content {
-                        if let cc_sdk::ContentBlock::Text(text) = block {
+                        if let nexus_claude::ContentBlock::Text(text) = block {
                             print!("{}", text.text);
                         }
                     }

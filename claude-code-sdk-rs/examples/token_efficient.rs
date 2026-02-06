@@ -2,9 +2,9 @@
 //!
 //! Demonstrates best practices for minimizing token consumption and costs.
 
-use cc_sdk::{ClaudeCodeOptions, ClaudeSDKClient, PermissionMode, Result};
-use cc_sdk::model_recommendation::ModelRecommendation;
-use cc_sdk::token_tracker::{BudgetLimit, BudgetWarningCallback};
+use nexus_claude::{ClaudeCodeOptions, ClaudeSDKClient, PermissionMode, Result};
+use nexus_claude::model_recommendation::ModelRecommendation;
+use nexus_claude::token_tracker::{BudgetLimit, BudgetWarningCallback};
 use std::sync::Arc;
 use futures::StreamExt;
 
@@ -46,14 +46,14 @@ async fn main() -> Result<()> {
     while let Some(msg) = messages.next().await {
         if let Ok(message) = msg {
             match message {
-                cc_sdk::Message::Assistant { message } => {
+                nexus_claude::Message::Assistant { message } => {
                     for block in &message.content {
-                        if let cc_sdk::ContentBlock::Text(text) = block {
+                        if let nexus_claude::ContentBlock::Text(text) = block {
                             println!("💬 Response: {}", text.text);
                         }
                     }
                 }
-                cc_sdk::Message::Result { .. } => break,
+                nexus_claude::Message::Result { .. } => break,
                 _ => {}
             }
         }

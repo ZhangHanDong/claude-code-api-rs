@@ -3,7 +3,7 @@
 //! This example demonstrates how to use the SimpleInteractiveClient for
 //! interactive, stateful conversations with Claude.
 
-use cc_sdk::{
+use nexus_claude::{
     ClaudeCodeOptions, ContentBlock, Message, PermissionMode, Result, SimpleInteractiveClient,
 };
 use std::io::{self, Write};
@@ -12,7 +12,7 @@ use std::io::{self, Write};
 async fn main() -> Result<()> {
     // Initialize logging
     tracing_subscriber::fmt()
-        .with_env_filter("cc_sdk=debug,interactive=info")
+        .with_env_filter("nexus_claude=debug,interactive=info")
         .init();
 
     println!("Claude Code SDK - Interactive Client Example");

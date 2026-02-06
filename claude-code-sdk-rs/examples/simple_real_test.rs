@@ -1,6 +1,6 @@
 //! Simple real API test - the easiest way to test
 
-use cc_sdk::{ClaudeCodeOptions, PermissionMode, Result, query};
+use nexus_claude::{ClaudeCodeOptions, PermissionMode, Result, query};
 use futures::StreamExt;
 
 #[tokio::main]
@@ -40,9 +40,9 @@ async fn main() -> Result<()> {
                 match result {
                     Ok(msg) => {
                         // Extract text content from assistant messages
-                        if let cc_sdk::Message::Assistant { message } = msg {
+                        if let nexus_claude::Message::Assistant { message } = msg {
                             for content in message.content {
-                                if let cc_sdk::ContentBlock::Text(text) = content {
+                                if let nexus_claude::ContentBlock::Text(text) = content {
                                     println!("Response: {}", text.text);
                                 }
                             }

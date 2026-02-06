@@ -3,14 +3,14 @@
 //! This example demonstrates how to use query() with BypassPermissions
 //! to allow file operations in --print mode.
 
-use cc_sdk::{ClaudeCodeOptions, Message, PermissionMode, Result, query};
+use nexus_claude::{ClaudeCodeOptions, Message, PermissionMode, Result, query};
 use futures::StreamExt;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize logging
     tracing_subscriber::fmt()
-        .with_env_filter("cc_sdk=info")
+        .with_env_filter("nexus_claude=info")
         .init();
 
     println!("Claude Code SDK - Query with File Operations Example\n");
@@ -39,10 +39,10 @@ async fn main() -> Result<()> {
             Message::Assistant { message } => {
                 for block in &message.content {
                     match block {
-                        cc_sdk::ContentBlock::Text(text) => {
+                        nexus_claude::ContentBlock::Text(text) => {
                             println!("Claude: {}", text.text);
                         }
-                        cc_sdk::ContentBlock::ToolUse(tool_use) => {
+                        nexus_claude::ContentBlock::ToolUse(tool_use) => {
                             println!("Claude is using tool: {} ({})", tool_use.name, tool_use.id);
                             if let Some(file_path) = tool_use.input.get("file_path") {
                                 println!("  File path: {file_path}");

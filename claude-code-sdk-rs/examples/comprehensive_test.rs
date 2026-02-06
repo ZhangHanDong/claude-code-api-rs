@@ -3,7 +3,7 @@
 //! 
 //! Run with: cargo run --example comprehensive_test
 
-use cc_sdk::{
+use nexus_claude::{
     query, InteractiveClient, ClaudeCodeOptions, 
     PermissionMode, Message, ContentBlock, Result
 };

@@ -14,9 +14,11 @@ mod memory;
 pub mod neo4j;
 pub mod meilisearch;
 pub mod combined;
+pub mod tiered_cache;
 
 pub use traits::*;
 pub use memory::*;
 pub use neo4j::{Neo4jClient, Neo4jConfig, Neo4jConversationStore, Neo4jSessionStore};
 pub use meilisearch::{MeilisearchClient, MeilisearchConfig, MessageDocument, ConversationDocument};
 pub use combined::{CombinedConversationStore, CombinedSessionStore};
+pub use tiered_cache::{TieredCache, TieredCacheConfig, TieredCacheStats};

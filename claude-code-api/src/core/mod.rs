@@ -7,3 +7,4 @@ pub mod conversation;
 pub mod cache;
 pub mod retry;
 pub mod interactive_session;
+pub mod storage;

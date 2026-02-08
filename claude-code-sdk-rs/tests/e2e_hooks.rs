@@ -53,7 +53,8 @@ async fn e2e_hook_callback_success() -> Result<()> {
                 "transcript_path": "/tmp/transcript",
                 "cwd": "/test/dir",
                 "tool_name": "TestTool",
-                "tool_input": {"command": "test"}
+                "tool_input": {"command": "test"},
+                "tool_use_id": "tu1"
             },
             "toolUseId": "tu1"
         }

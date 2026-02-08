@@ -81,11 +81,15 @@ pub use types::{
     HookCallback, HookContext, HookMatcher,
     // Hook Input types (strongly-typed)
     BaseHookInput, HookInput, PreToolUseHookInput, PostToolUseHookInput,
-    UserPromptSubmitHookInput, StopHookInput, SubagentStopHookInput, PreCompactHookInput,
+    PostToolUseFailureHookInput, UserPromptSubmitHookInput, StopHookInput,
+    SubagentStopHookInput, PreCompactHookInput,
+    NotificationHookInput, SubagentStartHookInput, PermissionRequestHookInput,
     // Hook Output types (strongly-typed)
     HookJSONOutput, AsyncHookJSONOutput, SyncHookJSONOutput,
     HookSpecificOutput, PreToolUseHookSpecificOutput, PostToolUseHookSpecificOutput,
-    UserPromptSubmitHookSpecificOutput, SessionStartHookSpecificOutput,
+    PostToolUseFailureHookSpecificOutput, UserPromptSubmitHookSpecificOutput,
+    SessionStartHookSpecificOutput, NotificationHookSpecificOutput,
+    SubagentStartHookSpecificOutput, PermissionRequestHookSpecificOutput,
     // SDK Control Protocol types
     SDKControlInitializeRequest, SDKControlInterruptRequest, SDKControlMcpMessageRequest,
     SDKControlPermissionRequest, SDKControlRequest, SDKControlSetPermissionModeRequest,

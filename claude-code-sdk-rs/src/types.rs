@@ -514,6 +514,8 @@ pub struct PreToolUseHookInput {
     pub tool_name: String,
     /// Input parameters for the tool
     pub tool_input: serde_json::Value,
+    /// Tool use ID
+    pub tool_use_id: String,
 }
 
 /// Input data for PostToolUse hook events
@@ -534,6 +536,8 @@ pub struct PostToolUseHookInput {
     pub tool_input: serde_json::Value,
     /// Response from the tool execution
     pub tool_response: serde_json::Value,
+    /// Tool use ID
+    pub tool_use_id: String,
 }
 
 /// Input data for UserPromptSubmit hook events
@@ -582,6 +586,12 @@ pub struct SubagentStopHookInput {
     pub permission_mode: Option<String>,
     /// Whether stop hook is active
     pub stop_hook_active: bool,
+    /// Agent ID
+    pub agent_id: String,
+    /// Path to the agent's transcript
+    pub agent_transcript_path: String,
+    /// Agent type
+    pub agent_type: String,
 }
 
 /// Input data for PreCompact hook events
@@ -603,6 +613,91 @@ pub struct PreCompactHookInput {
     pub custom_instructions: Option<String>,
 }
 
+/// Input data for PostToolUseFailure hook events
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PostToolUseFailureHookInput {
+    /// Session ID for this conversation
+    pub session_id: String,
+    /// Path to the transcript file
+    pub transcript_path: String,
+    /// Current working directory
+    pub cwd: String,
+    /// Permission mode (optional)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub permission_mode: Option<String>,
+    /// Name of the tool that failed
+    pub tool_name: String,
+    /// Input parameters that were passed to the tool
+    pub tool_input: serde_json::Value,
+    /// Tool use ID
+    pub tool_use_id: String,
+    /// Error message from the tool
+    pub error: String,
+    /// Whether this failure was due to an interrupt
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_interrupt: Option<bool>,
+}
+
+/// Input data for Notification hook events
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NotificationHookInput {
+    /// Session ID for this conversation
+    pub session_id: String,
+    /// Path to the transcript file
+    pub transcript_path: String,
+    /// Current working directory
+    pub cwd: String,
+    /// Permission mode (optional)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub permission_mode: Option<String>,
+    /// Notification message
+    pub message: String,
+    /// Notification title (optional)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    /// Notification type
+    pub notification_type: String,
+}
+
+/// Input data for SubagentStart hook events
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubagentStartHookInput {
+    /// Session ID for this conversation
+    pub session_id: String,
+    /// Path to the transcript file
+    pub transcript_path: String,
+    /// Current working directory
+    pub cwd: String,
+    /// Permission mode (optional)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub permission_mode: Option<String>,
+    /// Agent ID
+    pub agent_id: String,
+    /// Agent type
+    pub agent_type: String,
+}
+
+/// Input data for PermissionRequest hook events
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PermissionRequestHookInput {
+    /// Session ID for this conversation
+    pub session_id: String,
+    /// Path to the transcript file
+    pub transcript_path: String,
+    /// Current working directory
+    pub cwd: String,
+    /// Permission mode (optional)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub permission_mode: Option<String>,
+    /// Name of the tool requesting permission
+    pub tool_name: String,
+    /// Input parameters for the tool
+    pub tool_input: serde_json::Value,
+    /// Permission suggestions (optional)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub permission_suggestions: Option<Vec<serde_json::Value>>,
+}
+
 /// Union type for all hook inputs (discriminated by hook_event_name)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "hook_event_name")]
@@ -613,6 +708,9 @@ pub enum HookInput {
     /// PostToolUse hook input
     #[serde(rename = "PostToolUse")]
     PostToolUse(PostToolUseHookInput),
+    /// PostToolUseFailure hook input
+    #[serde(rename = "PostToolUseFailure")]
+    PostToolUseFailure(PostToolUseFailureHookInput),
     /// UserPromptSubmit hook input
     #[serde(rename = "UserPromptSubmit")]
     UserPromptSubmit(UserPromptSubmitHookInput),
@@ -625,6 +723,15 @@ pub enum HookInput {
     /// PreCompact hook input
     #[serde(rename = "PreCompact")]
     PreCompact(PreCompactHookInput),
+    /// Notification hook input
+    #[serde(rename = "Notification")]
+    Notification(NotificationHookInput),
+    /// SubagentStart hook input
+    #[serde(rename = "SubagentStart")]
+    SubagentStart(SubagentStartHookInput),
+    /// PermissionRequest hook input
+    #[serde(rename = "PermissionRequest")]
+    PermissionRequest(PermissionRequestHookInput),
 }
 
 // ============================================================================
@@ -702,6 +809,9 @@ pub struct PreToolUseHookSpecificOutput {
     /// Updated input parameters for the tool
     #[serde(rename = "updatedInput", skip_serializing_if = "Option::is_none")]
     pub updated_input: Option<serde_json::Value>,
+    /// Additional context to provide to Claude
+    #[serde(rename = "additionalContext", skip_serializing_if = "Option::is_none")]
+    pub additional_context: Option<String>,
 }
 
 /// Hook-specific output for PostToolUse events
@@ -710,6 +820,9 @@ pub struct PostToolUseHookSpecificOutput {
     /// Additional context to provide to Claude
     #[serde(rename = "additionalContext", skip_serializing_if = "Option::is_none")]
     pub additional_context: Option<String>,
+    /// Updated MCP tool output
+    #[serde(rename = "updatedMCPToolOutput", skip_serializing_if = "Option::is_none")]
+    pub updated_mcp_tool_output: Option<serde_json::Value>,
 }
 
 /// Hook-specific output for UserPromptSubmit events
@@ -728,6 +841,37 @@ pub struct SessionStartHookSpecificOutput {
     pub additional_context: Option<String>,
 }
 
+/// Hook-specific output for PostToolUseFailure events
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PostToolUseFailureHookSpecificOutput {
+    /// Additional context to provide to Claude
+    #[serde(rename = "additionalContext", skip_serializing_if = "Option::is_none")]
+    pub additional_context: Option<String>,
+}
+
+/// Hook-specific output for Notification events
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NotificationHookSpecificOutput {
+    /// Additional context to provide to Claude
+    #[serde(rename = "additionalContext", skip_serializing_if = "Option::is_none")]
+    pub additional_context: Option<String>,
+}
+
+/// Hook-specific output for SubagentStart events
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubagentStartHookSpecificOutput {
+    /// Additional context to provide to Claude
+    #[serde(rename = "additionalContext", skip_serializing_if = "Option::is_none")]
+    pub additional_context: Option<String>,
+}
+
+/// Hook-specific output for PermissionRequest events
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PermissionRequestHookSpecificOutput {
+    /// Permission decision
+    pub decision: serde_json::Value,
+}
+
 /// Union type for hook-specific outputs (discriminated by hookEventName)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "hookEventName")]
@@ -738,12 +882,24 @@ pub enum HookSpecificOutput {
     /// PostToolUse-specific output
     #[serde(rename = "PostToolUse")]
     PostToolUse(PostToolUseHookSpecificOutput),
+    /// PostToolUseFailure-specific output
+    #[serde(rename = "PostToolUseFailure")]
+    PostToolUseFailure(PostToolUseFailureHookSpecificOutput),
     /// UserPromptSubmit-specific output
     #[serde(rename = "UserPromptSubmit")]
     UserPromptSubmit(UserPromptSubmitHookSpecificOutput),
     /// SessionStart-specific output
     #[serde(rename = "SessionStart")]
     SessionStart(SessionStartHookSpecificOutput),
+    /// Notification-specific output
+    #[serde(rename = "Notification")]
+    Notification(NotificationHookSpecificOutput),
+    /// SubagentStart-specific output
+    #[serde(rename = "SubagentStart")]
+    SubagentStart(SubagentStartHookSpecificOutput),
+    /// PermissionRequest-specific output
+    #[serde(rename = "PermissionRequest")]
+    PermissionRequest(PermissionRequestHookSpecificOutput),
 }
 
 // ============================================================================
@@ -889,7 +1045,7 @@ pub struct ClaudeCodeOptions {
     /// Maximum number of conversation turns
     pub max_turns: Option<i32>,
     /// Maximum thinking tokens
-    pub max_thinking_tokens: i32,
+    pub max_thinking_tokens: Option<i32>,
     /// Maximum output tokens per response (1-32000, overrides CLAUDE_CODE_MAX_OUTPUT_TOKENS env var)
     pub max_output_tokens: Option<u32>,
     /// Model to use
@@ -1147,7 +1303,7 @@ impl ClaudeCodeOptionsBuilder {
 
     /// Set max thinking tokens
     pub fn max_thinking_tokens(mut self, tokens: i32) -> Self {
-        self.options.max_thinking_tokens = tokens;
+        self.options.max_thinking_tokens = Some(tokens);
         self
     }
 

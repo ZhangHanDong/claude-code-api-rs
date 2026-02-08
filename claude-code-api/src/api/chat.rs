@@ -119,7 +119,15 @@ pub async fn chat_completions(
         }
     }
 
-    let formatted_message = format_messages_for_claude(&context_messages).await?;
+    let mut formatted_message = format_messages_for_claude(&context_messages).await?;
+
+    // Inject tool definitions into the prompt so Claude knows what functions are available
+    if let Some(ref tools) = request.tools {
+        if !tools.is_empty() {
+            let tools_prompt = format_tools_for_claude(tools);
+            formatted_message = format!("{tools_prompt}\n\n{formatted_message}");
+        }
+    }
 
     // 根据配置选择使用交互式会话管理器或进程池
     let (session_id, rx) = if state.use_interactive_sessions {
@@ -170,6 +178,31 @@ pub async fn chat_completions(
 
         Ok(Json(response_data).into_response())
     }
+}
+
+/// Formats OpenAI-style tool definitions into a prompt that Claude can understand.
+/// This injects the tool schemas so Claude knows what functions it can call and
+/// responds with appropriately structured JSON when a tool call is intended.
+fn format_tools_for_claude(tools: &[crate::models::openai::Tool]) -> String {
+    let mut prompt = String::from(
+        "You have access to the following tools. When you need to call a tool, \
+         respond with ONLY a JSON object (no other text) in this format:\n\
+         {\"name\": \"<function_name>\", \"arguments\": {<parameters>}}\n\n\
+         Available tools:\n",
+    );
+
+    for tool in tools {
+        prompt.push_str(&format!("\n### {}\n", tool.function.name));
+        if let Some(ref desc) = tool.function.description {
+            prompt.push_str(&format!("Description: {desc}\n"));
+        }
+        prompt.push_str(&format!(
+            "Parameters: {}\n",
+            serde_json::to_string_pretty(&tool.function.parameters).unwrap_or_default()
+        ));
+    }
+
+    prompt
 }
 
 async fn format_messages_for_claude(messages: &[ChatMessage]) -> ApiResult<String> {

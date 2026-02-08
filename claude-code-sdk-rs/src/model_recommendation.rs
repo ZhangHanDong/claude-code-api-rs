@@ -18,9 +18,9 @@ impl ModelRecommendation {
     /// Create with default recommendations
     ///
     /// Default mappings:
-    /// - "simple" / "fast" / "cheap" → claude-3-5-haiku-20241022 (fastest, cheapest)
+    /// - "simple" / "fast" / "cheap" → claude-haiku-4-5-20251001 (fastest, cheapest)
     /// - "balanced" / "general" / "latest" → claude-sonnet-4-5-20250929 (latest Sonnet, balanced performance/cost)
-    /// - "complex" / "best" / "quality" → opus (most capable)
+    /// - "complex" / "best" / "quality" → claude-opus-4-6 (most capable)
     ///
     /// # Example
     ///
@@ -29,16 +29,16 @@ impl ModelRecommendation {
     ///
     /// let recommender = ModelRecommendation::default();
     /// let model = recommender.suggest("simple").unwrap();
-    /// assert_eq!(model, "claude-3-5-haiku-20241022");
+    /// assert_eq!(model, "claude-haiku-4-5-20251001");
     /// ```
     pub fn with_defaults() -> Self {
         let mut map = HashMap::new();
 
-        // Simple/fast tasks - use Haiku (cheapest, fastest)
-        map.insert("simple".to_string(), "claude-3-5-haiku-20241022".to_string());
-        map.insert("fast".to_string(), "claude-3-5-haiku-20241022".to_string());
-        map.insert("cheap".to_string(), "claude-3-5-haiku-20241022".to_string());
-        map.insert("quick".to_string(), "claude-3-5-haiku-20241022".to_string());
+        // Simple/fast tasks - use Haiku 4.5 (cheapest, fastest)
+        map.insert("simple".to_string(), "claude-haiku-4-5-20251001".to_string());
+        map.insert("fast".to_string(), "claude-haiku-4-5-20251001".to_string());
+        map.insert("cheap".to_string(), "claude-haiku-4-5-20251001".to_string());
+        map.insert("quick".to_string(), "claude-haiku-4-5-20251001".to_string());
 
         // Balanced tasks - use Sonnet 4.5 (good balance, latest)
         map.insert("balanced".to_string(), "claude-sonnet-4-5-20250929".to_string());
@@ -47,12 +47,12 @@ impl ModelRecommendation {
         map.insert("standard".to_string(), "claude-sonnet-4-5-20250929".to_string());
         map.insert("latest".to_string(), "claude-sonnet-4-5-20250929".to_string());
 
-        // Complex/critical tasks - use Opus (most capable)
-        map.insert("complex".to_string(), "opus".to_string());
-        map.insert("best".to_string(), "opus".to_string());
-        map.insert("quality".to_string(), "opus".to_string());
-        map.insert("critical".to_string(), "opus".to_string());
-        map.insert("advanced".to_string(), "opus".to_string());
+        // Complex/critical tasks - use Opus 4.6 (most capable)
+        map.insert("complex".to_string(), "claude-opus-4-6".to_string());
+        map.insert("best".to_string(), "claude-opus-4-6".to_string());
+        map.insert("quality".to_string(), "claude-opus-4-6".to_string());
+        map.insert("critical".to_string(), "claude-opus-4-6".to_string());
+        map.insert("advanced".to_string(), "claude-opus-4-6".to_string());
 
         Self { recommendations: map }
     }
@@ -87,10 +87,10 @@ impl ModelRecommendation {
     /// let recommender = ModelRecommendation::default();
     ///
     /// // For simple tasks, use Haiku
-    /// assert_eq!(recommender.suggest("simple"), Some("claude-3-5-haiku-20241022"));
+    /// assert_eq!(recommender.suggest("simple"), Some("claude-haiku-4-5-20251001"));
     ///
     /// // For complex tasks, use Opus
-    /// assert_eq!(recommender.suggest("complex"), Some("opus"));
+    /// assert_eq!(recommender.suggest("complex"), Some("claude-opus-4-6"));
     /// ```
     pub fn suggest(&self, task_type: &str) -> Option<&str> {
         self.recommendations.get(task_type).map(|s| s.as_str())
@@ -135,9 +135,9 @@ impl Default for ModelRecommendation {
 }
 
 /// Quick helper functions for common use cases
-/// Get the cheapest/fastest model (Haiku)
+/// Get the cheapest/fastest model (Haiku 4.5)
 pub fn cheapest_model() -> &'static str {
-    "claude-3-5-haiku-20241022"
+    "claude-haiku-4-5-20251001"
 }
 
 /// Get the balanced model (Sonnet 4.5 - latest)
@@ -150,9 +150,9 @@ pub fn latest_sonnet() -> &'static str {
     "claude-sonnet-4-5-20250929"
 }
 
-/// Get the most capable model (Opus)
+/// Get the most capable model (Opus 4.6)
 pub fn best_model() -> &'static str {
-    "opus"
+    "claude-opus-4-6"
 }
 
 /// Estimate relative cost multiplier for different models
@@ -166,7 +166,7 @@ pub fn best_model() -> &'static str {
 /// use cc_sdk::model_recommendation::estimate_cost_multiplier;
 ///
 /// // Haiku is baseline (1.0x)
-/// assert_eq!(estimate_cost_multiplier("claude-3-5-haiku-20241022"), 1.0);
+/// assert_eq!(estimate_cost_multiplier("claude-haiku-4-5-20251001"), 1.0);
 ///
 /// // Sonnet is ~5x more expensive
 /// assert_eq!(estimate_cost_multiplier("sonnet"), 5.0);
@@ -177,7 +177,10 @@ pub fn best_model() -> &'static str {
 pub fn estimate_cost_multiplier(model: &str) -> f64 {
     match model {
         // Haiku - baseline (cheapest)
-        "haiku" | "claude-3-5-haiku-20241022" => 1.0,
+        "haiku"
+        | "claude-haiku-4-5-20251001"  // Haiku 4.5 (latest)
+        | "claude-3-5-haiku-20241022"  // Haiku 3.5
+        => 1.0,
 
         // Sonnet - ~5x more expensive than Haiku
         "sonnet"
@@ -187,7 +190,11 @@ pub fn estimate_cost_multiplier(model: &str) -> f64 {
         => 5.0,
 
         // Opus - ~15x more expensive than Haiku
-        "opus" | "claude-opus-4-1-20250805" => 15.0,
+        "opus"
+        | "claude-opus-4-6"            // Opus 4.6 (latest)
+        | "claude-opus-4-1-20250805"   // Opus 4.1
+        | "claude-opus-4-20250514"     // Opus 4
+        => 15.0,
 
         // Unknown - assume Sonnet level
         _ => 5.0,
@@ -202,11 +209,11 @@ mod tests {
     fn test_default_recommendations() {
         let recommender = ModelRecommendation::default();
 
-        assert_eq!(recommender.suggest("simple"), Some("claude-3-5-haiku-20241022"));
-        assert_eq!(recommender.suggest("fast"), Some("claude-3-5-haiku-20241022"));
+        assert_eq!(recommender.suggest("simple"), Some("claude-haiku-4-5-20251001"));
+        assert_eq!(recommender.suggest("fast"), Some("claude-haiku-4-5-20251001"));
         assert_eq!(recommender.suggest("balanced"), Some("claude-sonnet-4-5-20250929"));
         assert_eq!(recommender.suggest("latest"), Some("claude-sonnet-4-5-20250929"));
-        assert_eq!(recommender.suggest("complex"), Some("opus"));
+        assert_eq!(recommender.suggest("complex"), Some("claude-opus-4-6"));
         assert_eq!(recommender.suggest("unknown"), None);
     }
 
@@ -232,16 +239,21 @@ mod tests {
 
     #[test]
     fn test_cost_multipliers() {
+        // Aliases
         assert_eq!(estimate_cost_multiplier("haiku"), 1.0);
         assert_eq!(estimate_cost_multiplier("sonnet"), 5.0);
         assert_eq!(estimate_cost_multiplier("opus"), 15.0);
+        // Full model IDs
+        assert_eq!(estimate_cost_multiplier("claude-haiku-4-5-20251001"), 1.0);
+        assert_eq!(estimate_cost_multiplier("claude-sonnet-4-5-20250929"), 5.0);
+        assert_eq!(estimate_cost_multiplier("claude-opus-4-6"), 15.0);
     }
 
     #[test]
     fn test_quick_helpers() {
-        assert_eq!(cheapest_model(), "claude-3-5-haiku-20241022");
+        assert_eq!(cheapest_model(), "claude-haiku-4-5-20251001");
         assert_eq!(balanced_model(), "claude-sonnet-4-5-20250929");
         assert_eq!(latest_sonnet(), "claude-sonnet-4-5-20250929");
-        assert_eq!(best_model(), "opus");
+        assert_eq!(best_model(), "claude-opus-4-6");
     }
 }

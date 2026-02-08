@@ -147,16 +147,65 @@ pub struct Tool {
     pub function: FunctionDefinition,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(untagged)]
+#[derive(Debug, Serialize, Clone)]
 pub enum ToolChoice {
+    /// "auto" - let the model decide whether to call tools
     Auto,
+    /// "none" - never call tools
     None,
-    Tool { 
+    /// "required" - must call at least one tool
+    Required,
+    /// Specific tool: {"type": "function", "function": {"name": "..."}}
+    Tool {
         #[serde(rename = "type")]
         tool_type: String,
         function: ToolChoiceFunction,
     },
+}
+
+impl<'de> serde::Deserialize<'de> for ToolChoice {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = Value::deserialize(deserializer)?;
+
+        match &value {
+            Value::String(s) => match s.as_str() {
+                "auto" => Ok(ToolChoice::Auto),
+                "none" => Ok(ToolChoice::None),
+                "required" => Ok(ToolChoice::Required),
+                other => Err(serde::de::Error::custom(format!(
+                    "unknown tool_choice string: \"{other}\", expected \"auto\", \"none\", or \"required\""
+                ))),
+            },
+            Value::Object(obj) => {
+                let tool_type = obj
+                    .get("type")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("function")
+                    .to_string();
+                let function = obj
+                    .get("function")
+                    .ok_or_else(|| {
+                        serde::de::Error::custom(
+                            "tool_choice object must have a \"function\" field",
+                        )
+                    })
+                    .and_then(|v| {
+                        serde_json::from_value::<ToolChoiceFunction>(v.clone())
+                            .map_err(serde::de::Error::custom)
+                    })?;
+                Ok(ToolChoice::Tool {
+                    tool_type,
+                    function,
+                })
+            }
+            _ => Err(serde::de::Error::custom(
+                "tool_choice must be a string or object",
+            )),
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

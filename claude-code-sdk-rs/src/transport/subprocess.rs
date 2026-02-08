@@ -418,10 +418,11 @@ impl SubprocessTransport {
         }
 
         // Max thinking tokens (extended thinking budget)
-        // Only pass if non-zero to match Python SDK behavior
-        if self.options.max_thinking_tokens > 0 {
-            cmd.arg("--max-thinking-tokens")
-                .arg(self.options.max_thinking_tokens.to_string());
+        if let Some(max_thinking_tokens) = self.options.max_thinking_tokens {
+            if max_thinking_tokens > 0 {
+                cmd.arg("--max-thinking-tokens")
+                    .arg(max_thinking_tokens.to_string());
+            }
         }
 
         // Working directory

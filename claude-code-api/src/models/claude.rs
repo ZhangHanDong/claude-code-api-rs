@@ -93,6 +93,22 @@ pub struct ClaudeModel {
 impl ClaudeModel {
     pub fn all() -> Vec<Self> {
         vec![
+            // Claude 4.5/4.6 Series (Latest)
+            Self {
+                id: "claude-opus-4-6".to_string(),
+                display_name: "Claude Opus 4.6".to_string(),
+                context_window: 500000,
+            },
+            Self {
+                id: "claude-sonnet-4-5-20250929".to_string(),
+                display_name: "Claude Sonnet 4.5".to_string(),
+                context_window: 500000,
+            },
+            Self {
+                id: "claude-haiku-4-5-20251001".to_string(),
+                display_name: "Claude Haiku 4.5".to_string(),
+                context_window: 200000,
+            },
             // Claude 4 Series (2025)
             Self {
                 id: "claude-opus-4-1-20250805".to_string(),

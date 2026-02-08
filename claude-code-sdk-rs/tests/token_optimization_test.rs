@@ -78,11 +78,10 @@ async fn test_budget_manager() {
 fn test_model_recommendations() {
     let recommender = ModelRecommendation::default();
 
-    assert_eq!(recommender.suggest("simple"), Some("claude-3-5-haiku-20241022"));
-    assert_eq!(recommender.suggest("fast"), Some("claude-3-5-haiku-20241022"));
-    // balanced now returns full Sonnet 4.5 model ID
+    assert_eq!(recommender.suggest("simple"), Some("claude-haiku-4-5-20251001"));
+    assert_eq!(recommender.suggest("fast"), Some("claude-haiku-4-5-20251001"));
     assert_eq!(recommender.suggest("balanced"), Some("claude-sonnet-4-5-20250929"));
-    assert_eq!(recommender.suggest("complex"), Some("opus"));
+    assert_eq!(recommender.suggest("complex"), Some("claude-opus-4-6"));
     assert_eq!(recommender.suggest("unknown"), None);
 }
 

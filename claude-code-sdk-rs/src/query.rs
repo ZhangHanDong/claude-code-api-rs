@@ -198,10 +198,11 @@ async fn query_print_mode(
     }
 
     // Max thinking tokens (extended thinking budget)
-    // Only pass if non-zero to match Python SDK behavior
-    if options.max_thinking_tokens > 0 {
-        cmd.arg("--max-thinking-tokens")
-            .arg(options.max_thinking_tokens.to_string());
+    if let Some(max_thinking_tokens) = options.max_thinking_tokens {
+        if max_thinking_tokens > 0 {
+            cmd.arg("--max-thinking-tokens")
+                .arg(max_thinking_tokens.to_string());
+        }
     }
 
     if !options.disallowed_tools.is_empty() {

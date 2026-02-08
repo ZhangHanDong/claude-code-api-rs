@@ -20,7 +20,7 @@ fn test_options_builder() {
     assert_eq!(options.permission_mode, PermissionMode::AcceptEdits);
     assert_eq!(options.allowed_tools, vec!["read", "write"]);
     assert_eq!(options.max_turns, Some(10));
-    assert_eq!(options.max_thinking_tokens, 5000);
+    assert_eq!(options.max_thinking_tokens, Some(5000));
 }
 
 #[test]

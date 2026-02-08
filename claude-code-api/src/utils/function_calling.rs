@@ -17,15 +17,37 @@ pub fn detect_and_convert_tool_call(
     
     if let Some(json_value) = json_result {
         info!("Detected JSON in Claude's response: {:?}", json_value);
-        
-        // Check if this looks like a tool call
+
+        // Check for the structured format we instructed Claude to use:
+        // {"name": "<function_name>", "arguments": {<parameters>}}
+        if let Some(name) = json_value.get("name").and_then(|v| v.as_str()) {
+            if let Some(args) = json_value.get("arguments") {
+                // Verify the name matches a requested tool
+                if let Some(tools) = requested_tools {
+                    if tools.iter().any(|t| t.function.name == name) {
+                        info!("Converting structured response to tool call: {}", name);
+                        return Some(FunctionCall {
+                            name: name.to_string(),
+                            arguments: args.to_string(),
+                        });
+                    }
+                }
+            }
+        }
+
+        // Check if this looks like a tool call via other heuristics
         if let Some(tool_name) = detect_tool_name(&json_value, requested_tools) {
             info!("Converting to tool call: {}", tool_name);
-            
-            // Convert the JSON to a function call
+
+            // If the JSON has an "arguments" field, use that; otherwise use the whole JSON
+            let arguments = json_value
+                .get("arguments")
+                .unwrap_or(&json_value)
+                .to_string();
+
             return Some(FunctionCall {
                 name: tool_name,
-                arguments: json_value.to_string(),
+                arguments,
             });
         } else if let Some(tools) = requested_tools {
             // If no specific tool match but JSON is valid and tools were requested,

@@ -18,7 +18,8 @@ fn test_pre_tool_use_hook_input_deserialization() {
         "cwd": "/current/dir",
         "permission_mode": "default",
         "tool_name": "Bash",
-        "tool_input": {"command": "ls"}
+        "tool_input": {"command": "ls"},
+        "tool_use_id": "tu_123"
     }"#;
 
     let result: Result<HookInput, _> = serde_json::from_str(json_str);
@@ -42,7 +43,8 @@ fn test_post_tool_use_hook_input_deserialization() {
         "cwd": "/current/dir",
         "tool_name": "Bash",
         "tool_input": {"command": "ls"},
-        "tool_response": {"output": "file1.txt\nfile2.txt"}
+        "tool_response": {"output": "file1.txt\nfile2.txt"},
+        "tool_use_id": "tu_456"
     }"#;
 
     let result: Result<HookInput, _> = serde_json::from_str(json_str);
@@ -104,7 +106,10 @@ fn test_subagent_stop_hook_input_deserialization() {
         "session_id": "test-session",
         "transcript_path": "/path/to/transcript",
         "cwd": "/current/dir",
-        "stop_hook_active": false
+        "stop_hook_active": false,
+        "agent_id": "agent_1",
+        "agent_transcript_path": "/path/to/agent/transcript",
+        "agent_type": "general-purpose"
     }"#;
 
     let result: Result<HookInput, _> = serde_json::from_str(json_str);
@@ -205,6 +210,7 @@ fn test_pre_tool_use_hook_specific_output() {
         permission_decision: Some("deny".to_string()),
         permission_decision_reason: Some("Tool not allowed".to_string()),
         updated_input: Some(json!({"modified": true})),
+        additional_context: None,
     });
 
     let json = serde_json::to_value(&specific_output)
@@ -219,6 +225,7 @@ fn test_pre_tool_use_hook_specific_output() {
 fn test_post_tool_use_hook_specific_output() {
     let specific_output = HookSpecificOutput::PostToolUse(PostToolUseHookSpecificOutput {
         additional_context: Some("Tool execution was successful".to_string()),
+        updated_mcp_tool_output: None,
     });
 
     let json = serde_json::to_value(&specific_output)
@@ -248,6 +255,7 @@ fn test_hook_specific_output_discriminated_union() {
         permission_decision: Some("allow".to_string()),
         permission_decision_reason: None,
         updated_input: None,
+        additional_context: None,
     });
 
     let json =
@@ -258,6 +266,7 @@ fn test_hook_specific_output_discriminated_union() {
     // Test PostToolUse variant
     let post_tool_use = HookSpecificOutput::PostToolUse(PostToolUseHookSpecificOutput {
         additional_context: Some("Context added".to_string()),
+        updated_mcp_tool_output: None,
     });
 
     let json =
@@ -277,6 +286,7 @@ fn test_sync_hook_output_with_hook_specific() {
                 permission_decision: Some("ask".to_string()),
                 permission_decision_reason: Some("Requires confirmation".to_string()),
                 updated_input: None,
+                additional_context: None,
             },
         )),
         ..Default::default()

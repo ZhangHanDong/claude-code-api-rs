@@ -8,9 +8,9 @@
 
 ---
 
-## 🦀 cc-sdk v0.4.0 - Rust SDK for Claude Code
+## 🦀 cc-sdk v0.6.0 - Rust SDK for Claude Code
 
-> **🎉 100% Feature Parity with Python claude-agent-sdk v0.1.14!**
+> **🎉 100% Feature Parity with Python claude-agent-sdk v0.1.14!** | **🌐 WebSocket Transport (v0.6.0)**
 
 [![Crates.io](https://img.shields.io/crates/v/cc-sdk.svg)](https://crates.io/crates/cc-sdk)
 [![Documentation](https://docs.rs/cc-sdk/badge.svg)](https://docs.rs/cc-sdk)
@@ -70,6 +70,7 @@ A high-performance Rust implementation of an OpenAI-compatible API gateway for C
 - **📊 Statistics API** - Monitor usage and performance metrics
 - **🔄 Multiple Client Modes** - OneShot, Interactive, and Batch processing modes
 - **🔧 Tool Calling** - OpenAI tools format support for AI tool integrations
+- **🌐 WebSocket Bridge** - Real-time bidirectional communication between CLI and external clients via WebSocket
 
 ## 🚀 Quick Start
 
@@ -461,6 +462,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 - `POST /v1/conversations` - Create a new conversation
 - `GET /v1/conversations` - List active conversations
 - `GET /v1/conversations/:id` - Get conversation details
+
+### WebSocket Sessions
+- `POST /v1/sessions` - Create a new WebSocket session (spawns CLI with `--sdk-url`)
+- `GET /v1/sessions` - List all active WebSocket sessions
+- `GET /v1/sessions/{id}` - Get session details
+- `DELETE /v1/sessions/{id}` - Delete a session (kills CLI process)
+- `WS /ws/cli/{session_id}` - WebSocket endpoint for CLI process connection
+- `WS /ws/session/{session_id}` - WebSocket endpoint for external client connection
 
 ### Statistics
 - `GET /stats` - Get API usage statistics

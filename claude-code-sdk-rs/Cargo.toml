@@ -1,6 +1,6 @@
 [package]
 name = "cc-sdk"
-version = "0.5.0"
+version = "0.6.0"
 edition = "2024"
 authors = ["ZhangHanDong"]
 license = "MIT"
@@ -35,11 +35,17 @@ crossbeam-channel = "0.5"
 libc = "0.2"
 # For auto-downloading CLI
 reqwest = { version = "0.11", features = ["rustls-tls"], default-features = false, optional = true }
+# For WebSocket transport
+tokio-tungstenite = { version = "0.26", features = ["native-tls"], optional = true }
+url = { version = "2", optional = true }
+http = { version = "1", optional = true }
 
 [features]
 default = ["auto-download"]
 # Enable automatic CLI download when not found
 auto-download = ["reqwest"]
+# Enable WebSocket transport for --sdk-url mode
+websocket = ["tokio-tungstenite", "url", "http"]
 
 [dev-dependencies]
 tokio-test = "0.4"

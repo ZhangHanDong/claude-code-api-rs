@@ -15,6 +15,8 @@ use tokio::sync::mpsc::Receiver;
 
 pub mod subprocess;
 pub mod mock;
+#[cfg(feature = "websocket")]
+pub mod websocket;
 
 pub use subprocess::SubprocessTransport;
 

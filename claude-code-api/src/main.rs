@@ -1,5 +1,5 @@
 use anyhow::Result;
-use axum::{routing::{get, post}, Router};
+use axum::{routing::{delete, get, post}, Router};
 use tower_http::cors::CorsLayer;
 use tracing::info;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -10,6 +10,7 @@ mod core;
 mod models;
 mod utils;
 mod middleware;
+mod ws;
 
 use crate::core::{
     config::Settings, 
@@ -127,13 +128,41 @@ async fn create_app(settings: Settings) -> Result<Router> {
         .route("/stats", get(api::stats::get_stats))
         .with_state(stats_state);
 
-    // 组合所有路由
+    // WebSocket bridge and CLI launcher
+    let ws_bridge = Arc::new(ws::bridge::WsBridge::new());
+    let ws_launcher = Arc::new(ws::launcher::WsCliLauncher::new(
+        settings.claude.command.clone(),
+        settings.server.port,
+    ));
+
+    let ws_session_state = api::ws_sessions::WsSessionState {
+        bridge: ws_bridge.clone(),
+        launcher: ws_launcher.clone(),
+    };
+
+    // WebSocket routes (CLI and client endpoints)
+    let ws_routes = Router::new()
+        .route("/ws/cli/{session_id}", get(ws::cli_handler::ws_cli_handler))
+        .route("/ws/session/{session_id}", get(ws::client_handler::ws_session_handler))
+        .with_state(ws_bridge);
+
+    // REST session management routes
+    let ws_session_routes = Router::new()
+        .route("/v1/sessions", post(api::ws_sessions::create_session))
+        .route("/v1/sessions", get(api::ws_sessions::list_sessions))
+        .route("/v1/sessions/{id}", get(api::ws_sessions::get_session))
+        .route("/v1/sessions/{id}", delete(api::ws_sessions::delete_session))
+        .with_state(ws_session_state);
+
+    // Combine all routes
     let app = Router::new()
         .route("/health", get(health_check))
         .route("/v1/models", get(api::models::list_models))
         .merge(api_routes)
         .merge(conversation_routes)
         .merge(stats_routes)
+        .merge(ws_routes)
+        .merge(ws_session_routes)
         .layer(middleware::from_fn(request_id::add_request_id))
         .layer(middleware::from_fn(error_handler::handle_errors))
         .layer(cors);

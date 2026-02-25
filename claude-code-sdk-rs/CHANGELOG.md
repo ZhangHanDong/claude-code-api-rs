@@ -5,6 +5,69 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-02-25
+
+### Added
+
+#### WebSocket Transport (Feature-Gated)
+
+- **New `websocket` feature flag** — enables WebSocket-based communication with Claude Code CLI
+- **`WebSocketTransport`** — full `Transport` trait implementation over WebSocket (NDJSON protocol)
+  - Connects via `tokio-tungstenite` to any `ws://` or `wss://` endpoint
+  - Mirrors `SubprocessTransport` behavior: same message routing, control protocol, and lifecycle
+  - Spawns 3 internal tasks: read (WS → channels), write (channels → WS), keepalive (ping/keep_alive)
+  - Automatic reconnection with exponential backoff (configurable max attempts and delays)
+  - `X-Last-Request-Id` header on reconnect for server-side deduplication
+- **`WebSocketConfig`** — configurable connection parameters:
+  - `max_reconnect_attempts` (default: 3)
+  - `base_reconnect_delay_ms` / `max_reconnect_delay_ms` (default: 1000 / 30000)
+  - `ping_interval_secs` (default: 10)
+  - `message_buffer_capacity` (default: 1000)
+  - `auth_token` — optional Bearer token for the WebSocket upgrade request
+- **`SdkError::WebSocketError`** — new error variant (feature-gated behind `websocket`)
+
+#### New Dependencies (Optional)
+
+- `tokio-tungstenite = "0.26"` (with `native-tls`)
+- `url = "2"`
+- `http = "1"`
+
+All gated behind `websocket` feature — zero cost when not enabled.
+
+### Changed
+
+#### Permission Protocol Fix (Python SDK Parity)
+
+- **Permission response format** now matches Python SDK exactly:
+  - Allow: `{"behavior": "allow", "updatedInput": ..., "updatedPermissions": ...}` (was `{"allow": true, "input": ...}`)
+  - Deny: `{"behavior": "deny", "message": "...", "interrupt": false}` (was `{"allow": false, "reason": ...}`)
+  - `updatedInput` is always included on allow (CLI Zod schema requires it)
+- **Auto-configure `permission_prompt_tool_name`**: When `can_use_tool` is set but `permission_prompt_tool_name` is not, automatically sets it to `"stdio"` (matching Python SDK behavior)
+
+### Usage
+
+```toml
+[dependencies]
+cc-sdk = { version = "0.6", features = ["websocket"] }
+```
+
+```rust
+use cc_sdk::{WebSocketTransport, WebSocketConfig};
+
+let config = WebSocketConfig {
+    auth_token: Some("my-token".into()),
+    ..Default::default()
+};
+let mut transport = WebSocketTransport::new("ws://localhost:8080/ws/cli/session-1", config);
+transport.connect().await?;
+```
+
+### Notes
+
+- 6 new unit tests for WebSocket transport
+- All 79 SDK tests pass (73 existing + 6 new)
+- Zero regressions
+
 ## [0.4.0] - 2025-12-17
 
 ### 🎯 Major Release: Python SDK v0.1.14 Full Parity & Auto-Download

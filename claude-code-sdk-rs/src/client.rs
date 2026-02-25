@@ -175,9 +175,15 @@ impl ClaudeSDKClient {
 
     /// Internal helper to construct client with pre-wrapped transport
     fn with_transport_internal(
-        options: ClaudeCodeOptions,
+        mut options: ClaudeCodeOptions,
         transport_arc: Arc<Mutex<Box<dyn Transport + Send>>>,
     ) -> Self {
+        // Auto-configure permission_prompt_tool_name when can_use_tool is set
+        // (matching Python SDK behavior: route permission requests via stdio control protocol)
+        if options.can_use_tool.is_some() && options.permission_prompt_tool_name.is_none() {
+            options.permission_prompt_tool_name = Some("stdio".to_string());
+        }
+
         // Create query handler if control protocol features are enabled
         let query_handler = if options.can_use_tool.is_some()
             || options.hooks.is_some()

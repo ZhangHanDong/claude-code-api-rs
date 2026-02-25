@@ -6,7 +6,7 @@
 
 A Rust SDK for interacting with Claude Code CLI, providing both simple query interfaces and full interactive client capabilities.
 
-> **v0.4.0**: 🎉 **100% Feature Parity with Python SDK v0.1.14** - Including automatic CLI download!
+> **v0.6.0**: WebSocket transport support! Connect to Claude Code CLI via `ws://` endpoints.
 
 ## Features
 
@@ -22,6 +22,7 @@ A Rust SDK for interacting with Claude Code CLI, providing both simple query int
 - 📥 **Auto CLI Download** - Automatically downloads Claude Code CLI if not found (v0.4.0+)
 - 📁 **File Checkpointing** - Rewind file changes to any point in conversation (v0.4.0+)
 - 📊 **Structured Output** - JSON schema validation for responses (v0.4.0+)
+- 🌐 **WebSocket Transport** - Connect via WebSocket instead of subprocess (v0.6.0+, feature-gated)
 
 ## Python SDK Parity (v0.4.0)
 
@@ -124,10 +125,46 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-cc-sdk = "0.4.0"
+cc-sdk = "0.6.0"
 tokio = { version = "1.0", features = ["full"] }
 futures = "0.3"
 ```
+
+### WebSocket Transport (Optional)
+
+Enable the `websocket` feature to connect via WebSocket instead of spawning a subprocess:
+
+```toml
+[dependencies]
+cc-sdk = { version = "0.6.0", features = ["websocket"] }
+```
+
+```rust
+use cc_sdk::{WebSocketTransport, WebSocketConfig};
+use cc_sdk::transport::Transport;
+
+#[tokio::main]
+async fn main() -> cc_sdk::Result<()> {
+    let config = WebSocketConfig {
+        auth_token: Some("my-bearer-token".into()),
+        ..Default::default()
+    };
+
+    let mut transport = WebSocketTransport::new(
+        "ws://localhost:8080/ws/cli/my-session",
+        config,
+    );
+    transport.connect().await?;
+
+    // Use transport.send_message(), transport.receive_messages(), etc.
+    // Same Transport trait as SubprocessTransport.
+
+    transport.disconnect().await?;
+    Ok(())
+}
+```
+
+This is useful when the CLI is managed externally (e.g., by an API server with `--sdk-url`), and you want to communicate over a network connection rather than stdin/stdout.
 
 ### Automatic CLI Download (Default)
 

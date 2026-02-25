@@ -375,19 +375,23 @@ impl Query {
                                                 suggestions: request.permission_suggestions.unwrap_or_default(),
                                             };
                                                 
+                                            // Save original input for fallback (Python SDK always sends updatedInput)
+                                            let original_input = request.input.clone();
+
                                             let result = can_use_tool
                                                 .can_use_tool(&request.tool_name, &request.input, &context)
                                                 .await;
-                                                
-                                            // CLI expects: {"allow": true, "input": ...} or {"allow": false, "reason": ...}
+
+                                            // Match Python SDK response format:
+                                            // Allow: {"behavior": "allow", "updatedInput": ..., "updatedPermissions": ...}
+                                            // Deny: {"behavior": "deny", "message": "...", "interrupt": false}
+                                            // NOTE: updatedInput is ALWAYS required for allow (CLI Zod schema expects it)
                                             let permission_response = match result {
                                                 PermissionResult::Allow(allow) => {
                                                     let mut resp = serde_json::json!({
-                                                        "allow": true,
+                                                        "behavior": "allow",
+                                                        "updatedInput": allow.updated_input.unwrap_or(original_input),
                                                     });
-                                                    if let Some(input) = allow.updated_input {
-                                                        resp["input"] = input;
-                                                    }
                                                     if let Some(perms) = allow.updated_permissions {
                                                         resp["updatedPermissions"] = serde_json::to_value(perms).unwrap_or_default();
                                                     }
@@ -395,10 +399,10 @@ impl Query {
                                                 }
                                                 PermissionResult::Deny(deny) => {
                                                     let mut resp = serde_json::json!({
-                                                        "allow": false,
+                                                        "behavior": "deny",
                                                     });
                                                     if !deny.message.is_empty() {
-                                                        resp["reason"] = serde_json::json!(deny.message);
+                                                        resp["message"] = serde_json::json!(deny.message);
                                                     }
                                                     if deny.interrupt {
                                                         resp["interrupt"] = serde_json::json!(true);
@@ -434,20 +438,23 @@ impl Query {
                                                         .unwrap_or_default();
 
                                                     let context = ToolPermissionContext { signal: None, suggestions };
+                                                    let original_input = input_val.clone();
                                                     let result = can_use_tool
                                                         .can_use_tool(tool_name, &input_val, &context)
                                                         .await;
 
                                                     let permission_response = match result {
                                                         PermissionResult::Allow(allow) => {
-                                                            let mut resp = serde_json::json!({ "allow": true });
-                                                            if let Some(input) = allow.updated_input { resp["input"] = input; }
+                                                            let mut resp = serde_json::json!({
+                                                                "behavior": "allow",
+                                                                "updatedInput": allow.updated_input.unwrap_or(original_input),
+                                                            });
                                                             if let Some(perms) = allow.updated_permissions { resp["updatedPermissions"] = serde_json::to_value(perms).unwrap_or_default(); }
                                                             resp
                                                         }
                                                         PermissionResult::Deny(deny) => {
-                                                            let mut resp = serde_json::json!({ "allow": false });
-                                                            if !deny.message.is_empty() { resp["reason"] = serde_json::json!(deny.message); }
+                                                            let mut resp = serde_json::json!({ "behavior": "deny" });
+                                                            if !deny.message.is_empty() { resp["message"] = serde_json::json!(deny.message); }
                                                             if deny.interrupt { resp["interrupt"] = serde_json::json!(true); }
                                                             resp
                                                         }

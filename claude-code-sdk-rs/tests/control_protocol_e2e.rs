@@ -148,8 +148,8 @@ async fn e2e_can_use_tool_allow() -> Result<()> {
     let resp = &outer["response"];
     assert_eq!(resp["subtype"], "success");
     assert_eq!(resp["request_id"], "req_123");
-    assert_eq!(resp["response"]["allow"], true);
-    assert_eq!(resp["response"]["input"]["safe"], true);
+    assert_eq!(resp["response"]["behavior"], "allow");
+    assert_eq!(resp["response"]["updatedInput"]["safe"], true);
 
     Ok(())
 }

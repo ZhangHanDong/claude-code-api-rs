@@ -122,6 +122,11 @@ pub enum SdkError {
         /// Description of unsupported feature
         feature: String,
     },
+
+    /// WebSocket transport error
+    #[cfg(feature = "websocket")]
+    #[error("WebSocket error: {0}")]
+    WebSocketError(String),
 }
 
 /// Result type alias for SDK operations

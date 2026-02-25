@@ -2,6 +2,48 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.0] - 2026-02-25
+
+### Added
+
+#### WebSocket Bridge (Plan A)
+
+- **WebSocket session management** — full lifecycle for CLI↔client bridging
+  - `POST /v1/sessions` — create a session, spawns CLI with `--sdk-url ws://...`
+  - `GET /v1/sessions` — list all active sessions
+  - `GET /v1/sessions/{id}` — get session details
+  - `DELETE /v1/sessions/{id}` — kill CLI process and clean up
+- **WebSocket endpoints** for real-time bidirectional communication:
+  - `/ws/cli/{session_id}` — CLI process connects here (NDJSON over WebSocket)
+  - `/ws/session/{session_id}` — external clients connect here
+- **WsBridge** — core message router between CLI and clients
+  - Routes `system/init`, `assistant`, `result`, `stream_event`, `control_request` from CLI to clients
+  - Routes `user_message`, `permission_response`, `interrupt`, `set_model`, `set_permission_mode` from clients to CLI
+  - Message history replay on client reconnection
+  - Pending permission tracking and forwarding
+  - Message queuing when CLI is not yet connected
+- **WsCliLauncher** — spawns Claude Code CLI with correct flags:
+  - `--sdk-url ws://127.0.0.1:{port}/ws/cli/{session_id}`
+  - `--print --output-format stream-json --input-format stream-json --verbose`
+  - Process lifecycle monitoring with stdout/stderr logging
+  - Cross-platform process termination (SIGTERM on Unix, taskkill on Windows)
+- **NDJSON helpers** — `parse_ndjson()` and `to_ndjson()` with 5 unit tests
+- Added `"ws"` feature to axum dependency for WebSocket upgrade support
+
+#### SDK WebSocket Transport (Plan B)
+
+- **`websocket` feature flag** in `cc-sdk` for WebSocket transport
+- **`WebSocketTransport`** — implements `Transport` trait over WebSocket
+- **`WebSocketConfig`** — reconnection, ping, buffer, and auth settings
+- **`SdkError::WebSocketError`** — new feature-gated error variant
+- 6 new unit tests for WebSocket transport
+- See `claude-code-sdk-rs/CHANGELOG.md` for full SDK details
+
+### Notes
+- All 79 SDK tests pass (73 existing + 6 new WebSocket)
+- All 23 API tests pass (18 existing + 5 new NDJSON)
+- Zero regressions from existing functionality
+
 ## [0.1.10] - 2025-01-15
 
 ### SDK Updates

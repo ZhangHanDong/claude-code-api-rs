@@ -82,10 +82,10 @@ async fn e2e_permission_callback_response_shape() {
     let resp = handle.outbound_control_rx.recv().await.unwrap();
     let envelope = resp.get("response").cloned().unwrap_or(serde_json::json!({}));
     let payload = envelope.get("response").cloned().unwrap_or(serde_json::json!({}));
-    assert_eq!(payload.get("allow").and_then(|v| v.as_bool()), Some(true));
+    assert_eq!(payload.get("behavior").and_then(|v| v.as_str()), Some("allow"));
     assert_eq!(
         payload
-            .get("input")
+            .get("updatedInput")
             .and_then(|v| v.get("patched"))
             .and_then(|v| v.as_bool()),
         Some(true)

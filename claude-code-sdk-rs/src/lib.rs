@@ -113,6 +113,8 @@ pub use types::ClaudeCodeOptionsBuilder;
 
 // Re-export transport types for convenience
 pub use transport::SubprocessTransport;
+#[cfg(feature = "websocket")]
+pub use transport::websocket::{WebSocketTransport, WebSocketConfig};
 
 // Re-export SDK MCP types
 pub use sdk_mcp::{

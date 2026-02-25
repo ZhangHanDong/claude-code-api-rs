@@ -5,3 +5,4 @@ pub mod sessions;
 pub mod conversations;
 pub mod stats;
 pub mod streaming_handler;
+pub mod ws_sessions;

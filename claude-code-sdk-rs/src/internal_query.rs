@@ -324,8 +324,13 @@ impl Query {
                     // Receive control request without holding lock
                     let control_message = control_rx.recv().await;
 
-                    if let Some(control_message) = control_message {
-                        debug!("Received control message: {:?}", control_message);
+                    // If channel closed (sender dropped), exit the loop
+                    let Some(control_message) = control_message else {
+                        debug!("Control channel closed, exiting control handler");
+                        break;
+                    };
+
+                    debug!("Received control message: {:?}", control_message);
 
                         // Check if this is a control response (from CLI to SDK)
                         if control_message.get("type").and_then(|v| v.as_str()) == Some("control_response") {
@@ -668,7 +673,6 @@ impl Query {
                                 }
                             }
                         }
-                    }
                 }
             });
         }

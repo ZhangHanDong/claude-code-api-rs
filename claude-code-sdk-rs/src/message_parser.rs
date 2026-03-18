@@ -6,8 +6,9 @@
 use crate::{
     errors::{Result, SdkError},
     types::{
-        AssistantMessage, ContentBlock, ContentValue, Message, TextContent, ThinkingContent,
-        ToolResultContent, ToolUseContent, UserMessage,
+        AssistantMessage, AssistantMessageError, ContentBlock, ContentValue, Message,
+        RateLimitInfo, TextContent, ThinkingContent, ToolResultContent, ToolUseContent,
+        UserMessage,
     },
 };
 use serde_json::Value;
@@ -26,9 +27,14 @@ pub fn parse_message(json: Value) -> Result<Option<Message>> {
         "assistant" => parse_assistant_message(json),
         "system" => parse_system_message(json),
         "result" => parse_result_message(json),
+        "stream_event" => parse_stream_event(json),
+        "rate_limit" => parse_rate_limit(json),
         _ => {
-            debug!("Ignoring message type: {}", msg_type);
-            Ok(None)
+            debug!("Unknown message type: {}, wrapping as Message::Unknown", msg_type);
+            Ok(Some(Message::Unknown {
+                msg_type: msg_type.to_string(),
+                raw: json,
+            }))
         }
     }
 }
@@ -81,9 +87,27 @@ fn parse_assistant_message(json: Value) -> Result<Option<Message>> {
         }
     }
 
+    // Extract optional fields from the message object
+    let model = message
+        .get("model")
+        .and_then(|v| v.as_str())
+        .map(String::from);
+    let usage = message.get("usage").cloned();
+    let error = message
+        .get("error")
+        .and_then(|v| serde_json::from_value::<AssistantMessageError>(v.clone()).ok());
+    let parent_tool_use_id = json
+        .get("parent_tool_use_id")
+        .and_then(|v| v.as_str())
+        .map(String::from);
+
     Ok(Some(Message::Assistant {
         message: AssistantMessage {
             content: content_blocks,
+            model,
+            usage,
+            error,
+            parent_tool_use_id,
         },
     }))
 }
@@ -244,9 +268,73 @@ fn parse_result_message(json: Value) -> Result<Option<Message>> {
                     .get("structured_output")
                     .or_else(|| json.get("structuredOutput"))
                     .and_then(|v| (!v.is_null()).then(|| v.clone())),
+                stop_reason: json
+                    .get("stop_reason")
+                    .and_then(|v| v.as_str())
+                    .map(String::from),
             }))
         }
     }
+}
+
+/// Parse a stream event message
+fn parse_stream_event(json: Value) -> Result<Option<Message>> {
+    let uuid = json
+        .get("uuid")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    let session_id = json
+        .get("session_id")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    let event = json
+        .get("event")
+        .cloned()
+        .unwrap_or_else(|| Value::Object(serde_json::Map::new()));
+    let parent_tool_use_id = json
+        .get("parent_tool_use_id")
+        .and_then(|v| v.as_str())
+        .map(String::from);
+
+    Ok(Some(Message::StreamEvent {
+        uuid,
+        session_id,
+        event,
+        parent_tool_use_id,
+    }))
+}
+
+/// Parse a rate limit message
+fn parse_rate_limit(json: Value) -> Result<Option<Message>> {
+    let uuid = json
+        .get("uuid")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    let session_id = json
+        .get("session_id")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+
+    let rate_limit_info = json
+        .get("rate_limit_info")
+        .cloned()
+        .ok_or_else(|| {
+            SdkError::parse_error("Missing 'rate_limit_info' field", json.to_string())
+        })
+        .and_then(|v| {
+            serde_json::from_value::<RateLimitInfo>(v)
+                .map_err(|e| SdkError::parse_error(format!("Invalid rate_limit_info: {e}"), json.to_string()))
+        })?;
+
+    Ok(Some(Message::RateLimit {
+        rate_limit_info,
+        uuid,
+        session_id,
+    }))
 }
 
 #[cfg(test)]
@@ -431,6 +519,12 @@ mod tests {
         });
 
         let result = parse_message(json).unwrap();
-        assert!(result.is_none());
+        assert!(result.is_some());
+        if let Some(Message::Unknown { msg_type, raw }) = result {
+            assert_eq!(msg_type, "unknown_type");
+            assert_eq!(raw["data"], "some data");
+        } else {
+            panic!("Expected Unknown message");
+        }
     }
 }

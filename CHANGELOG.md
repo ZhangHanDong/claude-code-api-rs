@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.0] - 2026-03-19
+
+### SDK Updates (cc-sdk v0.7.0)
+
+- **Python SDK v0.1.33 Parity** — 42 acceptance scenarios implemented
+  - `Effort` enum with `--effort` CLI flag
+  - `RateLimitInfo`, `RateLimitStatus`, `RateLimitType` for rate limit telemetry
+  - `AssistantMessageError` enum for error classification
+  - `Message::StreamEvent`, `Message::RateLimit`, `Message::Unknown` variants
+  - `AssistantMessage` extended with `model`, `usage`, `error`, `parent_tool_use_id`
+  - `Message::Result` extended with `stop_reason`
+- **Task Messages** — `TaskStartedMessage`, `TaskProgressMessage`, `TaskNotificationMessage` with helper methods
+- **Session History API** — `list_sessions()`, `get_session_messages()`, `rename_session()`, `tag_session()`
+- **MCP Runtime Control** — add/remove/reconnect/toggle MCP servers via SDK control protocol
+- **ThinkingConfig** — `Adaptive`, `Enabled { budget_tokens }`, `Disabled` (replaces deprecated `max_thinking_tokens`)
+- **Hook Extensions** — `agent_id`/`agent_type` on PreToolUse, PostToolUse, PostToolUseFailure, PermissionRequest hooks
+
+### Tests
+
+- 47 new tests, 176 total passing
+- See `claude-code-sdk-rs/CHANGELOG.md` for full details
+
 ## [0.6.0] - 2026-02-25
 
 ### Added

@@ -5,6 +5,72 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-03-19
+
+### Added
+
+#### Python SDK v0.1.33 Parity — Effort, Rate Limits & Stream Events
+
+- **`Effort` enum** — `Low`, `Medium`, `High`, `Max` with `--effort` CLI flag support
+- **`RateLimitInfo`** struct with `RateLimitStatus` and `RateLimitType` enums — full rate limit telemetry
+- **`AssistantMessageError`** enum — `AuthenticationFailed`, `BillingError`, `RateLimit`, `InvalidRequest`, `ServerError`, `Unknown`
+- **`Message::StreamEvent`** variant — captures raw stream events with uuid/session_id
+- **`Message::RateLimit`** variant — dedicated rate limit event messages
+- **`Message::Unknown`** variant — graceful handling of unrecognized message types (no more panics)
+- **`AssistantMessage`** extended with `model`, `usage`, `error`, `parent_tool_use_id` fields
+- **`Message::Result`** extended with `stop_reason` field
+
+#### Task Messages (Agent Orchestration)
+
+- **`TaskUsage`**, **`TaskStatus`**, **`TaskStartedMessage`**, **`TaskProgressMessage`**, **`TaskNotificationMessage`** — typed task lifecycle events
+- **`Message::as_task_started()`**, **`as_task_progress()`**, **`as_task_notification()`** — helper methods to extract typed task data from `Message::System` variants
+- **`AgentDefinition`** extended with `skills`, `memory`, `mcp_servers` fields
+
+#### Session History API
+
+- **`list_sessions()`** — list conversation sessions with metadata (CLI-backed)
+- **`get_session_messages()`** — retrieve messages from a specific session with pagination
+- **`rename_session()`** — rename a session by ID
+- **`tag_session()`** — tag/untag a session
+- **`SessionInfo`** and **`SessionMessage`** structs with full serde support
+- **`InteractiveClient`** delegate methods for all session operations
+- Unicode sanitization for session data (removes zero-width characters)
+
+#### MCP Runtime Control
+
+- **`McpConnectionStatus`** enum — `Connected`, `Failed`, `NeedsAuth`, `Pending`, `Disabled`
+- **`McpServerStatus`**, **`McpServerInfo`**, **`McpToolInfo`**, **`McpToolAnnotations`** structs
+- **`InteractiveClient::add_mcp_server()`** — add MCP server at runtime via SDK control protocol
+- **`InteractiveClient::remove_mcp_server()`** — remove MCP server at runtime
+- **`InteractiveClient::reconnect_mcp_server()`** — reconnect a failed MCP server
+- **`InteractiveClient::toggle_mcp_server()`** — enable/disable MCP server
+- **`InteractiveClient::get_mcp_status()`** — query MCP server status (stub, returns empty)
+
+#### ThinkingConfig
+
+- **`ThinkingConfig`** enum — `Adaptive`, `Enabled { budget_tokens }`, `Disabled`
+- Takes priority over deprecated `max_thinking_tokens` in CLI arg building
+- Builder method: `.thinking(ThinkingConfig::Enabled { budget_tokens: 10000 })`
+
+#### Hook Input Extensions
+
+- `agent_id` and `agent_type` fields added to `PreToolUseHookInput`, `PostToolUseHookInput`, `PostToolUseFailureHookInput`, `PermissionRequestHookInput`
+
+### Changed
+
+- Version bump: `0.6.0` → `0.7.0`
+- `message_parser.rs` unknown message types now produce `Message::Unknown` instead of being silently dropped
+- `query.rs` and `transport/subprocess.rs` both support `--effort` flag and `ThinkingConfig`
+
+### Tests
+
+- 47 new tests across 4 test files:
+  - `test_p0_parity.rs` (17 tests) — effort, rate limits, stream events, unknown messages
+  - `test_p1_task.rs` (10 tests) — task messages, agent definition
+  - `test_p1_session.rs` (9 tests) — session history types
+  - `test_p2_mcp_thinking.rs` (11 tests) — MCP status types, thinking config
+- Total: 176 tests passing (including 26 doc-tests)
+
 ## [0.6.0] - 2026-02-25
 
 ### Added

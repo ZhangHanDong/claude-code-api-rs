@@ -55,9 +55,13 @@ async fn test_streaming_flow() {
         let _ = tx.send(Ok(Message::Assistant {
             message: cc_sdk::AssistantMessage {
                 content: vec![],
+                model: None,
+                usage: None,
+                error: None,
+                parent_tool_use_id: None,
             },
         })).await;
-        
+
         // Send a result message
         let _ = tx.send(Ok(Message::Result {
             subtype: "result".to_string(),
@@ -70,6 +74,7 @@ async fn test_streaming_flow() {
             usage: None,
             result: Some("Success".to_string()),
             structured_output: None,
+            stop_reason: None,
         })).await;
     });
     
@@ -107,9 +112,13 @@ async fn test_receive_response_stops_after_result() {
         yield Ok::<Message, cc_sdk::SdkError>(Message::Assistant {
             message: cc_sdk::AssistantMessage {
                 content: vec![],
+                model: None,
+                usage: None,
+                error: None,
+                parent_tool_use_id: None,
             },
         });
-        
+
         yield Ok::<Message, cc_sdk::SdkError>(Message::Result {
             subtype: "result".to_string(),
             duration_ms: 100,
@@ -121,6 +130,7 @@ async fn test_receive_response_stops_after_result() {
             usage: None,
             result: None,
             structured_output: None,
+            stop_reason: None,
         });
 
         // This should NOT be received

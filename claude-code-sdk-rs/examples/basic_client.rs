@@ -53,6 +53,9 @@ async fn main() -> Result<()> {
                 Ok(Message::User { .. }) => {
                     println!("User message (unexpected)");
                 }
+                Ok(_) => {
+                    // StreamEvent, RateLimit, Unknown, etc.
+                }
                 Err(e) => {
                     println!("Error: {e}");
                     return Err(e);

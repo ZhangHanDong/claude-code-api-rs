@@ -8,9 +8,9 @@
 
 ---
 
-## 🦀 cc-sdk v0.6.0 - Rust SDK for Claude Code
+## 🦀 cc-sdk v0.7.0 - Rust SDK for Claude Code
 
-> **🎉 100% Feature Parity with Python claude-agent-sdk v0.1.14!** | **🌐 WebSocket Transport (v0.6.0)**
+> **🎉 Python SDK v0.1.33 Parity!** | **🌐 WebSocket Transport** | **🧠 Effort & ThinkingConfig** | **📋 Session History API**
 
 [![Crates.io](https://img.shields.io/crates/v/cc-sdk.svg)](https://crates.io/crates/cc-sdk)
 [![Documentation](https://docs.rs/cc-sdk/badge.svg)](https://docs.rs/cc-sdk)

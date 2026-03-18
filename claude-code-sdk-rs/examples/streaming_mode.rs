@@ -39,6 +39,9 @@ fn display_message(msg: &Message) {
                 println!("Cost: ${cost:.4}");
             }
         }
+        _ => {
+            // StreamEvent, RateLimit, Unknown, etc.
+        }
     }
 }
 

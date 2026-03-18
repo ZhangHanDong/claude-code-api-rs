@@ -417,8 +417,21 @@ impl SubprocessTransport {
             cmd.arg("--max-turns").arg(max_turns.to_string());
         }
 
-        // Max thinking tokens (extended thinking budget)
-        if let Some(max_thinking_tokens) = self.options.max_thinking_tokens {
+        // Thinking configuration (thinking takes priority over max_thinking_tokens)
+        if let Some(ref thinking) = self.options.thinking {
+            match thinking {
+                crate::types::ThinkingConfig::Enabled { budget_tokens } => {
+                    cmd.arg("--max-thinking-tokens")
+                        .arg(budget_tokens.to_string());
+                }
+                crate::types::ThinkingConfig::Disabled => {
+                    // Don't pass thinking tokens flag
+                }
+                crate::types::ThinkingConfig::Adaptive => {
+                    // Adaptive is the default, no flag needed
+                }
+            }
+        } else if let Some(max_thinking_tokens) = self.options.max_thinking_tokens {
             if max_thinking_tokens > 0 {
                 cmd.arg("--max-thinking-tokens")
                     .arg(max_thinking_tokens.to_string());
@@ -549,6 +562,11 @@ impl SubprocessTransport {
             })
             .unwrap_or_default();
         cmd.arg("--setting-sources").arg(sources_value);
+
+        // Effort level
+        if let Some(ref effort) = self.options.effort {
+            cmd.arg("--effort").arg(effort.to_string());
+        }
 
         // Extra arguments
         for (key, value) in &self.options.extra_args {

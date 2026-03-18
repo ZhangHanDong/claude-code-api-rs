@@ -48,6 +48,9 @@ async fn main() -> Result<()> {
                                     println!("  ✓ Result (error: {is_error})");
                                     break;
                                 }
+                                _ => {
+                                    println!("  … Other message type");
+                                }
                             }
                         }
                         Err(e) => {

@@ -44,6 +44,8 @@ mod internal_query;
 mod message_parser;
 pub mod model_recommendation;
 mod optimized_client;
+/// Session history API
+pub mod sessions;
 mod perf_utils;
 mod query;
 mod sdk_mcp;
@@ -64,6 +66,7 @@ pub use query::query;
 pub use interactive::InteractiveClient as SimpleInteractiveClient;
 pub use model_recommendation::ModelRecommendation;
 pub use optimized_client::{ClientMode, OptimizedClient};
+pub use sessions::{SessionInfo, SessionMessage, list_sessions, get_session_messages, rename_session, tag_session};
 pub use perf_utils::{MessageBatcher, PerformanceMetrics, RetryConfig};
 pub use token_tracker::{BudgetLimit, BudgetManager, BudgetStatus, TokenUsageTracker};
 /// Default interactive client - the recommended client for interactive use
@@ -96,8 +99,14 @@ pub use types::{
     SDKHookCallbackRequest, SDKControlRewindFilesRequest,
     // Phase 2 enhancements
     SettingSource, AgentDefinition, SystemPrompt,
+    // Task message types (Python SDK parity)
+    TaskUsage, TaskStatus, TaskStartedMessage, TaskProgressMessage, TaskNotificationMessage,
     // Phase 3 enhancements (Python SDK v0.1.12+ sync)
     ToolsConfig, ToolsPreset, SdkBeta,
+    // v0.7.0 enhancements (Python SDK parity)
+    Effort, RateLimitStatus, RateLimitType, RateLimitInfo, AssistantMessageError,
+    McpConnectionStatus, McpToolAnnotations, McpToolInfo, McpServerInfo, McpServerStatus,
+    ThinkingConfig,
     SandboxSettings, SandboxNetworkConfig, SandboxIgnoreViolations,
     SdkPluginConfig,
 };

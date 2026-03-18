@@ -197,8 +197,21 @@ async fn query_print_mode(
         cmd.arg("--max-turns").arg(max_turns.to_string());
     }
 
-    // Max thinking tokens (extended thinking budget)
-    if let Some(max_thinking_tokens) = options.max_thinking_tokens {
+    // Thinking configuration (thinking takes priority over max_thinking_tokens)
+    if let Some(ref thinking) = options.thinking {
+        match thinking {
+            crate::types::ThinkingConfig::Enabled { budget_tokens } => {
+                cmd.arg("--max-thinking-tokens")
+                    .arg(budget_tokens.to_string());
+            }
+            crate::types::ThinkingConfig::Disabled => {
+                // Don't pass thinking tokens flag
+            }
+            crate::types::ThinkingConfig::Adaptive => {
+                // Adaptive is the default, no flag needed
+            }
+        }
+    } else if let Some(max_thinking_tokens) = options.max_thinking_tokens {
         if max_thinking_tokens > 0 {
             cmd.arg("--max-thinking-tokens")
                 .arg(max_thinking_tokens.to_string());
@@ -248,6 +261,17 @@ async fn query_print_mode(
         cmd.arg("--mcp-config").arg(mcp_config.to_string());
     }
 
+    // Output format for structured outputs (json_schema only)
+    if let Some(ref format) = options.output_format {
+        if format.get("type").and_then(|v| v.as_str()) == Some("json_schema") {
+            if let Some(schema) = format.get("schema") {
+                if let Ok(schema_json) = serde_json::to_string(schema) {
+                    cmd.arg("--json-schema").arg(schema_json);
+                }
+            }
+        }
+    }
+
     // Extra arguments
     for (key, value) in &options.extra_args {
         let flag = if key.starts_with("--") || key.starts_with("-") {
@@ -259,6 +283,11 @@ async fn query_print_mode(
         if let Some(val) = value {
             cmd.arg(val);
         }
+    }
+
+    // Effort level
+    if let Some(ref effort) = options.effort {
+        cmd.arg("--effort").arg(effort.to_string());
     }
 
     // Add the prompt with --print

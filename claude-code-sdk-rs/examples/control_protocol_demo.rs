@@ -202,6 +202,9 @@ async fn main() -> Result<()> {
                                     println!("✓ Result (error: {is_error})");
                                     break;
                                 }
+                                _ => {
+                                    // StreamEvent, RateLimit, Unknown, etc.
+                                }
                             }
                         }
                         Err(e) => {

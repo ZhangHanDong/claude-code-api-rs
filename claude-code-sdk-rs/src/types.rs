@@ -27,6 +27,121 @@ pub enum PermissionMode {
 }
 
 // ============================================================================
+// Effort Level (Python SDK parity)
+// ============================================================================
+
+/// Effort level for Claude's reasoning depth
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Effort {
+    /// Minimal reasoning effort
+    Low,
+    /// Standard reasoning effort
+    Medium,
+    /// Higher reasoning effort
+    High,
+    /// Maximum reasoning effort
+    Max,
+}
+
+impl std::fmt::Display for Effort {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Effort::Low => write!(f, "low"),
+            Effort::Medium => write!(f, "medium"),
+            Effort::High => write!(f, "high"),
+            Effort::Max => write!(f, "max"),
+        }
+    }
+}
+
+// ============================================================================
+// Rate Limit Types (Python SDK parity)
+// ============================================================================
+
+/// Rate limit status
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RateLimitStatus {
+    /// Request allowed
+    Allowed,
+    /// Request allowed but approaching limit
+    AllowedWarning,
+    /// Request rejected due to rate limit
+    Rejected,
+}
+
+/// Rate limit type
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum RateLimitType {
+    /// 5-hour rolling window
+    #[serde(rename = "five_hour")]
+    FiveHour,
+    /// 7-day rolling window
+    #[serde(rename = "seven_day")]
+    SevenDay,
+    /// 7-day Opus-specific window
+    #[serde(rename = "seven_day_opus")]
+    SevenDayOpus,
+    /// 7-day Sonnet-specific window
+    #[serde(rename = "seven_day_sonnet")]
+    SevenDaySonnet,
+    /// Overage window
+    #[serde(rename = "overage")]
+    Overage,
+}
+
+/// Rate limit information
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct RateLimitInfo {
+    /// Current rate limit status
+    pub status: RateLimitStatus,
+    /// When the rate limit resets (ISO 8601 or epoch)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resets_at: Option<String>,
+    /// Type of rate limit
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rate_limit_type: Option<RateLimitType>,
+    /// Current utilization percentage (0.0 - 1.0)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub utilization: Option<f64>,
+    /// Overage status
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub overage_status: Option<String>,
+    /// When overage resets
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub overage_resets_at: Option<String>,
+    /// Reason overage is disabled
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub overage_disabled_reason: Option<String>,
+    /// Raw rate limit data
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub raw: Option<serde_json::Value>,
+}
+
+// ============================================================================
+// Assistant Message Error (Python SDK parity)
+// ============================================================================
+
+/// Error types for assistant messages
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AssistantMessageError {
+    /// Authentication failed
+    AuthenticationFailed,
+    /// Billing error
+    BillingError,
+    /// Rate limited
+    RateLimit,
+    /// Invalid request
+    InvalidRequest,
+    /// Server error
+    ServerError,
+    /// Unknown error
+    Unknown,
+}
+
+// ============================================================================
 // SDK Beta Features (matching Python SDK v0.1.12+)
 // ============================================================================
 
@@ -198,6 +313,99 @@ impl Default for ControlProtocolFormat {
         // Default to Legacy for maximum compatibility
         Self::Legacy
     }
+}
+
+// ============================================================================
+// MCP Runtime Status Types (Python SDK parity)
+// ============================================================================
+
+/// MCP server connection status
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum McpConnectionStatus {
+    /// Server is connected
+    Connected,
+    /// Connection failed
+    Failed,
+    /// Server needs authentication
+    NeedsAuth,
+    /// Connection pending
+    Pending,
+    /// Server is disabled
+    Disabled,
+}
+
+/// MCP tool annotations (capabilities/restrictions)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct McpToolAnnotations {
+    /// Whether the tool is read-only
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub read_only: Option<bool>,
+    /// Whether the tool is destructive
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub destructive: Option<bool>,
+    /// Whether the tool makes open-world requests
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub open_world: Option<bool>,
+}
+
+/// MCP tool information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct McpToolInfo {
+    /// Tool name
+    pub name: String,
+    /// Tool description
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    /// Tool annotations
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub annotations: Option<McpToolAnnotations>,
+}
+
+/// MCP server info
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct McpServerInfo {
+    /// Server name
+    pub name: String,
+    /// Server version
+    pub version: String,
+}
+
+/// MCP server runtime status
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct McpServerStatus {
+    /// Server name
+    pub name: String,
+    /// Connection status
+    pub status: McpConnectionStatus,
+    /// Server info (when connected)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub server_info: Option<McpServerInfo>,
+    /// Error message (when failed)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+    /// Available tools
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tools: Option<Vec<McpToolInfo>>,
+}
+
+// ============================================================================
+// Thinking Configuration (Python SDK parity)
+// ============================================================================
+
+/// Thinking configuration for Claude's reasoning
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(tag = "type", rename_all = "lowercase")]
+pub enum ThinkingConfig {
+    /// Adaptive thinking — Claude decides how much to think
+    Adaptive,
+    /// Enabled with a specific token budget
+    Enabled {
+        /// Maximum tokens for thinking
+        budget_tokens: i32,
+    },
+    /// Thinking disabled
+    Disabled,
 }
 
 /// MCP (Model Context Protocol) server configuration
@@ -516,6 +724,12 @@ pub struct PreToolUseHookInput {
     pub tool_input: serde_json::Value,
     /// Tool use ID
     pub tool_use_id: String,
+    /// Agent ID (for subagent contexts)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub agent_id: Option<String>,
+    /// Agent type (for subagent contexts)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub agent_type: Option<String>,
 }
 
 /// Input data for PostToolUse hook events
@@ -538,6 +752,12 @@ pub struct PostToolUseHookInput {
     pub tool_response: serde_json::Value,
     /// Tool use ID
     pub tool_use_id: String,
+    /// Agent ID (for subagent contexts)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub agent_id: Option<String>,
+    /// Agent type (for subagent contexts)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub agent_type: Option<String>,
 }
 
 /// Input data for UserPromptSubmit hook events
@@ -636,6 +856,12 @@ pub struct PostToolUseFailureHookInput {
     /// Whether this failure was due to an interrupt
     #[serde(skip_serializing_if = "Option::is_none")]
     pub is_interrupt: Option<bool>,
+    /// Agent ID (for subagent contexts)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub agent_id: Option<String>,
+    /// Agent type (for subagent contexts)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub agent_type: Option<String>,
 }
 
 /// Input data for Notification hook events
@@ -696,6 +922,12 @@ pub struct PermissionRequestHookInput {
     /// Permission suggestions (optional)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub permission_suggestions: Option<Vec<serde_json::Value>>,
+    /// Agent ID (for subagent contexts)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub agent_id: Option<String>,
+    /// Agent type (for subagent contexts)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub agent_type: Option<String>,
 }
 
 /// Union type for all hook inputs (discriminated by hook_event_name)
@@ -985,6 +1217,15 @@ pub struct AgentDefinition {
     /// Model to use
     #[serde(skip_serializing_if = "Option::is_none")]
     pub model: Option<String>,
+    /// Skills available to this agent
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub skills: Option<Vec<String>>,
+    /// Memory configuration
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub memory: Option<String>,
+    /// MCP server configurations for this agent
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "mcpServers")]
+    pub mcp_servers: Option<Vec<serde_json::Value>>,
 }
 
 /// System prompt configuration
@@ -1168,6 +1409,13 @@ pub struct ClaudeCodeOptions {
     ///     .build();
     /// ```
     pub auto_download_cli: bool,
+
+    // ========== v0.7.0 Enhancements (Python SDK parity) ==========
+    /// Effort level for Claude's reasoning depth
+    pub effort: Option<Effort>,
+    /// Thinking configuration (replaces max_thinking_tokens)
+    /// When set, takes priority over max_thinking_tokens
+    pub thinking: Option<ThinkingConfig>,
 }
 
 impl std::fmt::Debug for ClaudeCodeOptions {
@@ -1198,6 +1446,8 @@ impl std::fmt::Debug for ClaudeCodeOptions {
             .field("can_use_tool", &self.can_use_tool.is_some())
             .field("hooks", &self.hooks.is_some())
             .field("control_protocol_format", &self.control_protocol_format)
+            .field("effort", &self.effort)
+            .field("thinking", &self.thinking)
             .finish()
     }
 }
@@ -1562,10 +1812,140 @@ impl ClaudeCodeOptionsBuilder {
         self
     }
 
+    // ========== v0.7.0 Builder Methods (Python SDK parity) ==========
+
+    /// Set effort level for Claude's reasoning depth
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use cc_sdk::{ClaudeCodeOptions, Effort};
+    /// let options = ClaudeCodeOptions::builder()
+    ///     .effort(Effort::High)
+    ///     .build();
+    /// ```
+    pub fn effort(mut self, effort: Effort) -> Self {
+        self.options.effort = Some(effort);
+        self
+    }
+
+    /// Set thinking configuration
+    ///
+    /// When set, takes priority over `max_thinking_tokens`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use cc_sdk::{ClaudeCodeOptions, ThinkingConfig};
+    /// let options = ClaudeCodeOptions::builder()
+    ///     .thinking(ThinkingConfig::Enabled { budget_tokens: 10000 })
+    ///     .build();
+    /// ```
+    pub fn thinking(mut self, config: ThinkingConfig) -> Self {
+        self.options.thinking = Some(config);
+        self
+    }
+
     /// Build the options
     pub fn build(self) -> ClaudeCodeOptions {
         self.options
     }
+}
+
+// ============================================================================
+// Task Message Types (Python SDK parity)
+// ============================================================================
+
+/// Usage statistics for a task
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub struct TaskUsage {
+    /// Total tokens used
+    #[serde(default)]
+    pub total_tokens: u64,
+    /// Number of tool uses
+    #[serde(default)]
+    pub tool_uses: u64,
+    /// Duration in milliseconds
+    #[serde(default)]
+    pub duration_ms: u64,
+}
+
+/// Task completion status
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum TaskStatus {
+    /// Task completed successfully
+    Completed,
+    /// Task failed
+    Failed,
+    /// Task was stopped
+    Stopped,
+}
+
+/// Task started message data
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct TaskStartedMessage {
+    /// Task ID
+    pub task_id: String,
+    /// Task description
+    pub description: String,
+    /// Unique message ID
+    pub uuid: String,
+    /// Session ID
+    pub session_id: String,
+    /// Associated tool use ID
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tool_use_id: Option<String>,
+    /// Task type
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub task_type: Option<String>,
+}
+
+/// Task progress message data
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct TaskProgressMessage {
+    /// Task ID
+    pub task_id: String,
+    /// Task description/status
+    pub description: String,
+    /// Usage statistics
+    #[serde(default)]
+    pub usage: TaskUsage,
+    /// Unique message ID
+    pub uuid: String,
+    /// Session ID
+    pub session_id: String,
+    /// Associated tool use ID
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tool_use_id: Option<String>,
+    /// Name of last tool used
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_tool_name: Option<String>,
+}
+
+/// Task notification (completion) message data
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct TaskNotificationMessage {
+    /// Task ID
+    pub task_id: String,
+    /// Task completion status
+    pub status: TaskStatus,
+    /// Output file path
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub output_file: Option<String>,
+    /// Summary of task results
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub summary: Option<String>,
+    /// Unique message ID
+    pub uuid: String,
+    /// Session ID
+    pub session_id: String,
+    /// Associated tool use ID
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tool_use_id: Option<String>,
+    /// Usage statistics
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub usage: Option<TaskUsage>,
 }
 
 /// Main message type enum
@@ -1616,7 +1996,77 @@ pub enum Message {
         /// Contains the validated JSON response matching the schema
         #[serde(skip_serializing_if = "Option::is_none", alias = "structuredOutput")]
         structured_output: Option<serde_json::Value>,
+        /// Reason the conversation stopped
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        stop_reason: Option<String>,
     },
+
+    /// Stream event from the CLI
+    #[serde(rename = "stream_event")]
+    StreamEvent {
+        /// Unique message ID
+        uuid: String,
+        /// Session ID
+        session_id: String,
+        /// Event data
+        event: serde_json::Value,
+        /// Parent tool use ID (for subagent events)
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        parent_tool_use_id: Option<String>,
+    },
+
+    /// Rate limit notification
+    #[serde(rename = "rate_limit")]
+    RateLimit {
+        /// Rate limit details
+        rate_limit_info: RateLimitInfo,
+        /// Unique message ID
+        uuid: String,
+        /// Session ID
+        session_id: String,
+    },
+
+    /// Unknown message type (forward compatibility)
+    /// Not deserialized by serde — constructed by message_parser
+    #[serde(skip)]
+    Unknown {
+        /// Original message type string
+        msg_type: String,
+        /// Raw JSON data
+        raw: serde_json::Value,
+    },
+}
+
+impl Message {
+    /// Try to extract a TaskStartedMessage from a System message
+    pub fn as_task_started(&self) -> Option<TaskStartedMessage> {
+        if let Message::System { subtype, data } = self {
+            if subtype == "task_started" {
+                return serde_json::from_value(data.clone()).ok();
+            }
+        }
+        None
+    }
+
+    /// Try to extract a TaskProgressMessage from a System message
+    pub fn as_task_progress(&self) -> Option<TaskProgressMessage> {
+        if let Message::System { subtype, data } = self {
+            if subtype == "task_progress" {
+                return serde_json::from_value(data.clone()).ok();
+            }
+        }
+        None
+    }
+
+    /// Try to extract a TaskNotificationMessage from a System message
+    pub fn as_task_notification(&self) -> Option<TaskNotificationMessage> {
+        if let Message::System { subtype, data } = self {
+            if subtype == "task_notification" {
+                return serde_json::from_value(data.clone()).ok();
+            }
+        }
+        None
+    }
 }
 
 /// User message content
@@ -1631,6 +2081,18 @@ pub struct UserMessage {
 pub struct AssistantMessage {
     /// Content blocks
     pub content: Vec<ContentBlock>,
+    /// Model that generated this message
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
+    /// Token usage statistics
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub usage: Option<serde_json::Value>,
+    /// Error information if the message failed
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error: Option<AssistantMessageError>,
+    /// Parent tool use ID (for subagent messages)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parent_tool_use_id: Option<String>,
 }
 
 /// Result message (re-export for convenience)  

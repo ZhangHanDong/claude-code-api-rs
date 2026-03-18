@@ -253,6 +253,171 @@ impl InteractiveClient {
         Ok(())
     }
 
+    /// Get MCP server status for all configured servers
+    ///
+    /// Note: Requires the CLI to support `mcp_status` SDK control messages.
+    /// Returns an empty list if the CLI doesn't support this feature.
+    pub async fn get_mcp_status(&mut self) -> Result<Vec<crate::types::McpServerStatus>> {
+        if !self.connected {
+            return Err(SdkError::InvalidState {
+                message: "Not connected".into(),
+            });
+        }
+        // MCP status requires SDK control protocol support from the CLI.
+        // The transport currently doesn't expose a bidirectional SDK control channel
+        // for this operation. Return empty for now.
+        Ok(vec![])
+    }
+
+    /// Add an MCP server at runtime via SDK control protocol
+    pub async fn add_mcp_server(
+        &mut self,
+        name: &str,
+        config: crate::types::McpServerConfig,
+    ) -> Result<()> {
+        if !self.connected {
+            return Err(SdkError::InvalidState {
+                message: "Not connected".into(),
+            });
+        }
+
+        let config_json = serde_json::to_value(&config)
+            .map_err(|e| SdkError::TransportError(format!("Failed to serialize MCP config: {e}")))?;
+
+        let mcp_msg = crate::types::SDKControlMcpMessageRequest {
+            subtype: "mcp_message".to_string(),
+            mcp_server_name: name.to_string(),
+            message: serde_json::json!({
+                "action": "add",
+                "config": config_json
+            }),
+        };
+
+        let mut transport = self.transport.lock().await;
+        let request = crate::types::SDKControlRequest::McpMessage(mcp_msg);
+        let json = serde_json::to_value(&request)
+            .map_err(|e| SdkError::TransportError(format!("Failed to serialize: {e}")))?;
+        let input = crate::transport::InputMessage {
+            r#type: "sdk_control".to_string(),
+            message: json,
+            parent_tool_use_id: None,
+            session_id: String::new(),
+        };
+        transport.send_message(input).await
+    }
+
+    /// Remove an MCP server at runtime
+    pub async fn remove_mcp_server(&mut self, name: &str) -> Result<()> {
+        if !self.connected {
+            return Err(SdkError::InvalidState {
+                message: "Not connected".into(),
+            });
+        }
+
+        let mcp_msg = crate::types::SDKControlMcpMessageRequest {
+            subtype: "mcp_message".to_string(),
+            mcp_server_name: name.to_string(),
+            message: serde_json::json!({ "action": "remove" }),
+        };
+
+        let mut transport = self.transport.lock().await;
+        let request = crate::types::SDKControlRequest::McpMessage(mcp_msg);
+        let json = serde_json::to_value(&request)
+            .map_err(|e| SdkError::TransportError(format!("Failed to serialize: {e}")))?;
+        let input = crate::transport::InputMessage {
+            r#type: "sdk_control".to_string(),
+            message: json,
+            parent_tool_use_id: None,
+            session_id: String::new(),
+        };
+        transport.send_message(input).await
+    }
+
+    /// Reconnect an MCP server
+    pub async fn reconnect_mcp_server(&mut self, name: &str) -> Result<()> {
+        if !self.connected {
+            return Err(SdkError::InvalidState {
+                message: "Not connected".into(),
+            });
+        }
+
+        let mcp_msg = crate::types::SDKControlMcpMessageRequest {
+            subtype: "mcp_message".to_string(),
+            mcp_server_name: name.to_string(),
+            message: serde_json::json!({ "action": "reconnect" }),
+        };
+
+        let mut transport = self.transport.lock().await;
+        let request = crate::types::SDKControlRequest::McpMessage(mcp_msg);
+        let json = serde_json::to_value(&request)
+            .map_err(|e| SdkError::TransportError(format!("Failed to serialize: {e}")))?;
+        let input = crate::transport::InputMessage {
+            r#type: "sdk_control".to_string(),
+            message: json,
+            parent_tool_use_id: None,
+            session_id: String::new(),
+        };
+        transport.send_message(input).await
+    }
+
+    /// Toggle an MCP server enabled/disabled
+    pub async fn toggle_mcp_server(&mut self, name: &str, enabled: bool) -> Result<()> {
+        if !self.connected {
+            return Err(SdkError::InvalidState {
+                message: "Not connected".into(),
+            });
+        }
+
+        let mcp_msg = crate::types::SDKControlMcpMessageRequest {
+            subtype: "mcp_message".to_string(),
+            mcp_server_name: name.to_string(),
+            message: serde_json::json!({ "action": "toggle", "enabled": enabled }),
+        };
+
+        let mut transport = self.transport.lock().await;
+        let request = crate::types::SDKControlRequest::McpMessage(mcp_msg);
+        let json = serde_json::to_value(&request)
+            .map_err(|e| SdkError::TransportError(format!("Failed to serialize: {e}")))?;
+        let input = crate::transport::InputMessage {
+            r#type: "sdk_control".to_string(),
+            message: json,
+            parent_tool_use_id: None,
+            session_id: String::new(),
+        };
+        transport.send_message(input).await
+    }
+
+    /// List available sessions
+    pub async fn list_sessions(
+        &self,
+        directory: Option<&str>,
+        limit: Option<usize>,
+        include_worktrees: bool,
+    ) -> Result<Vec<crate::sessions::SessionInfo>> {
+        crate::sessions::list_sessions(directory, limit, include_worktrees).await
+    }
+
+    /// Get messages from a specific session
+    pub async fn get_session_messages(
+        &self,
+        session_id: &str,
+        directory: Option<&str>,
+        limit: Option<usize>,
+        offset: usize,
+    ) -> Result<Vec<crate::sessions::SessionMessage>> {
+        crate::sessions::get_session_messages(session_id, directory, limit, offset).await
+    }
+
+    /// Rename a session
+    pub async fn rename_session(&self, session_id: &str, title: &str) -> Result<()> {
+        crate::sessions::rename_session(session_id, title).await
+    }
+
+    /// Tag a session
+    pub async fn tag_session(&self, session_id: &str, tag: Option<&str>) -> Result<()> {
+        crate::sessions::tag_session(session_id, tag).await
+    }
+
     /// Disconnect
     pub async fn disconnect(&mut self) -> Result<()> {
         if !self.connected {

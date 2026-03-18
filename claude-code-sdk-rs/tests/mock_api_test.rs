@@ -24,6 +24,10 @@ impl MockResponseGenerator {
             content: vec![ContentBlock::Text(TextContent {
                 text: content.to_string(),
             })],
+            model: None,
+            usage: None,
+            error: None,
+            parent_tool_use_id: None,
         };
 
         let message = Message::Assistant {
@@ -44,6 +48,7 @@ impl MockResponseGenerator {
             usage: None,
             result: Some("Success".to_string()),
             structured_output: None,
+            stop_reason: None,
         });
     }
 
@@ -60,6 +65,10 @@ fn test_message_serialization() {
         content: vec![ContentBlock::Text(TextContent {
             text: "Hello, world!".to_string(),
         })],
+        model: None,
+        usage: None,
+        error: None,
+        parent_tool_use_id: None,
     };
 
     let message = Message::Assistant {

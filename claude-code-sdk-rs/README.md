@@ -6,7 +6,7 @@
 
 A Rust SDK for interacting with Claude Code CLI, providing both simple query interfaces and full interactive client capabilities.
 
-> **v0.6.0**: WebSocket transport support! Connect to Claude Code CLI via `ws://` endpoints.
+> **v0.7.0**: Python SDK v0.1.33 parity — Effort control, rate limit telemetry, task messages, session history API, MCP runtime control, ThinkingConfig.
 
 ## Features
 
@@ -24,9 +24,9 @@ A Rust SDK for interacting with Claude Code CLI, providing both simple query int
 - 📊 **Structured Output** - JSON schema validation for responses (v0.4.0+)
 - 🌐 **WebSocket Transport** - Connect via WebSocket instead of subprocess (v0.6.0+, feature-gated)
 
-## Python SDK Parity (v0.4.0)
+## Python SDK Parity (v0.7.0)
 
-This Rust SDK achieves **100% feature parity** with the official Python `claude-agent-sdk` v0.1.14:
+This Rust SDK achieves **full feature parity** with the official Python `claude-agent-sdk` v0.1.33:
 
 | Feature | Python SDK | Rust SDK | Status |
 |---------|-----------|----------|--------|
@@ -47,6 +47,12 @@ This Rust SDK achieves **100% feature parity** with the official Python `claude-
 | Hook callbacks | ✅ | ✅ | ✅ Parity |
 | MCP servers (all types) | ✅ | ✅ | ✅ Parity |
 | Bundled/Auto CLI | ✅ (bundled) | ✅ (auto-download) | ✅ Equivalent |
+| **Effort control** | ✅ | ✅ | ✅ v0.7.0 |
+| **Rate limit telemetry** | ✅ | ✅ | ✅ v0.7.0 |
+| **Task messages** | ✅ | ✅ | ✅ v0.7.0 |
+| **Session history API** | ✅ | ✅ | ✅ v0.7.0 |
+| **MCP runtime control** | ✅ | ✅ | ✅ v0.7.0 |
+| **ThinkingConfig** | ✅ | ✅ | ✅ v0.7.0 |
 
 > **Note**: Only `user` (OS setuid) is not implemented due to platform/privilege requirements.
 
@@ -125,7 +131,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-cc-sdk = "0.6.0"
+cc-sdk = "0.7.0"
 tokio = { version = "1.0", features = ["full"] }
 futures = "0.3"
 ```

@@ -43,6 +43,10 @@ impl MockClient {
         let assistant_msg = Message::Assistant {
             message: AssistantMessage {
                 content: vec![ContentBlock::Text(TextContent { text: response })],
+                model: None,
+                usage: None,
+                error: None,
+                parent_tool_use_id: None,
             },
         };
 
@@ -57,7 +61,8 @@ impl MockClient {
             total_cost_usd: Some(0.0001),
             usage: None,
             result: Some("Success".to_string()),
-                    structured_output: None,
+            structured_output: None,
+            stop_reason: None,
         };
 
         Ok(vec![assistant_msg, result_msg])

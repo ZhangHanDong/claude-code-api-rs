@@ -161,6 +161,9 @@ fn display_message(msg: &Message) {
                 println!("Total cost: ${cost:.4} USD");
             }
         }
+        _ => {
+            // StreamEvent, RateLimit, Unknown, etc.
+        }
     }
 }
 
@@ -171,5 +174,6 @@ fn message_type(msg: &Message) -> &str {
         Message::Assistant { .. } => "Assistant",
         Message::System { .. } => "System",
         Message::Result { .. } => "Result",
+        _ => "Other",
     }
 }

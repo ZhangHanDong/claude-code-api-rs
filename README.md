@@ -15,7 +15,7 @@
 [![Crates.io](https://img.shields.io/crates/v/cc-sdk.svg)](https://crates.io/crates/cc-sdk)
 [![Documentation](https://docs.rs/cc-sdk/badge.svg)](https://docs.rs/cc-sdk)
 
-**[cc-sdk](./claude-code-sdk-rs)** is the official Rust SDK for Claude Code CLI, providing:
+**[cc-sdk](./claude-code-sdk-rs)** is a community-driven Rust SDK for Claude Code CLI, providing:
 
 - 📥 **Auto CLI Download** - Automatically downloads Claude Code CLI if not found
 - 📁 **File Checkpointing** - Rewind file changes to any conversation point

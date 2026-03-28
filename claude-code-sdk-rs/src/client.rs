@@ -276,7 +276,23 @@ impl ClaudeSDKClient {
     }
 
     /// Send a user message to Claude
+    ///
+    /// Uses the session ID from `ClaudeCodeOptions::session_id` if set,
+    /// otherwise falls back to "default".
     pub async fn send_user_message(&mut self, prompt: String) -> Result<()> {
+        let session_id = self
+            .options
+            .session_id
+            .clone()
+            .unwrap_or_else(|| "default".to_string());
+        self.send_user_message_with_session(prompt, session_id).await
+    }
+
+    async fn send_user_message_with_session(
+        &mut self,
+        prompt: String,
+        session_id: String,
+    ) -> Result<()> {
         // Check connection
         {
             let state = self.state.read().await;
@@ -286,9 +302,6 @@ impl ClaudeSDKClient {
                 });
             }
         }
-
-        // Use default session ID
-        let session_id = "default".to_string();
 
         // Update session data
         {
@@ -316,14 +329,18 @@ impl ClaudeSDKClient {
         Ok(())
     }
 
-    /// Send a request to Claude (alias for send_user_message with optional session_id)
+    /// Send a request to Claude with an optional explicit session ID
+    ///
+    /// Priority: explicit `session_id` argument > `ClaudeCodeOptions::session_id` > "default"
     pub async fn send_request(
         &mut self,
         prompt: String,
-        _session_id: Option<String>,
+        session_id: Option<String>,
     ) -> Result<()> {
-        // For now, ignore session_id and use send_user_message
-        self.send_user_message(prompt).await
+        let effective_session_id = session_id
+            .or_else(|| self.options.session_id.clone())
+            .unwrap_or_else(|| "default".to_string());
+        self.send_user_message_with_session(prompt, effective_session_id).await
     }
 
     /// Receive messages from Claude
@@ -988,5 +1005,19 @@ mod tests {
             client.query_handler.is_some(),
             "enable_file_checkpointing should initialize the query handler for control protocol requests"
         );
+    }
+
+    #[test]
+    fn test_session_id_option_defaults_to_none() {
+        let options = ClaudeCodeOptions::default();
+        assert!(options.session_id.is_none());
+    }
+
+    #[test]
+    fn test_session_id_builder() {
+        let options = ClaudeCodeOptions::builder()
+            .session_id("my-session-123")
+            .build();
+        assert_eq!(options.session_id.as_deref(), Some("my-session-123"));
     }
 }

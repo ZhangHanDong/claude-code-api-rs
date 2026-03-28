@@ -1416,6 +1416,14 @@ pub struct ClaudeCodeOptions {
     /// Thinking configuration (replaces max_thinking_tokens)
     /// When set, takes priority over max_thinking_tokens
     pub thinking: Option<ThinkingConfig>,
+    /// Session ID to use for conversations
+    ///
+    /// When set, this ID is used instead of the default "default" session identifier.
+    /// This allows callers to control the session identity, which is important for
+    /// resume/fork workflows and for aligning session IDs across different layers.
+    ///
+    /// If not set, falls back to "default" (preserving backward compatibility).
+    pub session_id: Option<String>,
 }
 
 impl std::fmt::Debug for ClaudeCodeOptions {
@@ -1448,6 +1456,7 @@ impl std::fmt::Debug for ClaudeCodeOptions {
             .field("control_protocol_format", &self.control_protocol_format)
             .field("effort", &self.effort)
             .field("thinking", &self.thinking)
+            .field("session_id", &self.session_id)
             .finish()
     }
 }
@@ -1584,6 +1593,16 @@ impl ClaudeCodeOptionsBuilder {
     /// Set resume conversation ID
     pub fn resume(mut self, id: impl Into<String>) -> Self {
         self.options.resume = Some(id.into());
+        self
+    }
+
+    /// Set session ID for conversations
+    ///
+    /// When set, this ID is used instead of the default "default" session identifier.
+    /// This allows callers to control the session identity used in messages sent to
+    /// Claude Code CLI.
+    pub fn session_id(mut self, id: impl Into<String>) -> Self {
+        self.options.session_id = Some(id.into());
         self
     }
 

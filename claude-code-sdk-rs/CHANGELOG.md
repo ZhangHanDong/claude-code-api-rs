@@ -5,6 +5,51 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.1] - 2026-04-04
+
+### Added
+
+#### LLM Proxy Module (`cc_sdk::llm`)
+
+- **`llm::query(prompt, options)`** — send prompt, get text back (subscription auth, no agent overhead)
+- **`llm::query_stream(prompt, options)`** — streaming text deltas
+- **`LlmOptions`** builder: `system_prompt`, `model`, `thinking`, `max_turns`, `max_output_tokens`, `effort`
+- Auto-configures: `--tools ""`, `--setting-sources user`, `DontAsk`, `max_turns=1`, clears `ANTHROPIC_API_KEY`
+
+#### WebSocket Reconnection
+
+- Exponential backoff with ±25% jitter (matches CC source `WebSocketTransport.ts`)
+- Time-budget based (5 min default), not attempt-count based
+- Sleep/wake detection: gap > 60s resets reconnection budget
+- Permanent close codes (1002, 4001, 4003) skip reconnection
+- Circular replay buffer (200 messages) for replay on reconnect
+- `X-Last-Request-Id` header for server-side deduplication
+- Supervisor task manages WS lifecycle; external channels stable across reconnections
+
+#### Community Contributions
+
+- **`session_id` support** (PR #14 by @flazouh) — `ClaudeCodeOptions::session_id` for resume/fork workflows
+- **CPU spin fix** (PR #12 by @funsocietyhq) — control handler loop now exits when channel closes
+
+### Fixed
+
+- `query_print_mode` now sets `stdin(null)` to prevent child process blocking on inherited stdin
+- `query_print_mode` now handles `env` field (empty value = `env_remove`)
+- `query_print_mode` now handles `tools` and `setting_sources` fields
+- `llm::query()` breaks on `Message::Result` instead of waiting for process exit (avoids hang)
+- Clears `ANTHROPIC_API_KEY` in llm module for subscription auth (parent CC session's key is invalid for child)
+
+### Changed
+
+- Version bump: `0.8.0` → `0.8.1`
+
+### Tests
+
+- 8 llm module unit tests
+- 13 WebSocket unit tests (backoff, replay buffer, close codes)
+- 2 session_id tests (from PR #14)
+- Integration test verified: `llm::query("2+2")` → `"4"` via CC subscription
+
 ## [0.8.0] - 2026-04-04
 
 ### Added

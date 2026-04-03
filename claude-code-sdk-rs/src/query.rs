@@ -304,11 +304,26 @@ async fn query_print_mode(
         cmd.arg("--effort").arg(effort.to_string());
     }
 
+    // Setting sources
+    if let Some(ref sources) = options.setting_sources {
+        let source_strs: Vec<&str> = sources
+            .iter()
+            .map(|s| match s {
+                crate::types::SettingSource::User => "user",
+                crate::types::SettingSource::Project => "project",
+                crate::types::SettingSource::Local => "local",
+            })
+            .collect();
+        cmd.arg("--setting-sources").arg(source_strs.join(","));
+    }
+
     // Add the prompt with --print
     cmd.arg("--print").arg("--").arg(&prompt);
 
-    // Set up process pipes
-    cmd.stdout(std::process::Stdio::piped())
+    // Set up process pipes — stdin must be null to prevent the child from
+    // blocking on inherited stdin (especially when running inside a CC session)
+    cmd.stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped());
     
     // Handle max_output_tokens (priority: option > env var)
@@ -333,6 +348,15 @@ async fn query_print_mode(
         }
     }
 
+    // Apply environment variables
+    for (key, value) in &options.env {
+        if value.is_empty() {
+            cmd.env_remove(key);
+        } else {
+            cmd.env(key, value);
+        }
+    }
+
     info!("Starting Claude CLI with --print mode");
     debug!("Command: {:?}", cmd);
 
@@ -341,6 +365,7 @@ async fn query_print_mode(
     }
 
     let mut child = cmd.spawn().map_err(crate::SdkError::ProcessError)?;
+    debug!("Claude CLI spawned with PID: {:?}", child.id());
 
     let stdout = child
         .stdout

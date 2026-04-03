@@ -79,13 +79,21 @@ impl LlmOptions {
     /// This sets:
     /// - Empty system prompt (or user-provided)
     /// - `--tools ""` (disable all tools)
-    /// - `--bare` (skip hooks, LSP, plugins)
+    /// - `setting_sources: [User]` (skip project/local hooks for faster startup)
+    /// - Clears `ANTHROPIC_API_KEY` (forces subscription auth)
     /// - `PermissionMode::DontAsk`
     /// - `max_turns: 1` (unless overridden)
     pub(crate) fn to_claude_code_options(&self) -> ClaudeCodeOptions {
         let mut extra_args = HashMap::new();
-        extra_args.insert("bare".to_string(), None);
         extra_args.insert("tools".to_string(), Some(String::new()));
+
+        // Clear ANTHROPIC_API_KEY so the child CC process uses subscription auth
+        // instead of inheriting the parent process's session-specific API key.
+        // An empty value in env causes env_remove in the subprocess.
+        let mut env = HashMap::new();
+        env.insert("ANTHROPIC_API_KEY".to_string(), String::new());
+        // Skip hooks/plugins/CLAUDE.md loading for faster startup
+        env.insert("CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC".to_string(), "1".to_string());
 
         ClaudeCodeOptions {
             system_prompt_v2: Some(SystemPrompt::String(
@@ -98,6 +106,9 @@ impl LlmOptions {
             max_output_tokens: self.max_output_tokens,
             effort: self.effort,
             extra_args,
+            env,
+            // Only load user-level settings (has auth), skip project/local (has hooks)
+            setting_sources: Some(vec![crate::types::SettingSource::User]),
             ..Default::default()
         }
     }
@@ -219,6 +230,7 @@ pub async fn query(prompt: &str, options: Option<LlmOptions>) -> Result<LlmRespo
                         text_parts.push(r);
                     }
                 }
+                break; // Result marks end of response — don't wait for process exit
             }
             _ => {}
         }
@@ -366,11 +378,20 @@ mod tests {
             _ => panic!("Expected empty string system prompt"),
         }
 
-        // --bare and --tools "" in extra_args
-        assert_eq!(cc.extra_args.get("bare"), Some(&None));
+        // --tools "" in extra_args
         assert_eq!(
             cc.extra_args.get("tools"),
             Some(&Some(String::new()))
+        );
+        assert!(!cc.extra_args.contains_key("bare")); // no --bare (breaks subscription auth)
+
+        // ANTHROPIC_API_KEY cleared for subscription auth
+        assert_eq!(cc.env.get("ANTHROPIC_API_KEY"), Some(&String::new()));
+
+        // Only user-level settings (skip project/local hooks)
+        assert_eq!(
+            cc.setting_sources,
+            Some(vec![crate::types::SettingSource::User])
         );
 
         // Model not set

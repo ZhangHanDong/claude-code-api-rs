@@ -8,6 +8,7 @@ use thiserror::Error;
 
 /// Main error type for the Claude Code SDK
 #[derive(Error, Debug)]
+#[non_exhaustive]
 pub enum SdkError {
     /// Claude CLI executable was not found
     #[error(

@@ -119,11 +119,6 @@ pub async fn query(
     let options = options.unwrap_or_default();
     let prompt = prompt.into();
 
-    // Set environment variable to indicate SDK usage
-    unsafe {
-        std::env::set_var("CLAUDE_CODE_ENTRYPOINT", "sdk-rust");
-    }
-
     match prompt {
         QueryInput::Text(text) => {
             // For simple text queries, use --print mode like Python SDK
@@ -243,6 +238,9 @@ async fn query_print_mode(
         }
         PermissionMode::BypassPermissions => {
             cmd.arg("--permission-mode").arg("bypassPermissions");
+        }
+        PermissionMode::DontAsk => {
+            cmd.arg("--permission-mode").arg("dontAsk");
         }
     }
 

@@ -777,6 +777,39 @@ impl Query {
         Ok(())
     }
 
+    /// Get context usage information
+    pub async fn get_context_usage(&mut self) -> Result<serde_json::Value> {
+        let req = SDKControlRequest::GetContextUsage(crate::types::SDKControlGetContextUsageRequest::new());
+        self.send_control_request(req).await
+    }
+
+    /// Stop a background task
+    pub async fn stop_task(&mut self, task_id: &str) -> Result<()> {
+        let req = SDKControlRequest::StopTask(crate::types::SDKControlStopTaskRequest::new(task_id));
+        let _ = self.send_control_request(req).await?;
+        Ok(())
+    }
+
+    /// Get MCP server status
+    pub async fn get_mcp_status(&mut self) -> Result<serde_json::Value> {
+        let req = SDKControlRequest::McpStatus(crate::types::SDKControlMcpStatusRequest::new());
+        self.send_control_request(req).await
+    }
+
+    /// Reconnect an MCP server
+    pub async fn reconnect_mcp_server(&mut self, server_name: &str) -> Result<()> {
+        let req = SDKControlRequest::McpReconnect(crate::types::SDKControlMcpReconnectRequest::new(server_name));
+        let _ = self.send_control_request(req).await?;
+        Ok(())
+    }
+
+    /// Toggle an MCP server on/off
+    pub async fn toggle_mcp_server(&mut self, server_name: &str, enabled: bool) -> Result<()> {
+        let req = SDKControlRequest::McpToggle(crate::types::SDKControlMcpToggleRequest::new(server_name, enabled));
+        let _ = self.send_control_request(req).await?;
+        Ok(())
+    }
+
     /// Handle MCP message for SDK servers
     #[allow(dead_code)]
     async fn handle_mcp_message(&mut self, server_name: &str, message: &JsonValue) -> Result<JsonValue> {

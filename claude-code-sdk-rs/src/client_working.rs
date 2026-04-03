@@ -33,10 +33,6 @@ pub struct ClaudeSDKClientWorking {
 impl ClaudeSDKClientWorking {
     /// Create a new client
     pub fn new(options: ClaudeCodeOptions) -> Self {
-        unsafe {
-            std::env::set_var("CLAUDE_CODE_ENTRYPOINT", "sdk-rust");
-        }
-
         Self {
             options,
             transport: Arc::new(Mutex::new(None)),

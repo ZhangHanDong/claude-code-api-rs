@@ -5,6 +5,58 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-04-04
+
+### Added
+
+#### Python SDK v0.1.55 Full Parity — Permissions, Control Protocol, Context Usage
+
+- **`PermissionMode::DontAsk`** — new permission mode: reject tools that aren't pre-approved without prompting
+- **`get_context_usage()`** — query context window usage with token distribution, cache stats, and auto-compact info
+- **`stop_task(task_id)`** — stop a background task by ID
+- **`get_mcp_status()`** — query all MCP server connection status
+- **`reconnect_mcp_server(name)`** — reconnect a failed MCP server
+- **`toggle_mcp_server(name, enabled)`** — enable/disable an MCP server at runtime
+- **`ContextUsageResponse`**, **`ContextUsageCategory`**, **`ApiUsage`** — typed context usage with cache token breakdown
+- **`TaskBudget`** struct — task-level budget configuration (max cost, tokens, turns)
+- **`ForkSessionResult`** struct — result from forking a session
+
+#### AgentDefinition Extended
+
+- **5 new fields**: `disallowed_tools`, `initial_prompt`, `max_turns`, `background`, `effort`
+- **`permission_mode`** field — per-agent permission mode override
+
+#### Session API
+
+- **`delete_session()`** — delete a session by ID
+- **`fork_session()`** — fork a session, creating a new branch
+
+#### Cache Token Tracking
+
+- **`TokenUsageTracker`** extended with `cache_read_input_tokens` and `cache_creation_input_tokens`
+- **`update_with_cache()`** method — update tracker with full cache token data
+- **`total_cache_tokens()`** method — sum of cache read + creation tokens
+
+### Changed
+
+- **`#[non_exhaustive]`** added to `PermissionMode`, `Message`, `SdkError`, `HookInput` — future-proof for downstream crates
+- **Removed 6 `unsafe { std::env::set_var() }` calls** — `CLAUDE_CODE_ENTRYPOINT` is now only set via `Command::env()` in the transport layer (safe in Rust 2024 edition)
+- **Cleaned dead code** — removed commented-out `client_v2` / `client_final` module references from `lib.rs`
+- Version bump: `0.7.0` → `0.8.0`
+
+### Control Protocol
+
+- 5 new `SDKControlRequest` variants: `GetContextUsage`, `StopTask`, `McpStatus`, `McpReconnect`, `McpToggle`
+- Each with typed request structs and `::new()` constructors
+
+### Tests
+
+- 22 new tests:
+  - `types.rs` (17 unit tests) — DontAsk serde, all PermissionMode variants roundtrip, AgentDefinition new fields, control request types, ContextUsageResponse, TaskBudget, ForkSessionResult
+  - `token_tracker.rs` (3 unit tests) — cache token tracking, reset, mixed update methods
+  - `e2e_new_control_methods.rs` (5 e2e tests) — mock transport tests for all 5 new client control methods
+- Total: 208 tests passing (93 unit + 89 integration + 26 doc-tests)
+
 ## [0.7.0] - 2026-03-19
 
 ### Added

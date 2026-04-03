@@ -118,11 +118,6 @@ struct SessionData {
 impl ClaudeSDKClient {
     /// Create a new client with the given options
     pub fn new(options: ClaudeCodeOptions) -> Self {
-        // Set environment variable to indicate SDK usage
-        unsafe {
-            std::env::set_var("CLAUDE_CODE_ENTRYPOINT", "sdk-rust");
-        }
-
         let transport = match SubprocessTransport::new(options.clone()) {
             Ok(t) => t,
             Err(e) => {
@@ -161,11 +156,6 @@ impl ClaudeSDKClient {
     /// # }
     /// ```
     pub fn with_transport(options: ClaudeCodeOptions, transport: Box<dyn Transport + Send>) -> Self {
-        // Set environment variable to indicate SDK usage
-        unsafe {
-            std::env::set_var("CLAUDE_CODE_ENTRYPOINT", "sdk-rust");
-        }
-
         // Wrap transport in Arc for sharing
         let transport_arc: Arc<Mutex<Box<dyn Transport + Send>>> =
             Arc::new(Mutex::new(transport));
@@ -755,6 +745,130 @@ impl ClaudeSDKClient {
         } else {
             Err(SdkError::InvalidState {
                 message: "Query handler not initialized. Enable control protocol features (can_use_tool, hooks, mcp_servers, or enable_file_checkpointing).".to_string(),
+            })
+        }
+    }
+
+    /// Get context usage information including token distribution and cache stats
+    ///
+    /// Returns detailed context window usage including categories, API usage with
+    /// cache token information, and auto-compact settings.
+    ///
+    /// Requires control protocol to be enabled.
+    pub async fn get_context_usage(&mut self) -> Result<crate::types::ContextUsageResponse> {
+        {
+            let state = self.state.read().await;
+            if *state != ClientState::Connected {
+                return Err(SdkError::InvalidState {
+                    message: "Not connected. Call connect() first.".into(),
+                });
+            }
+        }
+
+        if let Some(ref query_handler) = self.query_handler {
+            let mut handler = query_handler.lock().await;
+            let raw = handler.get_context_usage().await?;
+            serde_json::from_value(raw).map_err(|e| SdkError::ControlRequestError(
+                format!("Failed to parse context usage response: {e}")
+            ))
+        } else {
+            Err(SdkError::InvalidState {
+                message: "Query handler not initialized. Enable control protocol features.".to_string(),
+            })
+        }
+    }
+
+    /// Stop a background task by ID
+    ///
+    /// Requires control protocol to be enabled.
+    pub async fn stop_task(&mut self, task_id: &str) -> Result<()> {
+        {
+            let state = self.state.read().await;
+            if *state != ClientState::Connected {
+                return Err(SdkError::InvalidState {
+                    message: "Not connected. Call connect() first.".into(),
+                });
+            }
+        }
+
+        if let Some(ref query_handler) = self.query_handler {
+            let mut handler = query_handler.lock().await;
+            handler.stop_task(task_id).await
+        } else {
+            Err(SdkError::InvalidState {
+                message: "Query handler not initialized. Enable control protocol features.".to_string(),
+            })
+        }
+    }
+
+    /// Get MCP server status information
+    ///
+    /// Returns the current status of all connected MCP servers.
+    /// Requires control protocol to be enabled.
+    pub async fn get_mcp_status(&mut self) -> Result<serde_json::Value> {
+        {
+            let state = self.state.read().await;
+            if *state != ClientState::Connected {
+                return Err(SdkError::InvalidState {
+                    message: "Not connected. Call connect() first.".into(),
+                });
+            }
+        }
+
+        if let Some(ref query_handler) = self.query_handler {
+            let mut handler = query_handler.lock().await;
+            handler.get_mcp_status().await
+        } else {
+            Err(SdkError::InvalidState {
+                message: "Query handler not initialized. Enable control protocol features.".to_string(),
+            })
+        }
+    }
+
+    /// Reconnect a failed MCP server
+    ///
+    /// Attempts to re-establish connection to the specified MCP server.
+    /// Requires control protocol to be enabled.
+    pub async fn reconnect_mcp_server(&mut self, server_name: &str) -> Result<()> {
+        {
+            let state = self.state.read().await;
+            if *state != ClientState::Connected {
+                return Err(SdkError::InvalidState {
+                    message: "Not connected. Call connect() first.".into(),
+                });
+            }
+        }
+
+        if let Some(ref query_handler) = self.query_handler {
+            let mut handler = query_handler.lock().await;
+            handler.reconnect_mcp_server(server_name).await
+        } else {
+            Err(SdkError::InvalidState {
+                message: "Query handler not initialized. Enable control protocol features.".to_string(),
+            })
+        }
+    }
+
+    /// Toggle an MCP server on/off
+    ///
+    /// Enables or disables the specified MCP server.
+    /// Requires control protocol to be enabled.
+    pub async fn toggle_mcp_server(&mut self, server_name: &str, enabled: bool) -> Result<()> {
+        {
+            let state = self.state.read().await;
+            if *state != ClientState::Connected {
+                return Err(SdkError::InvalidState {
+                    message: "Not connected. Call connect() first.".into(),
+                });
+            }
+        }
+
+        if let Some(ref query_handler) = self.query_handler {
+            let mut handler = query_handler.lock().await;
+            handler.toggle_mcp_server(server_name, enabled).await
+        } else {
+            Err(SdkError::InvalidState {
+                message: "Query handler not initialized. Enable control protocol features.".to_string(),
             })
         }
     }

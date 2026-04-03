@@ -14,6 +14,10 @@ pub struct TokenUsageTracker {
     pub total_input_tokens: u64,
     /// Total output tokens consumed
     pub total_output_tokens: u64,
+    /// Total cache read input tokens (prompt caching hits)
+    pub cache_read_input_tokens: u64,
+    /// Total cache creation input tokens (prompt caching writes)
+    pub cache_creation_input_tokens: u64,
     /// Total cost in USD
     pub total_cost_usd: f64,
     /// Number of sessions/queries completed
@@ -57,10 +61,34 @@ impl TokenUsageTracker {
         self.session_count += 1;
     }
 
+    /// Update statistics with full usage data including cache tokens
+    pub fn update_with_cache(
+        &mut self,
+        input_tokens: u64,
+        output_tokens: u64,
+        cache_read_input_tokens: u64,
+        cache_creation_input_tokens: u64,
+        cost_usd: f64,
+    ) {
+        self.total_input_tokens += input_tokens;
+        self.total_output_tokens += output_tokens;
+        self.cache_read_input_tokens += cache_read_input_tokens;
+        self.cache_creation_input_tokens += cache_creation_input_tokens;
+        self.total_cost_usd += cost_usd;
+        self.session_count += 1;
+    }
+
+    /// Get total cache tokens (read + creation)
+    pub fn total_cache_tokens(&self) -> u64 {
+        self.cache_read_input_tokens + self.cache_creation_input_tokens
+    }
+
     /// Reset all statistics to zero
     pub fn reset(&mut self) {
         self.total_input_tokens = 0;
         self.total_output_tokens = 0;
+        self.cache_read_input_tokens = 0;
+        self.cache_creation_input_tokens = 0;
         self.total_cost_usd = 0.0;
         self.session_count = 0;
     }
@@ -342,5 +370,52 @@ mod tests {
 
         manager.update_usage(300, 300, 0.05).await;
         assert!(manager.is_exceeded().await);
+    }
+
+    #[test]
+    fn test_tracker_cache_tokens() {
+        let mut tracker = TokenUsageTracker::new();
+        assert_eq!(tracker.cache_read_input_tokens, 0);
+        assert_eq!(tracker.cache_creation_input_tokens, 0);
+        assert_eq!(tracker.total_cache_tokens(), 0);
+
+        tracker.update_with_cache(100, 200, 500, 150, 0.03);
+        assert_eq!(tracker.total_input_tokens, 100);
+        assert_eq!(tracker.total_output_tokens, 200);
+        assert_eq!(tracker.cache_read_input_tokens, 500);
+        assert_eq!(tracker.cache_creation_input_tokens, 150);
+        assert_eq!(tracker.total_cache_tokens(), 650);
+        assert_eq!(tracker.session_count, 1);
+
+        // Accumulate
+        tracker.update_with_cache(50, 100, 300, 0, 0.02);
+        assert_eq!(tracker.cache_read_input_tokens, 800);
+        assert_eq!(tracker.cache_creation_input_tokens, 150);
+        assert_eq!(tracker.total_cache_tokens(), 950);
+        assert_eq!(tracker.session_count, 2);
+    }
+
+    #[test]
+    fn test_tracker_reset_clears_cache() {
+        let mut tracker = TokenUsageTracker::new();
+        tracker.update_with_cache(100, 200, 500, 150, 0.03);
+        assert_eq!(tracker.total_cache_tokens(), 650);
+
+        tracker.reset();
+        assert_eq!(tracker.cache_read_input_tokens, 0);
+        assert_eq!(tracker.cache_creation_input_tokens, 0);
+        assert_eq!(tracker.total_cache_tokens(), 0);
+        assert_eq!(tracker.total_tokens(), 0);
+    }
+
+    #[test]
+    fn test_update_and_update_with_cache_both_increment_sessions() {
+        let mut tracker = TokenUsageTracker::new();
+        tracker.update(10, 20, 0.01);
+        tracker.update_with_cache(10, 20, 100, 50, 0.01);
+        assert_eq!(tracker.session_count, 2);
+        assert_eq!(tracker.total_tokens(), 60);
+        // Regular update doesn't touch cache fields
+        assert_eq!(tracker.cache_read_input_tokens, 100);
     }
 }

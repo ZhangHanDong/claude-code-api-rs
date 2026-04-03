@@ -148,10 +148,16 @@ fn test_agent_definition_new_fields() {
         description: "Test agent".to_string(),
         prompt: "You are a test agent".to_string(),
         tools: Some(vec!["Read".to_string()]),
+        disallowed_tools: None,
         model: Some("claude-sonnet-4-20250514".to_string()),
         skills: Some(vec!["coding".to_string(), "analysis".to_string()]),
         memory: Some("persistent".to_string()),
         mcp_servers: Some(vec![json!({"name": "test-server", "url": "http://localhost:3000"})]),
+        initial_prompt: None,
+        max_turns: None,
+        background: None,
+        effort: None,
+        permission_mode: None,
     };
 
     let json_str = serde_json::to_string(&agent).unwrap();

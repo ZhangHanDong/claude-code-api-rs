@@ -107,10 +107,6 @@ pub struct OptimizedClient {
 impl OptimizedClient {
     /// Create a new optimized client
     pub fn new(options: ClaudeCodeOptions, mode: ClientMode) -> Result<Self> {
-        unsafe {
-            std::env::set_var("CLAUDE_CODE_ENTRYPOINT", "sdk-rust");
-        }
-
         let max_connections = match mode {
             ClientMode::Batch { max_concurrent } => max_concurrent,
             _ => 1,

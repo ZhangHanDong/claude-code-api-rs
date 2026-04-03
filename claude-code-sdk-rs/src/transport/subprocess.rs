@@ -400,6 +400,9 @@ impl SubprocessTransport {
             PermissionMode::BypassPermissions => {
                 cmd.arg("--permission-mode").arg("bypassPermissions");
             }
+            PermissionMode::DontAsk => {
+                cmd.arg("--permission-mode").arg("dontAsk");
+            }
         }
 
         // Model

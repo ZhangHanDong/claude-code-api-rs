@@ -35,8 +35,6 @@
 /// CLI download and management utilities
 pub mod cli_download;
 mod client;
-// mod client_v2;  // Has compilation errors
-// mod client_final;  // Has compilation errors
 mod client_working;
 mod errors;
 mod interactive;
@@ -55,8 +53,6 @@ mod types;
 
 // Re-export main types and functions
 pub use client::ClaudeSDKClient;
-// pub use client_v2::ClaudeSDKClientV2;  // Has compilation errors
-// pub use client_final::ClaudeSDKClientFinal;  // Has compilation errors
 pub use client_working::ClaudeSDKClientWorking;
 pub use errors::{Result, SdkError};
 pub use interactive::InteractiveClient;
@@ -66,7 +62,7 @@ pub use query::query;
 pub use interactive::InteractiveClient as SimpleInteractiveClient;
 pub use model_recommendation::ModelRecommendation;
 pub use optimized_client::{ClientMode, OptimizedClient};
-pub use sessions::{SessionInfo, SessionMessage, list_sessions, get_session_messages, rename_session, tag_session};
+pub use sessions::{SessionInfo, SessionMessage, list_sessions, get_session_messages, rename_session, tag_session, delete_session, fork_session};
 pub use perf_utils::{MessageBatcher, PerformanceMetrics, RetryConfig};
 pub use token_tracker::{BudgetLimit, BudgetManager, BudgetStatus, TokenUsageTracker};
 /// Default interactive client - the recommended client for interactive use
@@ -97,6 +93,8 @@ pub use types::{
     SDKControlInitializeRequest, SDKControlInterruptRequest, SDKControlMcpMessageRequest,
     SDKControlPermissionRequest, SDKControlRequest, SDKControlSetPermissionModeRequest,
     SDKHookCallbackRequest, SDKControlRewindFilesRequest,
+    SDKControlGetContextUsageRequest, SDKControlStopTaskRequest,
+    SDKControlMcpStatusRequest, SDKControlMcpReconnectRequest, SDKControlMcpToggleRequest,
     // Phase 2 enhancements
     SettingSource, AgentDefinition, SystemPrompt,
     // Task message types (Python SDK parity)
@@ -109,6 +107,9 @@ pub use types::{
     ThinkingConfig,
     SandboxSettings, SandboxNetworkConfig, SandboxIgnoreViolations,
     SdkPluginConfig,
+    // v0.8.0 enhancements (Python SDK full parity)
+    ContextUsageResponse, ContextUsageCategory, ApiUsage,
+    TaskBudget, ForkSessionResult,
 };
 
 // Phase 3: Type aliases for naming consistency

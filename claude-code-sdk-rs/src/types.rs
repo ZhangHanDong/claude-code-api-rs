@@ -14,6 +14,7 @@ use tokio::sync::Mutex;
 
 /// Permission mode for tool execution
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 #[serde(rename_all = "camelCase")]
 pub enum PermissionMode {
     /// Default mode - CLI prompts for dangerous tools
@@ -24,6 +25,8 @@ pub enum PermissionMode {
     Plan,
     /// Allow all tools without prompting (use with caution)
     BypassPermissions,
+    /// Don't ask — reject tools that aren't pre-approved (no interactive prompts)
+    DontAsk,
 }
 
 // ============================================================================
@@ -932,6 +935,7 @@ pub struct PermissionRequestHookInput {
 
 /// Union type for all hook inputs (discriminated by hook_event_name)
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[non_exhaustive]
 #[serde(tag = "hook_event_name")]
 pub enum HookInput {
     /// PreToolUse hook input
@@ -1214,18 +1218,36 @@ pub struct AgentDefinition {
     /// Allowed tools for this agent
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tools: Option<Vec<String>>,
+    /// Disallowed tools for this agent
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "disallowedTools")]
+    pub disallowed_tools: Option<Vec<String>>,
     /// Model to use
     #[serde(skip_serializing_if = "Option::is_none")]
     pub model: Option<String>,
     /// Skills available to this agent
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub skills: Option<Vec<String>>,
-    /// Memory configuration
+    /// Memory configuration ("user", "project", or "local")
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub memory: Option<String>,
     /// MCP server configurations for this agent
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "mcpServers")]
     pub mcp_servers: Option<Vec<serde_json::Value>>,
+    /// Initial prompt to send when the agent starts
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "initialPrompt")]
+    pub initial_prompt: Option<String>,
+    /// Maximum number of turns for this agent
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "maxTurns")]
+    pub max_turns: Option<i32>,
+    /// Whether this agent runs in the background
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub background: Option<bool>,
+    /// Effort level for this agent's reasoning depth
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub effort: Option<Effort>,
+    /// Permission mode for this agent
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "permissionMode")]
+    pub permission_mode: Option<PermissionMode>,
 }
 
 /// System prompt configuration
@@ -1950,6 +1972,7 @@ pub struct TaskNotificationMessage {
 
 /// Main message type enum
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[non_exhaustive]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum Message {
     /// User message
@@ -2288,6 +2311,194 @@ impl SDKControlRewindFilesRequest {
     }
 }
 
+/// SDK Control Protocol - Get context usage request
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SDKControlGetContextUsageRequest {
+    /// Subtype (always "get_context_usage")
+    pub subtype: String,
+}
+
+impl SDKControlGetContextUsageRequest {
+    /// Create a new get context usage request
+    pub fn new() -> Self {
+        Self {
+            subtype: "get_context_usage".to_string(),
+        }
+    }
+}
+
+/// SDK Control Protocol - Stop task request
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SDKControlStopTaskRequest {
+    /// Subtype (always "stop_task")
+    pub subtype: String,
+    /// Task ID to stop
+    #[serde(alias = "taskId")]
+    pub task_id: String,
+}
+
+impl SDKControlStopTaskRequest {
+    /// Create a new stop task request
+    pub fn new(task_id: impl Into<String>) -> Self {
+        Self {
+            subtype: "stop_task".to_string(),
+            task_id: task_id.into(),
+        }
+    }
+}
+
+/// SDK Control Protocol - Get MCP status request
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SDKControlMcpStatusRequest {
+    /// Subtype (always "mcp_status")
+    pub subtype: String,
+}
+
+impl SDKControlMcpStatusRequest {
+    /// Create a new MCP status request
+    pub fn new() -> Self {
+        Self {
+            subtype: "mcp_status".to_string(),
+        }
+    }
+}
+
+/// SDK Control Protocol - Reconnect MCP server request
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SDKControlMcpReconnectRequest {
+    /// Subtype (always "mcp_reconnect")
+    pub subtype: String,
+    /// Server name to reconnect
+    #[serde(alias = "serverName")]
+    pub server_name: String,
+}
+
+impl SDKControlMcpReconnectRequest {
+    /// Create a new MCP reconnect request
+    pub fn new(server_name: impl Into<String>) -> Self {
+        Self {
+            subtype: "mcp_reconnect".to_string(),
+            server_name: server_name.into(),
+        }
+    }
+}
+
+/// SDK Control Protocol - Toggle MCP server request
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SDKControlMcpToggleRequest {
+    /// Subtype (always "mcp_toggle")
+    pub subtype: String,
+    /// Server name to toggle
+    #[serde(alias = "serverName")]
+    pub server_name: String,
+    /// Whether to enable (true) or disable (false)
+    pub enabled: bool,
+}
+
+impl SDKControlMcpToggleRequest {
+    /// Create a new MCP toggle request
+    pub fn new(server_name: impl Into<String>, enabled: bool) -> Self {
+        Self {
+            subtype: "mcp_toggle".to_string(),
+            server_name: server_name.into(),
+            enabled,
+        }
+    }
+}
+
+/// Context usage category
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ContextUsageCategory {
+    /// Category name (e.g., "system", "conversation", "tools")
+    pub name: String,
+    /// Token count for this category
+    pub token_count: u64,
+    /// Percentage of total context
+    #[serde(default)]
+    pub percentage: f64,
+}
+
+/// API usage statistics including cache information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApiUsage {
+    /// Input tokens consumed
+    #[serde(default)]
+    pub input_tokens: u64,
+    /// Output tokens generated
+    #[serde(default)]
+    pub output_tokens: u64,
+    /// Cache read input tokens (prompt caching hits)
+    #[serde(default)]
+    pub cache_read_input_tokens: u64,
+    /// Cache creation input tokens (prompt caching writes)
+    #[serde(default)]
+    pub cache_creation_input_tokens: u64,
+}
+
+/// Context usage response from get_context_usage()
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ContextUsageResponse {
+    /// Token usage categories
+    #[serde(default)]
+    pub categories: Vec<ContextUsageCategory>,
+    /// Total tokens in context
+    #[serde(default)]
+    pub total_tokens: u64,
+    /// Maximum context window size
+    #[serde(default)]
+    pub max_tokens: u64,
+    /// Context usage percentage
+    #[serde(default)]
+    pub percentage: f64,
+    /// Active model
+    #[serde(default)]
+    pub model: String,
+    /// Whether auto-compact is enabled
+    #[serde(default)]
+    pub is_auto_compact_enabled: bool,
+    /// Auto-compact threshold (if enabled)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub auto_compact_threshold: Option<u64>,
+    /// Memory files loaded
+    #[serde(default)]
+    pub memory_files: Vec<serde_json::Value>,
+    /// MCP tools available
+    #[serde(default)]
+    pub mcp_tools: Vec<serde_json::Value>,
+    /// Message breakdown
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub message_breakdown: Option<serde_json::Value>,
+    /// API usage with cache information
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub api_usage: Option<ApiUsage>,
+}
+
+/// Task budget configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TaskBudget {
+    /// Maximum number of dollars to spend on a task
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_cost_usd: Option<f64>,
+    /// Maximum number of tokens to consume
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_tokens: Option<u64>,
+    /// Maximum number of turns
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_turns: Option<i32>,
+}
+
+/// Result from forking a session
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ForkSessionResult {
+    /// The new session ID
+    pub session_id: String,
+}
+
 /// SDK Control Protocol request types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -2316,6 +2527,21 @@ pub enum SDKControlRequest {
     /// Rewind files (Python SDK v0.1.14+)
     #[serde(rename = "rewind_files")]
     RewindFiles(SDKControlRewindFilesRequest),
+    /// Get context usage
+    #[serde(rename = "get_context_usage")]
+    GetContextUsage(SDKControlGetContextUsageRequest),
+    /// Stop a background task
+    #[serde(rename = "stop_task")]
+    StopTask(SDKControlStopTaskRequest),
+    /// Get MCP server status
+    #[serde(rename = "mcp_status")]
+    McpStatus(SDKControlMcpStatusRequest),
+    /// Reconnect an MCP server
+    #[serde(rename = "mcp_reconnect")]
+    McpReconnect(SDKControlMcpReconnectRequest),
+    /// Toggle an MCP server on/off
+    #[serde(rename = "mcp_toggle")]
+    McpToggle(SDKControlMcpToggleRequest),
 }
 
 /// Control request types (legacy, keeping for compatibility)
@@ -2818,5 +3044,233 @@ mod tests {
         // Note: auto_download_cli defaults to false (Rust bool default)
         // Users should explicitly enable it with .auto_download_cli(true)
         assert!(!options.auto_download_cli);
+    }
+
+    // === P0-1: DontAsk permission mode ===
+
+    #[test]
+    fn test_permission_mode_dont_ask_serialization() {
+        let mode = PermissionMode::DontAsk;
+        let json = serde_json::to_string(&mode).unwrap();
+        assert_eq!(json, r#""dontAsk""#);
+
+        let deserialized: PermissionMode = serde_json::from_str(r#""dontAsk""#).unwrap();
+        assert_eq!(deserialized, PermissionMode::DontAsk);
+    }
+
+    #[test]
+    fn test_permission_mode_all_variants_roundtrip() {
+        let variants = vec![
+            (PermissionMode::Default, r#""default""#),
+            (PermissionMode::AcceptEdits, r#""acceptEdits""#),
+            (PermissionMode::Plan, r#""plan""#),
+            (PermissionMode::BypassPermissions, r#""bypassPermissions""#),
+            (PermissionMode::DontAsk, r#""dontAsk""#),
+        ];
+        for (mode, expected_json) in variants {
+            let json = serde_json::to_string(&mode).unwrap();
+            assert_eq!(json, expected_json, "serialization failed for {:?}", mode);
+            let back: PermissionMode = serde_json::from_str(&json).unwrap();
+            assert_eq!(back, mode, "roundtrip failed for {:?}", mode);
+        }
+    }
+
+    // === P1-2: AgentDefinition new fields ===
+
+    #[test]
+    fn test_agent_definition_all_new_fields() {
+        let agent = AgentDefinition {
+            description: "Coder".to_string(),
+            prompt: "You write code".to_string(),
+            tools: Some(vec!["Bash".to_string()]),
+            disallowed_tools: Some(vec!["Write".to_string()]),
+            model: Some("claude-sonnet-4-20250514".to_string()),
+            skills: Some(vec!["tdd".to_string()]),
+            memory: Some("project".to_string()),
+            mcp_servers: None,
+            initial_prompt: Some("Start coding".to_string()),
+            max_turns: Some(50),
+            background: Some(true),
+            effort: Some(Effort::High),
+            permission_mode: Some(PermissionMode::DontAsk),
+        };
+
+        let json = serde_json::to_value(&agent).unwrap();
+        // Verify camelCase renames
+        assert_eq!(json["disallowedTools"], serde_json::json!(["Write"]));
+        assert_eq!(json["initialPrompt"], "Start coding");
+        assert_eq!(json["maxTurns"], 50);
+        assert_eq!(json["background"], true);
+        assert_eq!(json["effort"], "high");
+        assert_eq!(json["permissionMode"], "dontAsk");
+
+        // Roundtrip
+        let back: AgentDefinition = serde_json::from_value(json).unwrap();
+        assert_eq!(back.disallowed_tools, Some(vec!["Write".to_string()]));
+        assert_eq!(back.initial_prompt, Some("Start coding".to_string()));
+        assert_eq!(back.max_turns, Some(50));
+        assert_eq!(back.background, Some(true));
+        assert_eq!(back.effort, Some(Effort::High));
+        assert_eq!(back.permission_mode, Some(PermissionMode::DontAsk));
+    }
+
+    #[test]
+    fn test_agent_definition_backward_compat_minimal() {
+        // Old JSON without new fields should still parse
+        let json = serde_json::json!({
+            "description": "Agent",
+            "prompt": "Do stuff"
+        });
+        let agent: AgentDefinition = serde_json::from_value(json).unwrap();
+        assert!(agent.disallowed_tools.is_none());
+        assert!(agent.initial_prompt.is_none());
+        assert!(agent.max_turns.is_none());
+        assert!(agent.background.is_none());
+        assert!(agent.effort.is_none());
+        assert!(agent.permission_mode.is_none());
+    }
+
+    // === New control request types ===
+
+    #[test]
+    fn test_sdk_control_get_context_usage_request() {
+        let req = SDKControlGetContextUsageRequest::new();
+        assert_eq!(req.subtype, "get_context_usage");
+        let json = serde_json::to_value(&req).unwrap();
+        assert_eq!(json["subtype"], "get_context_usage");
+    }
+
+    #[test]
+    fn test_sdk_control_stop_task_request() {
+        let req = SDKControlStopTaskRequest::new("task-abc-123");
+        assert_eq!(req.subtype, "stop_task");
+        assert_eq!(req.task_id, "task-abc-123");
+        let json = serde_json::to_value(&req).unwrap();
+        assert_eq!(json["task_id"], "task-abc-123");
+    }
+
+    #[test]
+    fn test_sdk_control_mcp_status_request() {
+        let req = SDKControlMcpStatusRequest::new();
+        assert_eq!(req.subtype, "mcp_status");
+    }
+
+    #[test]
+    fn test_sdk_control_mcp_reconnect_request() {
+        let req = SDKControlMcpReconnectRequest::new("my-server");
+        assert_eq!(req.subtype, "mcp_reconnect");
+        assert_eq!(req.server_name, "my-server");
+    }
+
+    #[test]
+    fn test_sdk_control_mcp_toggle_request() {
+        let req = SDKControlMcpToggleRequest::new("my-server", false);
+        assert_eq!(req.subtype, "mcp_toggle");
+        assert_eq!(req.server_name, "my-server");
+        assert!(!req.enabled);
+    }
+
+    // === New response types ===
+
+    #[test]
+    fn test_context_usage_response_deserialize() {
+        let json = serde_json::json!({
+            "categories": [
+                {"name": "system", "tokenCount": 500, "percentage": 10.0},
+                {"name": "conversation", "tokenCount": 3000, "percentage": 60.0}
+            ],
+            "totalTokens": 5000,
+            "maxTokens": 200000,
+            "percentage": 2.5,
+            "model": "claude-sonnet-4-20250514",
+            "isAutoCompactEnabled": true,
+            "autoCompactThreshold": 180000,
+            "memoryFiles": [],
+            "mcpTools": [],
+            "apiUsage": {
+                "inputTokens": 4000,
+                "outputTokens": 1000,
+                "cacheReadInputTokens": 2000,
+                "cacheCreationInputTokens": 500
+            }
+        });
+
+        let resp: ContextUsageResponse = serde_json::from_value(json).unwrap();
+        assert_eq!(resp.categories.len(), 2);
+        assert_eq!(resp.categories[0].name, "system");
+        assert_eq!(resp.categories[0].token_count, 500);
+        assert_eq!(resp.total_tokens, 5000);
+        assert_eq!(resp.max_tokens, 200000);
+        assert_eq!(resp.model, "claude-sonnet-4-20250514");
+        assert!(resp.is_auto_compact_enabled);
+        assert_eq!(resp.auto_compact_threshold, Some(180000));
+
+        let api = resp.api_usage.unwrap();
+        assert_eq!(api.input_tokens, 4000);
+        assert_eq!(api.output_tokens, 1000);
+        assert_eq!(api.cache_read_input_tokens, 2000);
+        assert_eq!(api.cache_creation_input_tokens, 500);
+    }
+
+    #[test]
+    fn test_context_usage_response_minimal() {
+        // Minimal JSON — all defaults should work
+        let json = serde_json::json!({});
+        let resp: ContextUsageResponse = serde_json::from_value(json).unwrap();
+        assert_eq!(resp.total_tokens, 0);
+        assert!(resp.categories.is_empty());
+        assert!(resp.api_usage.is_none());
+    }
+
+    #[test]
+    fn test_task_budget_serialization() {
+        let budget = TaskBudget {
+            max_cost_usd: Some(5.0),
+            max_tokens: Some(100_000),
+            max_turns: Some(20),
+        };
+        let json = serde_json::to_value(&budget).unwrap();
+        assert_eq!(json["maxCostUsd"], 5.0);
+        assert_eq!(json["maxTokens"], 100_000);
+        assert_eq!(json["maxTurns"], 20);
+
+        let back: TaskBudget = serde_json::from_value(json).unwrap();
+        assert_eq!(back.max_cost_usd, Some(5.0));
+        assert_eq!(back.max_tokens, Some(100_000));
+        assert_eq!(back.max_turns, Some(20));
+    }
+
+    #[test]
+    fn test_fork_session_result_deserialize() {
+        let json = serde_json::json!({"sessionId": "sess-forked-abc"});
+        let result: ForkSessionResult = serde_json::from_value(json).unwrap();
+        assert_eq!(result.session_id, "sess-forked-abc");
+    }
+
+    // === SDKControlRequest enum variants ===
+
+    #[test]
+    fn test_sdk_control_request_new_variants_serialize() {
+        let req = SDKControlRequest::GetContextUsage(SDKControlGetContextUsageRequest::new());
+        let json = serde_json::to_value(&req).unwrap();
+        assert_eq!(json["type"], "get_context_usage");
+
+        let req = SDKControlRequest::StopTask(SDKControlStopTaskRequest::new("t1"));
+        let json = serde_json::to_value(&req).unwrap();
+        assert_eq!(json["type"], "stop_task");
+        assert_eq!(json["task_id"], "t1");
+
+        let req = SDKControlRequest::McpStatus(SDKControlMcpStatusRequest::new());
+        let json = serde_json::to_value(&req).unwrap();
+        assert_eq!(json["type"], "mcp_status");
+
+        let req = SDKControlRequest::McpReconnect(SDKControlMcpReconnectRequest::new("srv"));
+        let json = serde_json::to_value(&req).unwrap();
+        assert_eq!(json["type"], "mcp_reconnect");
+
+        let req = SDKControlRequest::McpToggle(SDKControlMcpToggleRequest::new("srv", true));
+        let json = serde_json::to_value(&req).unwrap();
+        assert_eq!(json["type"], "mcp_toggle");
+        assert_eq!(json["enabled"], true);
     }
 }

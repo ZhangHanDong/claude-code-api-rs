@@ -224,6 +224,78 @@ pub async fn tag_session(session_id: &str, tag: Option<&str>) -> Result<()> {
     Ok(())
 }
 
+/// Delete a session
+///
+/// # Arguments
+/// * `session_id` - The session ID to delete
+/// * `directory` - Optional working directory context
+pub async fn delete_session(session_id: &str, directory: Option<&str>) -> Result<()> {
+    let cli_path = crate::transport::subprocess::find_claude_cli()?;
+    let mut cmd = tokio::process::Command::new(&cli_path);
+
+    cmd.arg("sessions")
+        .arg("delete")
+        .arg("--session-id")
+        .arg(session_id);
+
+    if let Some(dir) = directory {
+        cmd.arg("--directory").arg(dir);
+    }
+
+    let output = cmd.output().await.map_err(SdkError::ProcessError)?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(SdkError::ConnectionError(format!(
+            "Failed to delete session: {stderr}"
+        )));
+    }
+
+    Ok(())
+}
+
+/// Fork a session, creating a new session branching from the original
+///
+/// # Arguments
+/// * `session_id` - The session ID to fork from
+/// * `directory` - Optional working directory context
+pub async fn fork_session(
+    session_id: &str,
+    directory: Option<&str>,
+) -> Result<crate::types::ForkSessionResult> {
+    let cli_path = crate::transport::subprocess::find_claude_cli()?;
+    let mut cmd = tokio::process::Command::new(&cli_path);
+
+    cmd.arg("sessions")
+        .arg("fork")
+        .arg("--session-id")
+        .arg(session_id)
+        .arg("--json");
+
+    if let Some(dir) = directory {
+        cmd.arg("--directory").arg(dir);
+    }
+
+    let output = cmd.output().await.map_err(SdkError::ProcessError)?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(SdkError::ConnectionError(format!(
+            "Failed to fork session: {stderr}"
+        )));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let sanitized = sanitize_unicode(&stdout);
+
+    serde_json::from_str(&sanitized).map_err(|e| {
+        SdkError::parse_error(
+            format!("Failed to parse fork session result: {e}"),
+            sanitized,
+        )
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

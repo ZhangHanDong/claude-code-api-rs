@@ -4,25 +4,58 @@
 [![Documentation](https://docs.rs/cc-sdk/badge.svg)](https://docs.rs/cc-sdk)
 [![License](https://img.shields.io/crates/l/cc-sdk.svg)](LICENSE)
 
-A Rust SDK for interacting with Claude Code CLI, providing both simple query interfaces and full interactive client capabilities.
+A community-driven Rust SDK for interacting with Claude Code CLI, providing simple LLM proxy, full interactive client, and WebSocket transport with production-grade reconnection.
 
-> **v0.7.0**: Python SDK v0.1.33 parity — Effort control, rate limit telemetry, task messages, session history API, MCP runtime control, ThinkingConfig.
+> **v0.8.1**: LLM proxy module, WebSocket reconnection, Python SDK v0.1.55 full parity, community PRs.
 
 ## Features
 
-- 🚀 **Simple Query Interface** - One-shot queries with the `query()` function
-- 💬 **Interactive Client** - Stateful conversations with context retention
-- 🔄 **Streaming Support** - Real-time message streaming
-- 🛑 **Interrupt Capability** - Cancel ongoing operations
-- 🔧 **Full Configuration** - Comprehensive options for Claude Code
-- 📦 **Type Safety** - Strongly typed with serde support
-- ⚡ **Async/Await** - Built on Tokio for async operations
-- 🔒 **Control Protocol** - Full support for permissions, hooks, and MCP servers
-- 💰 **Token Optimization** - Built-in tools to minimize costs and track usage
-- 📥 **Auto CLI Download** - Automatically downloads Claude Code CLI if not found (v0.4.0+)
-- 📁 **File Checkpointing** - Rewind file changes to any point in conversation (v0.4.0+)
-- 📊 **Structured Output** - JSON schema validation for responses (v0.4.0+)
-- 🌐 **WebSocket Transport** - Connect via WebSocket instead of subprocess (v0.6.0+, feature-gated)
+- **LLM Proxy** - Use CC subscription as a direct LLM: `llm::query("prompt")` (v0.8.1+)
+- **Simple Query** - One-shot queries with the `query()` function
+- **Interactive Client** - Stateful conversations with context retention
+- **Streaming** - Real-time message streaming
+- **Control Protocol** - Permissions, hooks, MCP servers
+- **WebSocket Transport** - Production-grade reconnection with exponential backoff (v0.8.1+)
+- **Token Optimization** - Budget tracking, cache token stats, model recommendations
+- **Type Safety** - Strongly typed with serde, `#[non_exhaustive]` for forward compat
+- **Auto CLI Download** - Downloads Claude Code CLI if not found
+
+## LLM Proxy — Use CC Subscription as Direct LLM (v0.8.1)
+
+Use your Claude Code subscription (flat-rate) to call Claude directly, bypassing the agent layer. No tools, no system prompt overhead — just prompt in, text out.
+
+```rust
+use cc_sdk::llm::{self, LlmOptions};
+use futures::StreamExt;
+
+#[tokio::main]
+async fn main() -> cc_sdk::Result<()> {
+    // Simple: send prompt, get text
+    let response = llm::query("Explain quantum entanglement in one sentence", None).await?;
+    println!("{}", response.text);
+    // → "Quantum entanglement is..."
+
+    // With options: custom system prompt + model
+    let opts = LlmOptions::builder()
+        .system_prompt("You are a concise translator. Translate to Chinese.")
+        .model("claude-sonnet-4-20250514")
+        .build();
+    let response = llm::query("Hello world", Some(opts)).await?;
+    println!("{}", response.text);
+
+    // Streaming: text chunks as they arrive
+    let mut stream = llm::query_stream("Write a haiku about Rust", None).await?;
+    while let Some(chunk) = stream.next().await {
+        print!("{}", chunk?);
+    }
+
+    Ok(())
+}
+```
+
+**What it does under the hood**: Spawns `claude --print --system-prompt "" --tools "" --permission-mode dontAsk --max-turns 1 --setting-sources user`, clears `ANTHROPIC_API_KEY` to force subscription auth, and extracts text from the NDJSON response.
+
+**`LlmOptions` fields**: `system_prompt`, `model`, `thinking`, `max_turns`, `max_output_tokens`, `effort`.
 
 ## Python SDK Parity (v0.7.0)
 
@@ -131,18 +164,18 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-cc-sdk = "0.7.0"
-tokio = { version = "1.0", features = ["full"] }
+cc-sdk = "0.8"
+tokio = { version = "1", features = ["full"] }
 futures = "0.3"
 ```
 
 ### WebSocket Transport (Optional)
 
-Enable the `websocket` feature to connect via WebSocket instead of spawning a subprocess:
+Enable the `websocket` feature for WebSocket-based communication with production-grade reconnection:
 
 ```toml
 [dependencies]
-cc-sdk = { version = "0.6.0", features = ["websocket"] }
+cc-sdk = { version = "0.8", features = ["websocket"] }
 ```
 
 ```rust
@@ -153,24 +186,34 @@ use cc_sdk::transport::Transport;
 async fn main() -> cc_sdk::Result<()> {
     let config = WebSocketConfig {
         auth_token: Some("my-bearer-token".into()),
+        auto_reconnect: true,                // default: true
+        base_reconnect_delay_ms: 1000,       // exponential backoff base
+        max_reconnect_delay_ms: 30000,       // backoff cap
+        reconnect_give_up_ms: 5 * 60 * 1000, // 5 min time budget
         ..Default::default()
     };
 
     let mut transport = WebSocketTransport::new(
         "ws://localhost:8080/ws/cli/my-session",
         config,
-    );
+    )?;
     transport.connect().await?;
 
     // Use transport.send_message(), transport.receive_messages(), etc.
     // Same Transport trait as SubprocessTransport.
+    // Reconnection is automatic — external channels stay stable.
 
     transport.disconnect().await?;
     Ok(())
 }
 ```
 
-This is useful when the CLI is managed externally (e.g., by an API server with `--sdk-url`), and you want to communicate over a network connection rather than stdin/stdout.
+**Reconnection features** (v0.8.1, matches CC source `WebSocketTransport.ts`):
+- Exponential backoff with jitter
+- Time-budget based (5 min default)
+- Sleep/wake detection resets budget
+- Message replay buffer on reconnect
+- Permanent close codes (1002, 4001, 4003) skip reconnection
 
 ### Automatic CLI Download (Default)
 
@@ -222,39 +265,19 @@ CLAUDE_MODEL=claude-sonnet-4-5-20250929
 
 See [Environment Variables Guide](docs/ENVIRONMENT_VARIABLES.md) for complete details.
 
-## Supported Models (2025)
+## Supported Models
 
-The SDK supports the latest Claude models available in 2025:
-
-### Latest Models
-- **Opus 4.1** - Most capable model
-  - Full name: `"claude-opus-4-1-20250805"`
-  - Alias: `"opus"` (recommended - uses latest Opus)
-  
-- **Sonnet 4** - Balanced performance
-  - Full name: `"claude-sonnet-4-20250514"`
-  - Alias: `"sonnet"` (recommended - uses latest Sonnet)
-
-### Previous Generation
-- **Claude 3.5 Sonnet** - `"claude-3-5-sonnet-20241022"`
-- **Claude 3.5 Haiku** - `"claude-3-5-haiku-20241022"` (fastest)
-
-### Using Models in Code
+| Model | ID | Alias |
+|-------|-----|-------|
+| **Opus 4.6** | `claude-opus-4-6` | `"opus"` |
+| **Sonnet 4.6** | `claude-sonnet-4-6` | `"sonnet"` |
+| **Haiku 4.5** | `claude-haiku-4-5-20251001` | `"haiku"` |
 
 ```rust
-use cc_sdk::{query, ClaudeCodeOptions, Result};
-
-// Using Opus 4.1 (recommended: use alias)
+// Use aliases — they always point to the latest version
 let options = ClaudeCodeOptions::builder()
-    .model("opus")  // or "claude-opus-4-1-20250805" for specific version
+    .model("sonnet")
     .build();
-
-// Using Sonnet 4 (recommended: use alias)
-let options = ClaudeCodeOptions::builder()
-    .model("sonnet")  // or "claude-sonnet-4-20250514" for specific version
-    .build();
-
-let mut messages = query("Your prompt", Some(options)).await?;
 ```
 
 ## Quick Start

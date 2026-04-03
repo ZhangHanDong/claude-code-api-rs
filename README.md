@@ -8,21 +8,31 @@
 
 ---
 
-## 🦀 cc-sdk v0.7.0 - Rust SDK for Claude Code
+## 🦀 cc-sdk v0.8.1 - Rust SDK for Claude Code
 
-> **🎉 Python SDK v0.1.33 Parity!** | **🌐 WebSocket Transport** | **🧠 Effort & ThinkingConfig** | **📋 Session History API**
+> **NEW: LLM Proxy** — use CC subscription as direct LLM | **WebSocket Reconnection** | **Python SDK v0.1.55 Full Parity**
 
 [![Crates.io](https://img.shields.io/crates/v/cc-sdk.svg)](https://crates.io/crates/cc-sdk)
 [![Documentation](https://docs.rs/cc-sdk/badge.svg)](https://docs.rs/cc-sdk)
 
-**[cc-sdk](./claude-code-sdk-rs)** is a community-driven Rust SDK for Claude Code CLI, providing:
+**[cc-sdk](./claude-code-sdk-rs)** is a community-driven Rust SDK for Claude Code CLI:
 
-- 📥 **Auto CLI Download** - Automatically downloads Claude Code CLI if not found
-- 📁 **File Checkpointing** - Rewind file changes to any conversation point
-- 📊 **Structured Output** - JSON schema validation for responses
-- 🔧 **Full Control Protocol** - Permissions, hooks, MCP servers
-- 💰 **Budget Control** - `max_budget_usd` and `fallback_model` support
-- 🏖️ **Sandbox** - Bash isolation for filesystem/network
+- **LLM Proxy** — `llm::query("prompt")` → text (bypasses agent layer, uses CC subscription)
+- **Full Agent SDK** — permissions, hooks, MCP servers, file checkpointing
+- **WebSocket** — production-grade reconnection with exponential backoff
+- **Budget Control** — `max_budget_usd`, cache token tracking
+
+```rust
+use cc_sdk::llm;
+
+#[tokio::main]
+async fn main() -> cc_sdk::Result<()> {
+    // Simple: use CC subscription as LLM proxy
+    let response = llm::query("Explain quantum entanglement", None).await?;
+    println!("{}", response.text);
+    Ok(())
+}
+```
 
 ```rust
 use cc_sdk::{query, ClaudeCodeOptions};
@@ -30,10 +40,10 @@ use futures::StreamExt;
 
 #[tokio::main]
 async fn main() -> cc_sdk::Result<()> {
+    // Full agent mode with streaming
     let options = ClaudeCodeOptions::builder()
-        .model("claude-opus-4-5-20251101")  // Latest Opus 4.5
-        .auto_download_cli(true)             // Auto-download CLI
-        .max_budget_usd(10.0)                // Budget limit
+        .model("sonnet")
+        .max_budget_usd(10.0)
         .build();
 
     let mut stream = query("Hello, Claude!", Some(options)).await?;
@@ -129,42 +139,19 @@ curl -X POST http://localhost:8080/v1/chat/completions \
   }'
 ```
 
-## 🤖 Supported Models (December 2025)
+## 🤖 Supported Models
 
-The API supports the latest Claude models:
-
-### Latest Models
-- **Opus 4.5** ⭐ NEW (November 2025) - Most capable model
-  - Recommended: `"opus"` (alias for latest)
-  - Full name: `"claude-opus-4-5-20251101"`
-  - SWE-bench: 80.9% (industry-leading)
-- **Sonnet 4.5** - Balanced performance
-  - Recommended: `"sonnet"` (alias for latest)
-  - Full name: `"claude-sonnet-4-5-20250929"`
-- **Sonnet 4** - Cost-effective
-  - Full name: `"claude-sonnet-4-20250514"`
-
-### Previous Generation
-- **Claude 3.5 Sonnet** (`claude-3-5-sonnet-20241022`)
-- **Claude 3.5 Haiku** (`claude-3-5-haiku-20241022`) - Fastest response times
-
-### Model Usage Examples
+| Model | ID | Alias |
+|-------|-----|-------|
+| **Opus 4.6** | `claude-opus-4-6` | `"opus"` |
+| **Sonnet 4.6** | `claude-sonnet-4-6` | `"sonnet"` |
+| **Haiku 4.5** | `claude-haiku-4-5-20251001` | `"haiku"` |
 
 ```bash
-# Using Opus 4.1 (recommended: use alias)
-curl -X POST http://localhost:8080/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{"model": "opus", "messages": [{"role": "user", "content": "Hello"}]}'
-
-# Using Sonnet 4 (recommended: use alias)
+# Use aliases — they always point to the latest version
 curl -X POST http://localhost:8080/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{"model": "sonnet", "messages": [{"role": "user", "content": "Hello"}]}'
-
-# Using latest aliases
-curl -X POST http://localhost:8080/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{"model": "opus", "messages": [{"role": "user", "content": "Hello"}]}'
 ```
 
 ## 📖 Core Features
@@ -419,32 +406,27 @@ If you prefer to build your own integration, you can use the SDK directly:
 
 ```toml
 [dependencies]
-cc-sdk = "0.1.5"
-tokio = { version = "1.0", features = ["full"] }
+cc-sdk = "0.8"
+tokio = { version = "1", features = ["full"] }
+futures = "0.3"
 ```
 
 ```rust
-use cc_sdk::{query, ClaudeCodeOptions, PermissionMode};
-use futures::StreamExt;
+use cc_sdk::llm::{self, LlmOptions};
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Simple query (streaming messages)
-    let mut messages = query("Explain quantum computing", None).await?;
-    while let Some(msg) = messages.next().await {
-        println!("{:?}", msg?);
-    }
+async fn main() -> cc_sdk::Result<()> {
+    // LLM proxy mode — simplest way to use Claude
+    let resp = llm::query("Explain quantum computing in one sentence", None).await?;
+    println!("{}", resp.text);
 
-    // With options
-    let options = ClaudeCodeOptions::builder()
-        .model("claude-3.5-sonnet")
-        .permission_mode(PermissionMode::AcceptEdits)
+    // With custom system prompt
+    let opts = LlmOptions::builder()
+        .system_prompt("You are a Rust expert. Be concise.")
+        .model("sonnet")
         .build();
-
-    let mut messages = query("Write a haiku", Some(options)).await?;
-    while let Some(msg) = messages.next().await {
-        println!("{:?}", msg?);
-    }
+    let resp = llm::query("What's the difference between Arc and Rc?", Some(opts)).await?;
+    println!("{}", resp.text);
 
     Ok(())
 }

@@ -51,6 +51,12 @@ pub mod token_tracker;
 pub mod transport;
 mod types;
 
+/// LLM Proxy — use Claude Code subscription as a direct LLM interface.
+///
+/// Strips away the CC agent layer (tools, system prompt, hooks) and provides
+/// a simple "send prompt, get text" API.
+pub mod llm;
+
 // Re-export main types and functions
 pub use client::ClaudeSDKClient;
 pub use client_working::ClaudeSDKClientWorking;
@@ -132,6 +138,9 @@ pub use sdk_mcp::{
     ToolResult, create_simple_tool,
     ToolResultContent as SdkToolResultContent,
 };
+
+// Re-export LLM proxy types
+pub use llm::{LlmOptions, LlmOptionsBuilder, LlmResponse};
 
 /// Prelude module for convenient imports
 pub mod prelude {

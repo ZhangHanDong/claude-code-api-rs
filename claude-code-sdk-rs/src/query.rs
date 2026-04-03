@@ -213,6 +213,22 @@ async fn query_print_mode(
         }
     }
 
+    // Tools configuration (base set of available tools)
+    if let Some(ref tools) = options.tools {
+        match tools {
+            crate::types::ToolsConfig::List(list) => {
+                if list.is_empty() {
+                    cmd.arg("--tools").arg("");
+                } else {
+                    cmd.arg("--tools").arg(list.join(","));
+                }
+            }
+            crate::types::ToolsConfig::Preset(_) => {
+                cmd.arg("--tools").arg("default");
+            }
+        }
+    }
+
     if !options.disallowed_tools.is_empty() {
         cmd.arg("--disallowedTools")
             .arg(options.disallowed_tools.join(","));
